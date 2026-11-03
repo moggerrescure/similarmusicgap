@@ -85,10 +85,10 @@ public final class TasteAnalyticsEngine {
             acousticProfile: acoustic,
             topArtists: topArtists,
             topGenres: [
-                ("Synthwave & Cyberpunk", 38),
-                ("Brazilian Phonk", 29),
-                ("Alternative / Shoegaze", 21),
-                ("Ambient Drone", 12)
+                GenreShare(genre: "Synthwave & Indie", share: 38),
+                GenreShare(genre: "Brazilian Phonk", share: 29),
+                GenreShare(genre: "Alternative / Shoegaze", share: 21),
+                GenreShare(genre: "Ambient Drone", share: 12)
             ],
             decadeDistribution: decadeDistribution,
             clusters: clusters,

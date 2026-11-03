@@ -5,22 +5,22 @@ import AVFoundation
 import UIKit
 
 /// UIView subclass that hosts an AVPlayerLayer for seamless 60fps hardware playback
-final class PlayerUIView: UIView {
-    override class var layerClass: AnyClass {
+public final class PlayerUIView: UIView {
+    override public class var layerClass: AnyClass {
         AVPlayerLayer.self
     }
     
-    var playerLayer: AVPlayerLayer {
+    public var playerLayer: AVPlayerLayer {
         layer as! AVPlayerLayer
     }
     
-    override init(frame: CGRect) {
+    override public init(frame: CGRect) {
         super.init(frame: frame)
         playerLayer.videoGravity = .resizeAspectFill
         backgroundColor = .black
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 }

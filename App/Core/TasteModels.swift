@@ -87,13 +87,25 @@ public struct TasteTwinMatch: Codable, Equatable {
     }
 }
 
+/// Genre share entry (S1, S2, SO1)
+public struct GenreShare: Codable, Equatable, Identifiable, Hashable {
+    public var id: String { genre }
+    public let genre: String
+    public let share: Int
+    
+    public init(genre: String, share: Int) {
+        self.genre = genre
+        self.share = share
+    }
+}
+
 /// Full comprehensive taste profile (S1, S2, S3, SO1)
 public struct FullTasteProfile: Codable, Equatable {
     public let archetypeTitle: String
     public let aiInterpretation: String
     public let acousticProfile: AcousticProfile
     public let topArtists: [String]
-    public let topGenres: [(genre: String, share: Int)]
+    public let topGenres: [GenreShare]
     public let decadeDistribution: [DecadeShare]
     public let clusters: [ListeningCluster]
     public let tasteTwin: TasteTwinMatch
@@ -104,7 +116,7 @@ public struct FullTasteProfile: Codable, Equatable {
         aiInterpretation: String,
         acousticProfile: AcousticProfile,
         topArtists: [String],
-        topGenres: [(genre: String, share: Int)],
+        topGenres: [GenreShare],
         decadeDistribution: [DecadeShare],
         clusters: [ListeningCluster],
         tasteTwin: TasteTwinMatch,
@@ -119,37 +131,6 @@ public struct FullTasteProfile: Codable, Equatable {
         self.clusters = clusters
         self.tasteTwin = tasteTwin
         self.totalAnalyzedTracks = totalAnalyzedTracks
-    }
-    
-    // Custom Codable for tuple
-    enum CodingKeys: String, CodingKey {
-        case archetypeTitle, aiInterpretation, acousticProfile, topArtists, decadeDistribution, clusters, tasteTwin, totalAnalyzedTracks
-        case genresArray
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        archetypeTitle = try container.decode(String.self, forKey: .archetypeTitle)
-        aiInterpretation = try container.decode(String.self, forKey: .aiInterpretation)
-        acousticProfile = try container.decode(AcousticProfile.self, forKey: .acousticProfile)
-        topArtists = try container.decode([String].self, forKey: .topArtists)
-        decadeDistribution = try container.decode([DecadeShare].self, forKey: .decadeDistribution)
-        clusters = try container.decode([ListeningCluster].self, forKey: .clusters)
-        tasteTwin = try container.decode(TasteTwinMatch.self, forKey: .tasteTwin)
-        totalAnalyzedTracks = try container.decode(Int.self, forKey: .totalAnalyzedTracks)
-        topGenres = [("Synthwave / Indie", 42), ("Mid-90s Phonk", 28), ("Ambient Lo-Fi", 18), ("Alternative Rock", 12)]
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(archetypeTitle, forKey: .archetypeTitle)
-        try container.encode(aiInterpretation, forKey: .aiInterpretation)
-        try container.encode(acousticProfile, forKey: .acousticProfile)
-        try container.encode(topArtists, forKey: .topArtists)
-        try container.encode(decadeDistribution, forKey: .decadeDistribution)
-        try container.encode(clusters, forKey: .clusters)
-        try container.encode(tasteTwin, forKey: .tasteTwin)
-        try container.encode(totalAnalyzedTracks, forKey: .totalAnalyzedTracks)
     }
 }
 
