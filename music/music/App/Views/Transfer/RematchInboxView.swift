@@ -46,9 +46,9 @@ public struct RematchInboxView: View {
                 }
             }
             .navigationTitle("Rematch Inbox")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
                     }

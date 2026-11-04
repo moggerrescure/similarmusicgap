@@ -218,9 +218,9 @@ public struct ServicesHubView: View {
                     .padding(.bottom, 40)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button {
                         HapticManager.lightImpact()
                         Task { await coordinator.syncAll() }

@@ -251,8 +251,8 @@ public struct TransferConfigView: View {
             }
         }
         .navigationTitle("Transfer Studio")
-        .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $showingLiveMigration) {
+        .inlineNavigationBarTitle()
+        .fullScreenOrSheet(isPresented: $showingLiveMigration) {
             LiveTransferHUDView()
         }
         .sheet(item: $completedReport) { report in

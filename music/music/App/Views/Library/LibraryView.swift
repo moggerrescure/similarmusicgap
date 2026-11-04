@@ -149,7 +149,7 @@ public struct LibraryView: View {
                 }
             }
             .navigationTitle("Universal Library (L1)")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .searchable(text: $searchText, prompt: "Search title, artist, or album (L2)")
             .sheet(isPresented: $showingDuplicatesSheet) {
                 DuplicatesInspectorView(duplicates: duplicates)

@@ -40,9 +40,9 @@ public struct DuplicatesInspectorView: View {
                 }
             }
             .navigationTitle("Duplicates Finder (L5)")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
                     }

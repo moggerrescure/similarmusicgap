@@ -127,7 +127,7 @@ public struct TransferReportView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .sheet(isPresented: $showingShareSheet) {
                 ShareTextSheet(text: report.shareableText)
             }

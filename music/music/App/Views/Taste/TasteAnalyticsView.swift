@@ -4,7 +4,7 @@ import SwiftUI
 public struct TasteAnalyticsView: View {
     @State private var profile: FullTasteProfile = TasteAnalyticsEngine.shared.analyzeLibrary(tracks: ServicesCoordinator.shared.allTracks)
     @State private var showingStorySheet: Bool = false
-    @State private var generatedStoryImage: UIImage?
+    @State private var generatedStoryImage: PlatformImage?
     @State private var showingShareSheet: Bool = false
     
     public init() {}
@@ -197,7 +197,7 @@ public struct TasteAnalyticsView: View {
             }
         }
         .navigationTitle("Taste DNA")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationBarTitle()
         .sheet(isPresented: $showingStorySheet) {
             StoryPreviewModal(profile: profile)
         }
@@ -208,7 +208,7 @@ public struct TasteAnalyticsView: View {
 private struct StoryPreviewModal: View {
     let profile: FullTasteProfile
     @Environment(\.dismiss) private var dismiss
-    @State private var renderedImage: UIImage?
+    @State private var renderedImage: PlatformImage?
     @State private var showingShareSheet: Bool = false
     
     var body: some View {
@@ -264,7 +264,7 @@ private struct StoryPreviewModal: View {
                 }
             }
             .navigationTitle("Stories Card")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .sheet(isPresented: $showingShareSheet) {
                 if let renderedImage = renderedImage {
                     ShareImageSheet(image: renderedImage)
@@ -284,7 +284,7 @@ private struct ShareImageSheet: UIViewControllerRepresentable {
 }
 #else
 private struct ShareImageSheet: View {
-    let image: Any
+    let image: PlatformImage
     var body: some View { Text("Share Image") }
 }
 #endif

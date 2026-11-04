@@ -1,4 +1,31 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+public typealias PlatformImage = UIImage
+#elseif canImport(AppKit)
+import AppKit
+public typealias PlatformImage = NSImage
+#endif
+
+extension View {
+    @ViewBuilder
+    public func inlineNavigationBarTitle() -> some View {
+        #if os(iOS)
+        self.navigationBarTitleDisplayMode(.inline)
+        #else
+        self
+        #endif
+    }
+    
+    @ViewBuilder
+    public func fullScreenOrSheet<Content: View>(isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> Content) -> some View {
+        #if os(iOS)
+        self.fullScreenCover(isPresented: isPresented, content: content)
+        #else
+        self.sheet(isPresented: isPresented, content: content)
+        #endif
+    }
+}
 
 /// Luxury Athletic / Health HUD Design Tokens (Strict Dark Mode)
 public enum PastelTheme {

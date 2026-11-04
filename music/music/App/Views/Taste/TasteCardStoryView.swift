@@ -154,12 +154,17 @@ public struct TasteCardStoryView: View {
 // MARK: - Image Snapshot Render Helper
 @MainActor
 public enum StoryExporter {
-    public static func renderStoryImage(profile: FullTasteProfile) -> UIImage? {
+    public static func renderStoryImage(profile: FullTasteProfile) -> PlatformImage? {
         #if os(iOS)
         let storyView = TasteCardStoryView(profile: profile)
         let renderer = ImageRenderer(content: storyView)
         renderer.scale = 3.0 // 3x Retina output (1080x1920)
         return renderer.uiImage
+        #elseif os(macOS)
+        let storyView = TasteCardStoryView(profile: profile)
+        let renderer = ImageRenderer(content: storyView)
+        renderer.scale = 2.0
+        return renderer.nsImage
         #else
         return nil
         #endif
