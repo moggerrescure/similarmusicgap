@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Inspector Sheet for Cross-Platform Duplicate Tracks (P2 - L5)
+/// Inspector Sheet for Cross-Platform Duplicate Tracks
 public struct DuplicatesInspectorView: View {
     public let duplicates: [DuplicateGroup]
     @Environment(\.dismiss) private var dismiss
@@ -17,29 +17,29 @@ public struct DuplicatesInspectorView: View {
                 
                 if duplicates.isEmpty {
                     VStack(spacing: 12) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 48))
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 44))
                             .foregroundColor(PastelTheme.emeraldSuccess)
                         Text("No Duplicates Found")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
-                        Text("Your library is 100% clean across all connected platforms.")
+                        Text("Your library is 100% clean across all streaming services.")
                             .font(.system(size: 14))
                             .foregroundColor(PastelTheme.textSecondary)
                     }
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 14) {
+                        LazyVStack(spacing: 12) {
                             ForEach(duplicates) { dup in
                                 DuplicateRowCard(item: dup)
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 16)
                     }
                 }
             }
-            .navigationTitle("Duplicates Finder (L5)")
+            .navigationTitle("Duplicates")
             .inlineNavigationBarTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -58,11 +58,11 @@ private struct DuplicateRowCard: View {
     let item: DuplicateGroup
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.canonicalTitle)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundColor(PastelTheme.textPrimary)
                     Text(item.canonicalArtist)
                         .font(.system(size: 13))
@@ -84,10 +84,9 @@ private struct DuplicateRowCard: View {
             Divider()
                 .background(PastelTheme.cardBorder)
             
-            // Connected Services Badges & Direct Deep Links (L6)
             HStack(spacing: 8) {
                 Text("Found in:")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(PastelTheme.textTertiary)
                 
                 ForEach(item.services) { srv in
@@ -102,13 +101,14 @@ private struct DuplicateRowCard: View {
                         }
                     } label: {
                         HStack(spacing: 4) {
-                            Circle()
-                                .fill(Color(hex: srv.brandColorHex))
-                                .frame(width: 6, height: 6)
+                            Image(systemName: srv.iconName)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color(hex: srv.brandColorHex))
                             Text(srv.displayName)
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                             Image(systemName: "arrow.up.right")
-                                .font(.system(size: 9))
+                                .font(.system(size: 8))
+                                .foregroundColor(PastelTheme.textTertiary)
                         }
                         .foregroundColor(PastelTheme.textPrimary)
                         .padding(.horizontal, 8)
@@ -120,13 +120,16 @@ private struct DuplicateRowCard: View {
                 }
             }
         }
-        .padding(16)
+        .padding(14)
         .background(PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(PastelTheme.cardBorder, lineWidth: 1)
         )
     }
 }
 
+#Preview {
+    DuplicatesInspectorView(duplicates: [])
+}

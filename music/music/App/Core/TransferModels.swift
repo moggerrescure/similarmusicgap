@@ -89,17 +89,17 @@ public struct TransferExecutionReport: Identifiable, Codable {
     
     public var shareableText: String {
         """
-        🎵 SoundShift Migration Report
-        -----------------------------
+        SoundShift Migration Report
+        =============================
         From: \(sourceProvider.displayName)
         To:   \(destinationProvider.displayName)
         Date: \(timestamp.formatted(date: .abbreviated, time: .shortened))
         
-        ✅ Successfully Transferred: \(successfullyTransferred) / \(totalTracks) tracks (\(String(format: "%.1f", (Double(successfullyTransferred) / max(1.0, Double(totalTracks))) * 100))%)
-        ⚠️ Alternates Matched:      \(alternatesAccepted)
-        ❌ Unresolved / Missing:     \(missingTracks.count)
+        • Successfully Transferred: \(successfullyTransferred) / \(totalTracks) tracks (\(String(format: "%.1f", (Double(successfullyTransferred) / max(1.0, Double(totalTracks))) * 100))%)
+        • Alternates Matched:       \(alternatesAccepted)
+        • Unresolved / Missing:     \(missingTracks.count)
         
-        \(missingTracks.isEmpty ? "All tracks matched perfectly!" : "Missing tracks list:\n" + missingTracks.prefix(10).map { "• \($0.title) — \($0.primaryArtist)" }.joined(separator: "\n"))
+        \(missingTracks.isEmpty ? "All tracks matched with precision." : "Unresolved tracks:\n" + missingTracks.prefix(10).map { "- \($0.title) — \($0.primaryArtist)" }.joined(separator: "\n"))
         """
     }
 }

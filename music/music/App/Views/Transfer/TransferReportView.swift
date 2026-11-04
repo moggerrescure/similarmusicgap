@@ -92,7 +92,7 @@ public struct TransferReportView: View {
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: "square.and.arrow.up")
-                                    Text("Share Migration Report (T13)")
+                                    Text("Share Migration Summary")
                                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 }
                                 .foregroundColor(PastelTheme.textPrimary)

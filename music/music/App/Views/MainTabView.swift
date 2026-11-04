@@ -8,35 +8,35 @@ public struct MainTabView: View {
     
     public var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab 1: Connected Services (A4, A5)
+            // Tab 1: Services Hub
             ServicesHubView()
                 .tabItem {
-                    Label("Services", systemImage: "antenna.radiowaves.left.and.right")
+                    Label("Services", systemImage: "link.circle.fill")
                 }
                 .tag(0)
             
-            // Tab 2: Universal Library (L1, L2, L3, L5, L6)
+            // Tab 2: Library
             LibraryView()
                 .tabItem {
                     Label("Library", systemImage: "music.note.list")
                 }
                 .tag(1)
             
-            // Tab 3: Transfer Studio (T1 - T13)
+            // Tab 3: Transfer
             NavigationStack {
                 TransferConfigView()
             }
             .tabItem {
-                Label("Transfer", systemImage: "arrow.left.arrow.right")
+                Label("Transfer", systemImage: "arrow.triangle.swap")
             }
             .tag(2)
             
-            // Tab 4: Taste DNA & 9:16 Social Stories (S1 - S3, SO1)
+            // Tab 4: Taste Profile
             NavigationStack {
                 TasteAnalyticsView()
             }
             .tabItem {
-                Label("Taste DNA", systemImage: "sparkles")
+                Label("Taste", systemImage: "chart.bar.fill")
             }
             .tag(3)
         }
@@ -49,19 +49,22 @@ public struct MainTabView: View {
     private func customizeTabBarAppearance() {
         #if os(iOS)
         let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(PastelTheme.canvas)
+        appearance.configureWithDefaultBackground()
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        appearance.backgroundColor = UIColor(PastelTheme.canvas).withAlphaComponent(0.85)
         
         // Unselected items
         appearance.stackedLayoutAppearance.normal.iconColor = UIColor(PastelTheme.textTertiary)
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(PastelTheme.textTertiary)
+            .foregroundColor: UIColor(PastelTheme.textTertiary),
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium)
         ]
         
         // Selected items
         appearance.stackedLayoutAppearance.selected.iconColor = UIColor(PastelTheme.pastelOat)
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor(PastelTheme.pastelOat)
+            .foregroundColor: UIColor(PastelTheme.pastelOat),
+            .font: UIFont.systemFont(ofSize: 10, weight: .bold)
         ]
         
         UITabBar.appearance().standardAppearance = appearance

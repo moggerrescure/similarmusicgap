@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 9:16 Viral Instagram Stories & Telegram Taste Passport Card (P1 - SO1)
+/// 9:16 Viral Instagram Stories & Telegram Taste Passport Card
 public struct TasteCardStoryView: View {
     public let profile: FullTasteProfile
     
@@ -21,18 +21,18 @@ public struct TasteCardStoryView: View {
                 endRadius: 400
             )
             
-            VStack(alignment: .leading, spacing: 20) {
-                // MARK: - Header Receipt Bar
+            VStack(alignment: .leading, spacing: 18) {
+                // MARK: - Header Bar
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("SOUNDSHIFT // SONIC PASSPORT")
-                            .font(.system(size: 10, weight: .black, design: .monospaced))
-                            .tracking(1.5)
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .tracking(1.2)
                             .foregroundColor(PastelTheme.textTertiary)
                         
-                        Text("CROSS-PLATFORM AUDIT")
+                        Text("CROSS-LIBRARY AUDIT")
                             .font(.system(size: 9, weight: .bold))
-                            .tracking(1.0)
+                            .tracking(0.8)
                             .foregroundColor(PastelTheme.emeraldSuccess)
                     }
                     
@@ -53,36 +53,44 @@ public struct TasteCardStoryView: View {
                     .background(PastelTheme.cardBorder)
                 
                 // MARK: - Archetype Hero
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("ARCHETYPE")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .tracking(1.2)
+                        .tracking(1.0)
                         .foregroundColor(PastelTheme.amberWarning)
                     
                     Text(profile.archetypeTitle)
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .font(.system(size: 24, weight: .heavy, design: .rounded))
                         .foregroundColor(PastelTheme.textPrimary)
                         .lineLimit(2)
                 }
                 
-                // MARK: - Mini Radar Chart
-                TasteRadarView(profile: profile.acousticProfile)
-                    .frame(height: 190)
+                // MARK: - Acoustic Spectrum Bars
+                VStack(spacing: 8) {
+                    StoryAcousticBar(title: "ENERGY", value: profile.acousticProfile.energy, color: PastelTheme.pastelOat)
+                    StoryAcousticBar(title: "VALENCE", value: profile.acousticProfile.valence, color: PastelTheme.amberWarning)
+                    StoryAcousticBar(title: "DANCEABILITY", value: profile.acousticProfile.danceability, color: PastelTheme.emeraldSuccess)
+                    StoryAcousticBar(title: "ACOUSTICNESS", value: profile.acousticProfile.acousticness, color: PastelTheme.slateBlue)
+                }
+                .padding(14)
+                .background(PastelTheme.cardSubtle)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(PastelTheme.cardBorder, lineWidth: 0.5))
                 
-                // MARK: - Top 3 Key Artists
+                // MARK: - Top Key Artists
                 VStack(alignment: .leading, spacing: 8) {
                     Text("DEFINING ARTISTS")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .tracking(1.0)
+                        .tracking(0.8)
                         .foregroundColor(PastelTheme.textTertiary)
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         ForEach(profile.topArtists.prefix(3), id: \.self) { artist in
                             Text(artist)
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .foregroundColor(PastelTheme.pastelOat)
                                 .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
+                                .padding(.vertical, 5)
                                 .background(PastelTheme.card)
                                 .clipShape(Capsule())
                                 .overlay(Capsule().stroke(PastelTheme.cardBorder, lineWidth: 0.5))
@@ -90,11 +98,11 @@ public struct TasteCardStoryView: View {
                     }
                 }
                 
-                // MARK: - Taste Twin Metric (SO3)
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(PastelTheme.emeraldSuccess)
-                        .frame(width: 8, height: 8)
+                // MARK: - Taste Twin Metric
+                HStack(spacing: 10) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(PastelTheme.emeraldSuccess)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("ANONYMOUS TASTE TWIN")
@@ -102,21 +110,21 @@ public struct TasteCardStoryView: View {
                             .foregroundColor(PastelTheme.textTertiary)
                         
                         Text("98.4% Match in \(profile.tasteTwin.twinLocationHint)")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
                     }
                     
                     Spacer()
                     
                     Text("Top 0.04%")
-                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
                         .foregroundColor(PastelTheme.amberWarning)
                 }
                 .padding(12)
                 .background(PastelTheme.cardSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(PastelTheme.cardBorder, lineWidth: 0.5)
                 )
                 
@@ -126,21 +134,21 @@ public struct TasteCardStoryView: View {
                 HStack {
                     HStack(spacing: 6) {
                         Image(systemName: "waveform")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundColor(PastelTheme.pastelOat)
                         Text("SoundShift")
-                            .font(.system(size: 14, weight: .heavy, design: .rounded))
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
                             .foregroundColor(PastelTheme.pastelOat)
                     }
                     
                     Spacer()
                     
-                    Text("soundshift.app // YM • Spotify • AM")
+                    Text("soundshift.app")
                         .font(.system(size: 9, weight: .medium, design: .monospaced))
                         .foregroundColor(PastelTheme.textTertiary)
                 }
             }
-            .padding(26)
+            .padding(24)
         }
         .frame(width: 360, height: 640) // 9:16 aspect canvas
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -148,6 +156,38 @@ public struct TasteCardStoryView: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(PastelTheme.cardBorderFocused, lineWidth: 1.5)
         )
+    }
+}
+
+// MARK: - Story Acoustic Bar
+private struct StoryAcousticBar: View {
+    let title: String
+    let value: Double
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.textSecondary)
+                Spacer()
+                Text("\(Int(value * 100))%")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(color)
+                    .monospacedDigit()
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(PastelTheme.card)
+                    Capsule()
+                        .fill(color)
+                        .frame(width: geo.size.width * CGFloat(min(1.0, max(0.0, value))))
+                }
+            }
+            .frame(height: 5)
+        }
     }
 }
 
@@ -170,4 +210,3 @@ public enum StoryExporter {
         #endif
     }
 }
-

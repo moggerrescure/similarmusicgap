@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Screen: Taste Analytics & Social Music DNA Hub (P0 - S1, S2, S3, SO1, SO3)
+/// Screen: Taste Analytics & Acoustic Profile
 public struct TasteAnalyticsView: View {
     @State private var profile: FullTasteProfile = TasteAnalyticsEngine.shared.analyzeLibrary(tracks: ServicesCoordinator.shared.allTracks)
     @State private var showingStorySheet: Bool = false
@@ -15,79 +15,95 @@ public struct TasteAnalyticsView: View {
                 .ignoresSafeArea()
             
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    // MARK: - Header
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Circle()
-                                .fill(PastelTheme.lavenderAI)
-                                .frame(width: 8, height: 8)
-                            
-                            Text("AI TASTE INTELLIGENCE")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .tracking(1.2)
-                                .foregroundColor(PastelTheme.lavenderAI)
-                        }
+                VStack(spacing: 20) {
+                    // MARK: - Archetype Insight Card
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("ACOUSTIC ARCHETYPE")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .tracking(0.6)
+                            .foregroundColor(PastelTheme.textTertiary)
                         
                         Text(profile.archetypeTitle)
-                            .font(.system(size: 32, weight: .heavy, design: .rounded))
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
-                    }
-                    .padding(.top, 8)
-                    
-                    // MARK: - AI Narrative Quote
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(PastelTheme.pastelOat)
-                            Text("PORTRAIT OF YOUR TASTE")
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .tracking(0.8)
-                                .foregroundColor(PastelTheme.pastelOat)
-                        }
                         
                         Text(profile.aiInterpretation)
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(PastelTheme.textSecondary)
                             .lineSpacing(4)
+                            .padding(.top, 2)
                     }
                     .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(PastelTheme.cardBorder, lineWidth: 1)
                     )
                     
-                    // MARK: - Acoustic Radar (S1)
+                    // MARK: - Acoustic Spectrum (Apple Health Style Horizontal Bars)
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("ACOUSTIC DIMENSIONS (S1)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(1.0)
+                        Text("ACOUSTIC SPECTRUM")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .tracking(0.6)
                             .foregroundColor(PastelTheme.textTertiary)
                         
-                        TasteRadarView(profile: profile.acousticProfile)
-                            .padding(.vertical, 8)
+                        VStack(spacing: 12) {
+                            AcousticMetricRow(
+                                title: "Energy",
+                                value: profile.acousticProfile.energy,
+                                icon: "bolt.fill",
+                                color: PastelTheme.pastelOat
+                            )
+                            
+                            AcousticMetricRow(
+                                title: "Valence",
+                                value: profile.acousticProfile.valence,
+                                icon: "sun.max.fill",
+                                color: PastelTheme.amberWarning
+                            )
+                            
+                            AcousticMetricRow(
+                                title: "Danceability",
+                                value: profile.acousticProfile.danceability,
+                                icon: "figure.dance",
+                                color: PastelTheme.emeraldSuccess
+                            )
+                            
+                            AcousticMetricRow(
+                                title: "Acousticness",
+                                value: profile.acousticProfile.acousticness,
+                                icon: "guitars.fill",
+                                color: PastelTheme.slateBlue
+                            )
+                            
+                            AcousticMetricRow(
+                                title: "Focus & Flow",
+                                value: profile.acousticProfile.focusFlow,
+                                icon: "waveform.badge.magnifyingglass",
+                                color: PastelTheme.lavenderAI
+                            )
+                        }
                     }
                     .padding(18)
                     .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(PastelTheme.cardBorder, lineWidth: 1)
                     )
                     
-                    // MARK: - Decade Affinity Distribution (S2)
+                    // MARK: - Decade Affinity Distribution
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("DECADE AFFINITY (S2)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(1.0)
+                        Text("DECADE DISTRIBUTION")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .tracking(0.6)
                             .foregroundColor(PastelTheme.textTertiary)
                         
-                        // Horizontal Bar
+                        // Stacked horizontal capsule
                         GeometryReader { geo in
-                            HStack(spacing: 3) {
+                            HStack(spacing: 2) {
                                 ForEach(profile.decadeDistribution) { dec in
                                     Rectangle()
                                         .fill(Color(hex: dec.colorHex))
@@ -96,18 +112,18 @@ public struct TasteAnalyticsView: View {
                             }
                             .clipShape(Capsule())
                         }
-                        .frame(height: 10)
+                        .frame(height: 8)
                         
-                        // Decade Legend
+                        // Legend
                         HStack {
                             ForEach(profile.decadeDistribution) { dec in
                                 HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(Color(hex: dec.colorHex))
-                                        .frame(width: 6, height: 6)
-                                    Text("\(dec.decade) (\(Int(dec.percentage))%)")
-                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    Text(dec.decade)
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(PastelTheme.textSecondary)
+                                    Text("\(Int(dec.percentage))%")
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .foregroundColor(Color(hex: dec.colorHex))
                                 }
                                 if dec.decade != profile.decadeDistribution.last?.decade {
                                     Spacer()
@@ -117,89 +133,131 @@ public struct TasteAnalyticsView: View {
                     }
                     .padding(18)
                     .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(PastelTheme.cardBorder, lineWidth: 1)
                     )
                     
-                    // MARK: - Context / Mode Clusters (S3)
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("CONTEXT CLUSTERS (S3)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(1.0)
+                    // MARK: - Listening Habits / Clusters
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("LISTENING HABITS")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .tracking(0.6)
                             .foregroundColor(PastelTheme.textTertiary)
                         
                         ForEach(profile.clusters) { cluster in
-                            HStack(spacing: 14) {
-                                Circle()
-                                    .fill(PastelTheme.cardSubtle)
-                                    .frame(width: 42, height: 42)
-                                    .overlay(
-                                        Image(systemName: cluster.icon)
-                                            .foregroundColor(Color(hex: cluster.colorHex))
-                                    )
+                            HStack(spacing: 12) {
+                                Image(systemName: cluster.icon)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(Color(hex: cluster.colorHex))
+                                    .frame(width: 32, height: 32)
+                                    .background(PastelTheme.cardSubtle)
+                                    .clipShape(Circle())
                                 
-                                VStack(alignment: .leading, spacing: 3) {
+                                VStack(alignment: .leading, spacing: 2) {
                                     HStack {
                                         Text(cluster.title)
-                                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                                            .font(.system(size: 14, weight: .semibold))
                                             .foregroundColor(PastelTheme.textPrimary)
-                                        
                                         Spacer()
-                                        
                                         Text("\(cluster.percentage)%")
-                                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                                            .font(.system(size: 13, weight: .bold, design: .rounded))
                                             .foregroundColor(Color(hex: cluster.colorHex))
                                     }
-                                    
                                     Text(cluster.description)
                                         .font(.system(size: 12))
                                         .foregroundColor(PastelTheme.textSecondary)
-                                        .lineLimit(2)
+                                        .lineLimit(1)
                                 }
                             }
-                            .padding(14)
-                            .background(PastelTheme.cardSubtle)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .padding(.vertical, 6)
+                            
+                            if cluster.id != profile.clusters.last?.id {
+                                Divider().background(PastelTheme.cardBorder)
+                            }
                         }
                     }
                     .padding(18)
                     .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(PastelTheme.cardBorder, lineWidth: 1)
                     )
                     
-                    // MARK: - Primary Action: Generate Social Story Card (SO1)
+                    // MARK: - Share Action
                     Button {
                         HapticManager.successNotification()
                         showingStorySheet = true
                     } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "sparkles.rectangle.stack.fill")
-                                .font(.system(size: 18))
-                            Text("Generate 9:16 Social Story Card (SO1)")
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Share Stories Card")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                         }
                         .foregroundColor(PastelTheme.textOnOat)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 56)
+                        .frame(height: 52)
                         .background(PastelTheme.pastelOat)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .buttonStyle(TouchFeedbackButtonStyle())
                     .padding(.top, 4)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
             }
         }
-        .navigationTitle("Taste DNA")
+        .navigationTitle("Taste Profile")
         .inlineNavigationBarTitle()
         .sheet(isPresented: $showingStorySheet) {
             StoryPreviewModal(profile: profile)
+        }
+    }
+}
+
+// MARK: - Acoustic Metric Row Component (Apple Health HUD Style)
+private struct AcousticMetricRow: View {
+    let title: String
+    let value: Double // 0.0 to 1.0
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(color)
+                    .frame(width: 18)
+                
+                Text(title)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(PastelTheme.textPrimary)
+                
+                Spacer()
+                
+                Text("\(Int(value * 100))%")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(color)
+                    .monospacedDigit()
+            }
+            
+            // Progress Bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(PastelTheme.cardSubtle)
+                        .frame(height: 6)
+                    
+                    Capsule()
+                        .fill(color)
+                        .frame(width: geo.size.width * CGFloat(min(1.0, max(0.0, value))), height: 6)
+                }
+            }
+            .frame(height: 6)
         }
     }
 }
@@ -225,8 +283,7 @@ private struct StoryPreviewModal: View {
                     
                     Spacer()
                     
-                    // Action Buttons
-                    HStack(spacing: 14) {
+                    HStack(spacing: 12) {
                         Button {
                             dismiss()
                         } label: {
@@ -234,9 +291,9 @@ private struct StoryPreviewModal: View {
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(PastelTheme.textSecondary)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                                .frame(height: 48)
                                 .background(PastelTheme.card)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         
                         Button {
@@ -253,9 +310,9 @@ private struct StoryPreviewModal: View {
                             }
                             .foregroundColor(PastelTheme.textOnOat)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 50)
+                            .frame(height: 48)
                             .background(PastelTheme.pastelOat)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         .buttonStyle(TouchFeedbackButtonStyle())
                     }
@@ -294,4 +351,3 @@ private struct ShareImageSheet: View {
         TasteAnalyticsView()
     }
 }
-

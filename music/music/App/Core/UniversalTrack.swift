@@ -23,6 +23,14 @@ public enum MusicProviderType: String, Codable, CaseIterable, Identifiable {
         case .appleMusic: return "#FB7185"   // Rose/Pink
         }
     }
+    
+    public var iconName: String {
+        switch self {
+        case .yandexMusic: return "waveform"
+        case .spotify: return "dot.radiowaves.left.and.right"
+        case .appleMusic: return "applelogo"
+        }
+    }
 }
 
 /// Universal canonical music track model across all streaming platforms

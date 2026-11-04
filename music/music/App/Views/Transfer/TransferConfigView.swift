@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Main Transfer Configuration & Migration Master View (P0 - T1, T2, T3, T5, T6, T11)
+/// Main Transfer Configuration & Migration Master View
 public struct TransferConfigView: View {
     @StateObject private var transferManager = TransferManager.shared
     @ObservedObject private var coordinator = ServicesCoordinator.shared
@@ -25,129 +25,211 @@ public struct TransferConfigView: View {
                 .ignoresSafeArea()
             
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    // MARK: - Step 1: Direction Hub (Source -> Destination)
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("MIGRATION PATH (T1)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(1.0)
+                VStack(spacing: 20) {
+                    // MARK: - Section 1: Direction Hub
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("TRANSFER ROUTE")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .tracking(0.6)
                             .foregroundColor(PastelTheme.textTertiary)
+                            .padding(.horizontal, 4)
                         
-                        HStack(spacing: 12) {
-                            // Source Picker Card
-                            DirectionCard(
-                                title: "SOURCE",
-                                selection: $sourceProvider,
-                                options: MusicProviderType.allCases
-                            )
-                            
-                            // Swap Arrow
-                            Button {
-                                HapticManager.lightImpact()
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                    let temp = sourceProvider
-                                    sourceProvider = destinationProvider
-                                    destinationProvider = temp
-                                    transferManager.lastDryRun = nil
+                        VStack(spacing: 0) {
+                            // Source Row Dropdown
+                            Menu {
+                                ForEach(MusicProviderType.allCases) { opt in
+                                    Button {
+                                        sourceProvider = opt
+                                        if destinationProvider == opt {
+                                            destinationProvider = MusicProviderType.allCases.first { $0 != opt } ?? .appleMusic
+                                        }
+                                        transferManager.lastDryRun = nil
+                                    } label: {
+                                        HStack {
+                                            Text(opt.displayName)
+                                            if sourceProvider == opt {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
                                 }
                             } label: {
-                                Circle()
-                                    .fill(PastelTheme.card)
-                                    .frame(width: 44, height: 44)
-                                    .overlay(
-                                        Image(systemName: "arrow.left.arrow.right")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(PastelTheme.pastelOat)
-                                    )
-                                    .overlay(
-                                        Circle()
-                                            .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                                    )
+                                HStack(spacing: 12) {
+                                    Text("From")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(PastelTheme.textSecondary)
+                                        .frame(width: 44, alignment: .leading)
+                                    
+                                    Image(systemName: sourceProvider.iconName)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(Color(hex: sourceProvider.brandColorHex))
+                                        .frame(width: 24)
+                                    
+                                    Text(sourceProvider.displayName)
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundColor(PastelTheme.textPrimary)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(PastelTheme.textTertiary)
+                                }
+                                .padding(.horizontal, 16)
+                                .frame(height: 54)
                             }
                             
-                            // Destination Picker Card
-                            DirectionCard(
-                                title: "DESTINATION",
-                                selection: $destinationProvider,
-                                options: MusicProviderType.allCases.filter { $0 != sourceProvider }
-                            )
-                        }
-                    }
-                    .padding(18)
-                    .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                    )
-                    
-                    // MARK: - Step 2: Content Scope (T2, T3)
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("WHAT TO TRANSFER")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .tracking(1.0)
-                            .foregroundColor(PastelTheme.textTertiary)
-                        
-                        // Favorite Songs Toggle
-                        Toggle(isOn: $scope.transferFavorites) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Liked Songs & Favorites (T3)")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundColor(PastelTheme.textPrimary)
-                                Text("Your core library favorites with preserved order")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(PastelTheme.textSecondary)
-                            }
-                        }
-                        .tint(PastelTheme.emeraldSuccess)
-                        
-                        Divider().background(PastelTheme.cardBorder)
-                        
-                        // Conflict Policy Picker (T11)
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Conflict Policy (T11)")
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundColor(PastelTheme.textPrimary)
-                            
-                            Picker("Policy", selection: $conflictPolicy) {
-                                ForEach(ConflictPolicy.allCases) { policy in
-                                    Text(policy.rawValue).tag(policy)
+                            // Center Swap Divider
+                            ZStack {
+                                Divider()
+                                    .background(PastelTheme.cardBorder)
+                                
+                                Button {
+                                    HapticManager.lightImpact()
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                        let temp = sourceProvider
+                                        sourceProvider = destinationProvider
+                                        destinationProvider = temp
+                                        transferManager.lastDryRun = nil
+                                    }
+                                } label: {
+                                    Circle()
+                                        .fill(PastelTheme.cardSubtle)
+                                        .frame(width: 32, height: 32)
+                                        .overlay(
+                                            Image(systemName: "arrow.up.arrow.down")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundColor(PastelTheme.pastelOat)
+                                        )
+                                        .overlay(
+                                            Circle()
+                                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                                        )
                                 }
                             }
-                            .pickerStyle(.segmented)
+                            .padding(.horizontal, 16)
                             
-                            Text(conflictPolicy.description)
-                                .font(.system(size: 12))
-                                .foregroundColor(PastelTheme.textTertiary)
+                            // Destination Row Dropdown
+                            Menu {
+                                ForEach(MusicProviderType.allCases.filter { $0 != sourceProvider }) { opt in
+                                    Button {
+                                        destinationProvider = opt
+                                        transferManager.lastDryRun = nil
+                                    } label: {
+                                        HStack {
+                                            Text(opt.displayName)
+                                            if destinationProvider == opt {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Text("To")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(PastelTheme.textSecondary)
+                                        .frame(width: 44, alignment: .leading)
+                                    
+                                    Image(systemName: destinationProvider.iconName)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(Color(hex: destinationProvider.brandColorHex))
+                                        .frame(width: 24)
+                                    
+                                    Text(destinationProvider.displayName)
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundColor(PastelTheme.textPrimary)
+                                    
+                                    Spacer()
+                                    
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(PastelTheme.textTertiary)
+                                }
+                                .padding(.horizontal, 16)
+                                .frame(height: 54)
+                            }
                         }
+                        .background(PastelTheme.card)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                        )
                     }
-                    .padding(18)
-                    .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                    )
                     
-                    // MARK: - Step 3: Dry-Run Match Visualizer (T6, T7)
+                    // MARK: - Section 2: Content Preferences
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("PREFERENCES")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .tracking(0.6)
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .padding(.horizontal, 4)
+                        
+                        VStack(spacing: 16) {
+                            // Toggle Favorites
+                            Toggle(isOn: $scope.transferFavorites) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Favorites & Liked Songs")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(PastelTheme.textPrimary)
+                                    Text("Preserve original track order and date added")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(PastelTheme.textSecondary)
+                                }
+                            }
+                            .tint(PastelTheme.emeraldSuccess)
+                            
+                            Divider()
+                                .background(PastelTheme.cardBorder)
+                            
+                            // Conflict Policy Segmented Control
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("When Track Already Exists")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(PastelTheme.textSecondary)
+                                
+                                Picker("Conflict Policy", selection: $conflictPolicy) {
+                                    ForEach(ConflictPolicy.allCases) { policy in
+                                        Text(policy.rawValue).tag(policy)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                
+                                Text(conflictPolicy.description)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(PastelTheme.textTertiary)
+                            }
+                        }
+                        .padding(16)
+                        .background(PastelTheme.card)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                        )
+                    }
+                    
+                    // MARK: - Section 3: Pre-Flight Match Analysis
                     if let dryRun = transferManager.lastDryRun {
                         VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                Text("DRY-RUN ANALYSIS PREVIEW (T6)")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .tracking(1.0)
-                                    .foregroundColor(PastelTheme.pastelOat)
+                                Text("MATCH PREVIEW")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .tracking(0.6)
+                                    .foregroundColor(PastelTheme.textTertiary)
                                 
                                 Spacer()
                                 
-                                Text("\(String(format: "%.1f", dryRun.matchRatePercentage))% MATCH")
-                                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                Text("\(String(format: "%.1f", dryRun.matchRatePercentage))%")
+                                    .font(.system(size: 16, weight: .heavy, design: .rounded))
                                     .foregroundColor(PastelTheme.emeraldSuccess)
+                                    .monospacedDigit()
                             }
                             
-                            // Multi-color segmented progress bar
+                            // Progress bar
                             GeometryReader { geo in
-                                HStack(spacing: 3) {
+                                HStack(spacing: 2) {
                                     Rectangle()
                                         .fill(PastelTheme.emeraldSuccess)
                                         .frame(width: geo.size.width * CGFloat(Double(dryRun.exactMatchesCount) / max(1.0, Double(dryRun.totalTracks))))
@@ -155,54 +237,53 @@ public struct TransferConfigView: View {
                                         .fill(PastelTheme.amberWarning)
                                         .frame(width: geo.size.width * CGFloat(Double(dryRun.alternateMatchesCount) / max(1.0, Double(dryRun.totalTracks))))
                                     Rectangle()
-                                        .fill(Color.red.opacity(0.8))
+                                        .fill(PastelTheme.cardSubtle)
                                 }
                                 .clipShape(Capsule())
                             }
-                            .frame(height: 8)
+                            .frame(height: 6)
                             
-                            // Breakdown labels
+                            // Counters
                             HStack {
                                 Label("\(dryRun.exactMatchesCount) Exact", systemImage: "checkmark.circle.fill")
                                     .foregroundColor(PastelTheme.emeraldSuccess)
                                 Spacer()
-                                Label("\(dryRun.alternateMatchesCount) Alternate", systemImage: "questionmark.circle.fill")
+                                Label("\(dryRun.alternateMatchesCount) Alternate", systemImage: "arrow.triangle.swap")
                                     .foregroundColor(PastelTheme.amberWarning)
                                 Spacer()
-                                Label("\(dryRun.missingCount) Missing", systemImage: "xmark.circle.fill")
+                                Label("\(dryRun.missingCount) Missing", systemImage: "xmark.circle")
                                     .foregroundColor(PastelTheme.textTertiary)
                             }
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
                             
-                            // Button to inspect alternates if any
                             if !transferManager.rematchQueue.isEmpty {
                                 Button {
                                     showingRematchInbox = true
                                 } label: {
                                     HStack {
-                                        Text("Review \(transferManager.rematchQueue.count) Alternates in Inbox")
+                                        Text("Review \(transferManager.rematchQueue.count) Alternates")
                                             .font(.system(size: 13, weight: .semibold))
+                                        Spacer()
                                         Image(systemName: "chevron.right")
-                                            .font(.system(size: 11))
+                                            .font(.system(size: 12, weight: .semibold))
                                     }
                                     .foregroundColor(PastelTheme.amberWarning)
+                                    .padding(.top, 4)
                                 }
-                                .padding(.top, 4)
                             }
                         }
-                        .padding(18)
-                        .background(PastelTheme.cardSubtle)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(16)
+                        .background(PastelTheme.card)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
                         )
                     }
                     
-                    // MARK: - Action Buttons
+                    // MARK: - Action Button
                     VStack(spacing: 12) {
                         if transferManager.lastDryRun == nil {
-                            // Primary Action: Run Dry-Run Analysis
                             Button {
                                 HapticManager.lightImpact()
                                 runDryRun()
@@ -211,46 +292,46 @@ public struct TransferConfigView: View {
                                     if isAnalyzingDryRun {
                                         ProgressView().tint(PastelTheme.textOnOat)
                                     } else {
-                                        Text("Analyze Matching (Dry-Run)")
-                                            .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                        Image(systemName: "sparkles")
+                                        Image(systemName: "slider.horizontal.2.square")
+                                            .font(.system(size: 16, weight: .semibold))
+                                        Text("Analyze Match Compatibility")
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     }
                                 }
                                 .foregroundColor(PastelTheme.textOnOat)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 56)
+                                .frame(height: 52)
                                 .background(PastelTheme.pastelOat)
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             .buttonStyle(TouchFeedbackButtonStyle())
                         } else {
-                            // Primary Action: Execute Live Migration
                             Button {
                                 HapticManager.successNotification()
                                 startLiveMigration()
                             } label: {
                                 HStack(spacing: 8) {
-                                    Text("Start Full Migration")
-                                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                                     Image(systemName: "arrow.right.circle.fill")
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 18, weight: .bold))
+                                    Text("Begin Transfer")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 }
                                 .foregroundColor(PastelTheme.textOnOat)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 56)
+                                .frame(height: 52)
                                 .background(PastelTheme.emeraldSuccess)
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             .buttonStyle(TouchFeedbackButtonStyle())
                         }
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 4)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 20)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
             }
         }
-        .navigationTitle("Transfer Studio")
+        .navigationTitle("Transfer")
         .inlineNavigationBarTitle()
         .fullScreenOrSheet(isPresented: $showingLiveMigration) {
             LiveTransferHUDView()
@@ -290,53 +371,8 @@ public struct TransferConfigView: View {
     }
 }
 
-// MARK: - Direction Card Helper
-private struct DirectionCard: View {
-    let title: String
-    @Binding var selection: MusicProviderType
-    let options: [MusicProviderType]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(0.8)
-                .foregroundColor(PastelTheme.textTertiary)
-            
-            Menu {
-                ForEach(options) { opt in
-                    Button(opt.displayName) {
-                        selection = opt
-                    }
-                }
-            } label: {
-                HStack {
-                    Circle()
-                        .fill(Color(hex: selection.brandColorHex))
-                        .frame(width: 8, height: 8)
-                    
-                    Text(selection.displayName)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(PastelTheme.textPrimary)
-                    
-                    Spacer()
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 11))
-                        .foregroundColor(PastelTheme.textTertiary)
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 10)
-                .background(PastelTheme.cardSubtle)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
 #Preview {
     NavigationStack {
         TransferConfigView()
     }
 }
-
