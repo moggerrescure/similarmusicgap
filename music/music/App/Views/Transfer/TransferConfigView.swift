@@ -131,10 +131,7 @@ public struct TransferConfigView: View {
                             .foregroundColor(PastelTheme.textSecondary)
                             .frame(width: 44, alignment: .leading)
                         
-                        Image(systemName: sourceProvider.iconName)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color(hex: sourceProvider.brandColorHex))
-                            .frame(width: 24)
+                        PlatformBrandBadgeView(type: sourceProvider, size: 24)
                         
                         Text(sourceProvider.displayName)
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -198,10 +195,7 @@ public struct TransferConfigView: View {
                             .foregroundColor(PastelTheme.textSecondary)
                             .frame(width: 44, alignment: .leading)
                         
-                        Image(systemName: destinationProvider.iconName)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(Color(hex: destinationProvider.brandColorHex))
-                            .frame(width: 24)
+                        PlatformBrandBadgeView(type: destinationProvider, size: 24)
                         
                         Text(destinationProvider.displayName)
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -564,15 +558,11 @@ private struct HistoryItemRow: View {
     var body: some View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
-                Image(systemName: from.iconName)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(Color(hex: from.brandColorHex))
+                PlatformBrandBadgeView(type: from, size: 20)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(PastelTheme.textTertiary)
-                Image(systemName: to.iconName)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(Color(hex: to.brandColorHex))
+                PlatformBrandBadgeView(type: to, size: 20)
             }
             .frame(width: 56)
             

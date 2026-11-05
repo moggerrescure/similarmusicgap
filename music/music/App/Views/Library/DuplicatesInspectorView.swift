@@ -101,9 +101,7 @@ private struct DuplicateRowCard: View {
                         }
                     } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: srv.iconName)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(Color(hex: srv.brandColorHex))
+                            PlatformBrandBadgeView(type: srv, size: 14)
                             Text(srv.displayName)
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                             Image(systemName: "arrow.up.right")

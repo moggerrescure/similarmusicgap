@@ -264,18 +264,7 @@ private struct ServiceHubNode: View {
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .foregroundColor(PastelTheme.textTertiary)
             
-            ZStack {
-                Circle()
-                    .fill(PastelTheme.card)
-                    .frame(width: 68, height: 68)
-                    .overlay(
-                        Circle().stroke(Color(hex: type.brandColorHex).opacity(0.4), lineWidth: 1.5)
-                    )
-                
-                Image(systemName: type.iconName)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(Color(hex: type.brandColorHex))
-            }
+            PlatformBrandBadgeView(type: type, size: 56)
             
             Text(type.displayName)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))

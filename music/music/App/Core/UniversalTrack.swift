@@ -31,6 +31,14 @@ public enum MusicProviderType: String, Codable, CaseIterable, Identifiable {
         case .appleMusic: return "applelogo"
         }
     }
+    
+    public var assetIconName: String {
+        switch self {
+        case .spotify: return "spotify_icon"
+        case .appleMusic: return "apple_music_icon"
+        case .yandexMusic: return "yandex_music_icon"
+        }
+    }
 }
 
 /// Universal canonical music track model across all streaming platforms
