@@ -251,71 +251,132 @@ private struct ServiceCardView: View {
     let onRevoke: () -> Void
     var onConfigure: (() -> Void)? = nil
     
+    private var bannerName: String {
+        switch type {
+        case .spotify: return "spotify_banner"
+        case .appleMusic: return "apple_music_banner"
+        case .yandexMusic: return "yandex_music_banner"
+        }
+    }
+    
     var body: some View {
-        HStack(spacing: 12) {
-            // Icon
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(PastelTheme.cardSubtle)
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Image(systemName: type.iconName)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color(hex: type.brandColorHex))
-                )
+        ZStack {
+            // Layer 1: Atmospheric Background Banner Image
+            GeometryReader { geo in
+                Image(bannerName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .opacity(0.38)
+            }
             
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(type.displayName)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(PastelTheme.textPrimary)
-                    
-                    if let onConfigure = onConfigure {
-                        Button(action: onConfigure) {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(PastelTheme.textTertiary)
+            // Layer 2: Deep Dark Glass Scrim for 100% High-Contrast Text
+            LinearGradient(
+                stops: [
+                    .init(color: PastelTheme.card.opacity(0.92), location: 0.0),
+                    .init(color: PastelTheme.card.opacity(0.72), location: 0.50),
+                    .init(color: PastelTheme.card.opacity(0.86), location: 1.0)
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            
+            // Layer 3: Brand Ambient Radial Glow
+            RadialGradient(
+                colors: [Color(hex: type.brandColorHex).opacity(0.18), Color.clear],
+                center: .trailing,
+                startRadius: 20,
+                endRadius: 260
+            )
+            
+            // Layer 4: Interactive HUD Content
+            HStack(spacing: 14) {
+                // Official Vector Brand Badge
+                PlatformBrandBadgeView(type: type, size: 46)
+                
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(type.displayName)
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textPrimary)
+                        
+                        if isAuthenticated {
+                            HStack(spacing: 3) {
+                                Circle()
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 5, height: 5)
+                                Text("LIVE")
+                                    .font(.system(size: 8, weight: .heavy, design: .rounded))
+                                    .foregroundColor(PastelTheme.emeraldSuccess)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(PastelTheme.emeraldSuccess.opacity(0.16))
+                            .clipShape(Capsule())
+                        }
+                        
+                        if let onConfigure = onConfigure {
+                            Button(action: onConfigure) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(PastelTheme.textTertiary)
+                            }
                         }
                     }
+                    
+                    Text(isAuthenticated ? "\(trackCount) tracks • \(userDisplayName ?? "Connected")" : (onConfigure != nil && !SpotifyConfig.isConfigured ? "Setup required • Tap to configure" : "Tap Connect to sync library"))
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(isAuthenticated ? PastelTheme.textSecondary : PastelTheme.textTertiary)
+                        .lineLimit(1)
                 }
                 
-                Text(isAuthenticated ? "\(trackCount) tracks • \(userDisplayName ?? "Connected")" : (onConfigure != nil && !SpotifyConfig.isConfigured ? "Setup required" : "Not connected"))
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(isAuthenticated ? PastelTheme.textSecondary : PastelTheme.textTertiary)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            // Action button
-            if isAuthenticated {
-                Button(action: onRevoke) {
-                    Text("Disconnect")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(PastelTheme.textTertiary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(PastelTheme.cardSubtle)
-                        .clipShape(Capsule())
+                Spacer()
+                
+                // Action Button
+                if isAuthenticated {
+                    Button(action: onRevoke) {
+                        Text("Disconnect")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(PastelTheme.cardSubtle.opacity(0.85))
+                            .clipShape(Capsule())
+                    }
+                } else {
+                    Button(action: onConnect) {
+                        Text("Connect")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(TouchFeedbackButtonStyle())
                 }
-            } else {
-                Button(action: onConnect) {
-                    Text("Connect")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(PastelTheme.textOnOat)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(PastelTheme.pastelOat)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(TouchFeedbackButtonStyle())
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
-        .padding(14)
+        .frame(minHeight: 76)
         .background(PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: type.brandColorHex).opacity(0.45),
+                            PastelTheme.cardBorder,
+                            Color.clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
     }
 }

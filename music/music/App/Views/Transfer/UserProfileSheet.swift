@@ -103,9 +103,7 @@ public struct UserProfileSheet: View {
                             
                             VStack(spacing: 8) {
                                 AccountStatusRow(
-                                    name: "Spotify",
-                                    icon: "dot.radiowaves.left.and.right",
-                                    colorHex: "#10B981",
+                                    type: .spotify,
                                     isConnected: coordinator.spotify.isAuthenticated,
                                     detail: coordinator.spotify.userDisplayName ?? "Not connected"
                                 ) {
@@ -114,9 +112,7 @@ public struct UserProfileSheet: View {
                                 }
                                 
                                 AccountStatusRow(
-                                    name: "Apple Music",
-                                    icon: "applelogo",
-                                    colorHex: "#FB7185",
+                                    type: .appleMusic,
                                     isConnected: coordinator.appleMusic.isAuthenticated,
                                     detail: coordinator.appleMusic.userDisplayName ?? "Not connected"
                                 ) {
@@ -125,9 +121,7 @@ public struct UserProfileSheet: View {
                                 }
                                 
                                 AccountStatusRow(
-                                    name: "Yandex Music",
-                                    icon: "waveform",
-                                    colorHex: "#FBBF24",
+                                    type: .yandexMusic,
                                     isConnected: coordinator.yandexMusic.isAuthenticated,
                                     detail: coordinator.yandexMusic.userDisplayName ?? "Not connected"
                                 ) {
@@ -362,9 +356,7 @@ private struct MetricPill: View {
 
 // MARK: - Account Status Row
 private struct AccountStatusRow: View {
-    let name: String
-    let icon: String
-    let colorHex: String
+    let type: MusicProviderType
     let isConnected: Bool
     let detail: String
     let onTap: () -> Void
@@ -372,17 +364,10 @@ private struct AccountStatusRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(PastelTheme.cardSubtle)
-                    .frame(width: 36, height: 36)
-                    .overlay(
-                        Image(systemName: icon)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(Color(hex: colorHex))
-                    )
+                PlatformBrandBadgeView(type: type, size: 36)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(name)
+                    Text(type.displayName)
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundColor(PastelTheme.textPrimary)
                     
