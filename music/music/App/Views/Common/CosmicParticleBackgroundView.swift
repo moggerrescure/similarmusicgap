@@ -131,3 +131,4 @@ public struct CosmicParticleBackgroundView: View {
         .ignoresSafeArea()
     }
 }
+

@@ -137,8 +137,21 @@ public final class ServicesCoordinator: ObservableObject {
         HapticManager.lightImpact()
     }
     
-    // MARK: - Universal Backup Export (P0 - C8)
-    public func exportUniversalJSON() -> URL? {
+    // MARK: - Universal Backup Export & Track Ingestion
+    public func tracks(for type: MusicProviderType) -> [UniversalTrack] {
+        let matching = allTracks.filter { track in
+            switch type {
+            case .spotify: return track.spotifyId != nil
+            case .appleMusic: return track.appleMusicId != nil
+            case .yandexMusic: return track.yandexId != nil
+            }
+        }
+        if !matching.isEmpty { return matching }
+        // Fallback to sample library if not yet synced
+        return spotify.sampleMockTracks
+    }
+    
+    public func exportUniversalJSON(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_Backup") -> URL? {
         struct BackupPayload: Codable {
             let exportedAt: Date
             let totalTracks: Int
@@ -146,7 +159,7 @@ public final class ServicesCoordinator: ObservableObject {
             let playlists: [UniversalPlaylist]
         }
         
-        let exportTracks = allTracks.isEmpty ? spotify.sampleMockTracks : allTracks
+        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : (allTracks.isEmpty ? spotify.sampleMockTracks : allTracks)
         let exportPlaylists = allPlaylists.isEmpty ? [
             UniversalPlaylist(providerPlaylistId: "pl_backup", providerType: .spotify, title: "Favorites Vault", trackCount: exportTracks.count, tracks: exportTracks)
         ] : allPlaylists
@@ -164,8 +177,52 @@ public final class ServicesCoordinator: ObservableObject {
         
         guard let data = try? encoder.encode(payload) else { return nil }
         
-        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("SoundShift_Universal_Backup_\(Int(Date().timeIntervalSince1970)).json")
+        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("\(filename)_\(Int(Date().timeIntervalSince1970)).json")
         try? data.write(to: tempUrl)
+        return tempUrl
+    }
+    
+    public func exportCSV(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_Tracks") -> URL? {
+        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : (allTracks.isEmpty ? spotify.sampleMockTracks : allTracks)
+        var csv = "Title,Artist,Album,Duration,ISRC,Spotify_ID,Apple_ID,Yandex_ID\n"
+        for t in exportTracks {
+            let title = "\"\(t.title.replacingOccurrences(of: "\"", with: "\"\""))\""
+            let artist = "\"\(t.primaryArtist.replacingOccurrences(of: "\"", with: "\"\""))\""
+            let album = "\"\(t.album?.replacingOccurrences(of: "\"", with: "\"\"") ?? "")\""
+            let duration = t.formattedDuration
+            let isrc = t.isrc ?? ""
+            let sId = t.spotifyId ?? ""
+            let aId = t.appleMusicId ?? ""
+            let yId = t.yandexId ?? ""
+            csv += "\(title),\(artist),\(album),\(duration),\(isrc),\(sId),\(aId),\(yId)\n"
+        }
+        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("\(filename)_\(Int(Date().timeIntervalSince1970)).csv")
+        try? csv.data(using: .utf8)?.write(to: tempUrl)
+        return tempUrl
+    }
+    
+    public func exportPlainText(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_TrackList") -> URL? {
+        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : (allTracks.isEmpty ? spotify.sampleMockTracks : allTracks)
+        var text = "# SoundShift Music Export (\(Date().formatted(date: .abbreviated, time: .shortened)))\n"
+        text += "# Total tracks: \(exportTracks.count)\n\n"
+        for (index, t) in exportTracks.enumerated() {
+            text += "\(index + 1). \(t.primaryArtist) — \(t.title)\n"
+        }
+        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("\(filename)_\(Int(Date().timeIntervalSince1970)).txt")
+        try? text.data(using: .utf8)?.write(to: tempUrl)
+        return tempUrl
+    }
+    
+    public func exportM3U(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_Playlist") -> URL? {
+        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : (allTracks.isEmpty ? spotify.sampleMockTracks : allTracks)
+        var m3u = "#EXTM3U\n"
+        for t in exportTracks {
+            let durationSeconds = t.durationMs / 1000
+            m3u += "#EXTINF:\(durationSeconds),\(t.primaryArtist) - \(t.title)\n"
+            m3u += "\(t.title).mp3\n"
+        }
+        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("\(filename)_\(Int(Date().timeIntervalSince1970)).m3u8")
+        try? m3u.data(using: .utf8)?.write(to: tempUrl)
         return tempUrl
     }
     
