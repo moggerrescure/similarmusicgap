@@ -12,8 +12,7 @@ public struct ServicesHubView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                PastelTheme.canvas
-                    .ignoresSafeArea()
+                CosmicParticleBackgroundView(particleCount: 45)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {

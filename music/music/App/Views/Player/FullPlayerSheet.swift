@@ -80,11 +80,14 @@ public struct FullPlayerSheet: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(PastelTheme.card)
                             
-                            // 3D Liquid Wave Fill
-                            LiquidWaveProgressView(
+                            // 3D Left-to-Right Liquid Wave Fill
+                            HorizontalLiquidWaveProgressView(
                                 progress: isDraggingScrubber ? dragProgress : player.progress,
-                                color: PastelTheme.pastelOat,
-                                secondaryColor: PastelTheme.emeraldSuccess.opacity(0.8)
+                                currentTime: player.currentTime,
+                                duration: player.duration,
+                                showSecondsHUD: false,
+                                primaryColor: PastelTheme.pastelOat,
+                                secondaryColor: PastelTheme.emeraldSuccess
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }

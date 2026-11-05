@@ -39,8 +39,7 @@ public struct TransferConfigView: View {
     
     public var body: some View {
         ZStack {
-            PastelTheme.canvas
-                .ignoresSafeArea()
+            CosmicParticleBackgroundView(particleCount: 45)
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {

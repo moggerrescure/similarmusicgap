@@ -38,6 +38,31 @@ public final class AudioPlayerManager: ObservableObject {
     // Favorites registry
     @Published public private(set) var favoriteTrackIds: Set<UUID> = []
     
+    // MARK: - Formatted Time Strings (Apple HUD Standard)
+    public var formattedCurrentTime: String {
+        formatSeconds(currentTime)
+    }
+    
+    public var formattedDuration: String {
+        formatSeconds(duration)
+    }
+    
+    public var formattedRemainingTime: String {
+        let rem = max(0, duration - currentTime)
+        return "-" + formatSeconds(rem)
+    }
+    
+    public var secondsHUDText: String {
+        "\(formattedCurrentTime) / \(formattedDuration)"
+    }
+    
+    private func formatSeconds(_ sec: Double) -> String {
+        let total = max(0, Int(sec))
+        let min = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", min, s)
+    }
+    
     // Audio Player & Timer
     private var avPlayer: AVPlayer?
     private var displayLinkTimer: Timer?

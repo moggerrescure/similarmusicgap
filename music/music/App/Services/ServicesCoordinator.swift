@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 /// Main orchestrator for streaming providers and local library synchronization
 @MainActor
@@ -86,6 +87,54 @@ public final class ServicesCoordinator: ObservableObject {
     
     private func refreshAggregates() {
         objectWillChange.send()
+    }
+    
+    // MARK: - Local Playlist & Reorder Management
+    public func createPlaylist(title: String, description: String? = nil, tracks: [UniversalTrack] = []) -> UniversalPlaylist {
+        let pl = UniversalPlaylist(
+            providerPlaylistId: "local_\(UUID().uuidString.prefix(8))",
+            providerType: .spotify,
+            title: title,
+            description: description,
+            trackCount: tracks.count,
+            tracks: tracks
+        )
+        allPlaylists.insert(pl, at: 0)
+        refreshAggregates()
+        HapticManager.successNotification()
+        return pl
+    }
+    
+    public func deletePlaylist(id: UUID) {
+        allPlaylists.removeAll { $0.id == id }
+        refreshAggregates()
+        HapticManager.lightImpact()
+    }
+    
+    public func addTrackToPlaylist(track: UniversalTrack, playlistId: UUID) {
+        if let idx = allPlaylists.firstIndex(where: { $0.id == playlistId }) {
+            if !allPlaylists[idx].tracks.contains(where: { $0.id == track.id }) {
+                allPlaylists[idx].tracks.append(track)
+                allPlaylists[idx].trackCount = allPlaylists[idx].tracks.count
+                refreshAggregates()
+                HapticManager.lightImpact()
+            }
+        }
+    }
+    
+    public func removeTrackFromPlaylist(track: UniversalTrack, playlistId: UUID) {
+        if let idx = allPlaylists.firstIndex(where: { $0.id == playlistId }) {
+            allPlaylists[idx].tracks.removeAll(where: { $0.id == track.id })
+            allPlaylists[idx].trackCount = allPlaylists[idx].tracks.count
+            refreshAggregates()
+            HapticManager.lightImpact()
+        }
+    }
+    
+    public func reorderTracks(fromOffsets: IndexSet, toOffset: Int) {
+        allTracks.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        refreshAggregates()
+        HapticManager.lightImpact()
     }
     
     // MARK: - Universal Backup Export (P0 - C8)

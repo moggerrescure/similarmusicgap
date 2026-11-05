@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Floating HUD Mini-Player docking above bottom navigation with 3D fluid water-fill progress
+/// Floating HUD Mini-Player docking above bottom navigation with Left-to-Right 3D fluid water-fill progress
 public struct FloatingMiniPlayerView: View {
     @ObservedObject private var player = AudioPlayerManager.shared
     @State private var showingFullPlayer: Bool = false
@@ -10,15 +10,17 @@ public struct FloatingMiniPlayerView: View {
     public var body: some View {
         if let track = player.currentTrack {
             ZStack(alignment: .bottom) {
-                // Background Card with 3D Liquid Wave fill
-                ZStack {
+                // Background Card with Horizontal Left-to-Right Liquid Wave Fill
+                ZStack(alignment: .leading) {
                     PastelTheme.card
                     
-                    // Liquid water-fill layer
-                    LiquidWaveProgressView(
+                    // Left-to-Right Fluid Water Fill Layer
+                    HorizontalLiquidWaveProgressView(
                         progress: player.progress,
-                        color: PastelTheme.pastelOat.opacity(0.18),
-                        secondaryColor: PastelTheme.emeraldSuccess.opacity(0.12)
+                        currentTime: player.currentTime,
+                        duration: player.duration,
+                        primaryColor: PastelTheme.pastelOat,
+                        secondaryColor: PastelTheme.emeraldSuccess
                     )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -29,81 +31,115 @@ public struct FloatingMiniPlayerView: View {
                 
                 // Content Row
                 HStack(spacing: 12) {
-                    // Artwork with pulsing glow
+                    // Artwork / Playback Pulse
                     ZStack {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(PastelTheme.cardSubtle)
                             .frame(width: 40, height: 40)
                         
-                        Image(systemName: "music.note")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(PastelTheme.pastelOat)
-                            .scaleEffect(player.isPlaying ? 1.08 : 1.0)
-                            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: player.isPlaying)
+                        if player.isPlaying {
+                            WaveformBarsView()
+                                .frame(width: 24, height: 16)
+                        } else {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(PastelTheme.pastelOat)
+                        }
                     }
                     
-                    // Title & Artist
+                    // Title, Artist, & Live Seconds HUD
                     VStack(alignment: .leading, spacing: 2) {
                         Text(track.title)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
                             .lineLimit(1)
                         
-                        Text(track.primaryArtist)
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(PastelTheme.textSecondary)
-                            .lineLimit(1)
+                        HStack(spacing: 5) {
+                            Text(track.primaryArtist)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(PastelTheme.textSecondary)
+                                .lineLimit(1)
+                            
+                            Text("•")
+                                .font(.system(size: 10))
+                                .foregroundColor(PastelTheme.textTertiary)
+                            
+                            // High-legibility Seconds Counter (Left-to-Right Water Sync)
+                            Text(player.secondsHUDText)
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundColor(PastelTheme.emeraldSuccess)
+                                .contentTransition(.numericText())
+                        }
                     }
                     
                     Spacer()
                     
-                    // Favorite Toggle
+                    // Favorite Toggle Button (Independent Tap Zone)
                     Button {
+                        HapticManager.lightImpact()
                         player.toggleFavorite(track: track)
                     } label: {
                         Image(systemName: player.isFavorite(track: track) ? "heart.fill" : "heart")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(player.isFavorite(track: track) ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 34, height: 34)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(BorderlessButtonStyle())
                     
                     // Play/Pause Button
                     Button {
+                        HapticManager.lightImpact()
                         player.togglePlayPause()
                     } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundColor(PastelTheme.textOnOat)
                             .frame(width: 34, height: 34)
                             .background(PastelTheme.pastelOat)
                             .clipShape(Circle())
                     }
-                    .buttonStyle(TouchFeedbackButtonStyle())
+                    .buttonStyle(BorderlessButtonStyle())
                     
-                    // Next Button
+                    // Next Track Button
                     Button {
+                        HapticManager.lightImpact()
                         player.playNext()
                     } label: {
                         Image(systemName: "forward.fill")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(PastelTheme.textPrimary)
                             .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(BorderlessButtonStyle())
                 }
                 .padding(.horizontal, 14)
-                .frame(height: 56)
+                .frame(height: 58)
                 
-                // Subtle 2pt bottom progress hairline
+                // Luminous 2pt bottom progress indicator with specular glint
                 GeometryReader { geo in
-                    Rectangle()
-                        .fill(PastelTheme.pastelOat)
-                        .frame(width: geo.size.width * CGFloat(player.progress), height: 2)
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                            .fill(PastelTheme.cardBorder)
+                            .frame(height: 2)
+                        
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [PastelTheme.emeraldSuccess, PastelTheme.pastelOat],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(0, geo.size.width * CGFloat(player.progress)), height: 2)
+                    }
                 }
                 .frame(height: 2)
             }
-            .frame(height: 56)
+            .frame(height: 58)
             .padding(.horizontal, 12)
-            .padding(.bottom, 54) // floats just above the bottom tab bar
+            .padding(.bottom, 54) // floats right above the bottom tab bar
             .contentShape(Rectangle())
             .onTapGesture {
                 HapticManager.lightImpact()

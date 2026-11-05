@@ -110,6 +110,14 @@ public enum HapticManager {
         #endif
     }
     
+    public static func heavyImpact() {
+        #if os(iOS)
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
+        generator.prepare()
+        generator.impactOccurred()
+        #endif
+    }
+    
     public static func successNotification() {
         #if os(iOS)
         let generator = UINotificationFeedbackGenerator()
