@@ -4,6 +4,7 @@ import SwiftUI
 public struct ServicesHubView: View {
     @StateObject private var coordinator = ServicesCoordinator.shared
     @State private var showingExportSheet: Bool = false
+    @State private var showingSpotifySetup: Bool = false
     @State private var exportURL: URL?
     
     public init() {}
@@ -63,10 +64,17 @@ public struct ServicesHubView: View {
                                     userDisplayName: coordinator.spotify.userDisplayName,
                                     trackCount: coordinator.spotify.trackCount,
                                     onConnect: {
-                                        Task { await coordinator.authenticate(type: .spotify) }
+                                        if SpotifyConfig.isConfigured {
+                                            Task { await coordinator.authenticate(type: .spotify) }
+                                        } else {
+                                            showingSpotifySetup = true
+                                        }
                                     },
                                     onRevoke: {
                                         Task { await coordinator.revoke(type: .spotify) }
+                                    },
+                                    onConfigure: {
+                                        showingSpotifySetup = true
                                     }
                                 )
                                 
@@ -169,6 +177,9 @@ public struct ServicesHubView: View {
                     ShareSheet(activityItems: [exportURL])
                 }
             }
+            .sheet(isPresented: $showingSpotifySetup) {
+                SpotifySetupSheet()
+            }
         }
     }
 }
@@ -212,6 +223,7 @@ private struct ServiceCardView: View {
     let trackCount: Int
     let onConnect: () -> Void
     let onRevoke: () -> Void
+    var onConfigure: (() -> Void)? = nil
     
     var body: some View {
         HStack(spacing: 12) {
@@ -226,13 +238,24 @@ private struct ServiceCardView: View {
                 )
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(type.displayName)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(PastelTheme.textPrimary)
+                HStack(spacing: 6) {
+                    Text(type.displayName)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(PastelTheme.textPrimary)
+                    
+                    if let onConfigure = onConfigure {
+                        Button(action: onConfigure) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(PastelTheme.textTertiary)
+                        }
+                    }
+                }
                 
-                Text(isAuthenticated ? "\(trackCount) tracks" : "Not connected")
-                    .font(.system(size: 13, weight: .regular))
+                Text(isAuthenticated ? "\(trackCount) tracks • \(userDisplayName ?? "Connected")" : (onConfigure != nil && !SpotifyConfig.isConfigured ? "Setup required" : "Not connected"))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundColor(isAuthenticated ? PastelTheme.textSecondary : PastelTheme.textTertiary)
+                    .lineLimit(1)
             }
             
             Spacer()
@@ -287,6 +310,10 @@ private struct ShareSheet: View {
 }
 #endif
 
-#Preview {
-    ServicesHubView()
+#if DEBUG
+struct ServicesHubView_Previews: PreviewProvider {
+    static var previews: some View {
+        ServicesHubView()
+    }
 }
+#endif

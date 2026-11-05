@@ -69,6 +69,36 @@ public final class AppleMusicProvider: MusicProviderProtocol, ObservableObject {
     public func fetchFavorites() async throws -> [UniversalTrack] {
         guard isAuthenticated else { throw NSError(domain: "AppleMusicProvider", code: 401, userInfo: [NSLocalizedDescriptionKey: "Not authorized for Apple Music"]) }
         
+        #if canImport(MusicKit)
+        if MusicAuthorization.currentStatus == .authorized {
+            do {
+                var request = MusicLibraryRequest<Song>()
+                request.limit = 100
+                let response = try await request.response()
+                if !response.items.isEmpty {
+                    let liveTracks = response.items.map { song in
+                        UniversalTrack(
+                            isrc: song.isrc,
+                            title: song.title,
+                            artists: [song.artistName],
+                            album: song.albums?.first?.title,
+                            durationMs: Int((song.duration ?? 0) * 1000),
+                            releaseYear: song.releaseDate.map { Calendar.current.component(.year, from: $0) },
+                            appleMusicId: song.id.rawValue
+                        )
+                    }
+                    await MainActor.run {
+                        self.trackCount = liveTracks.count
+                        self.lastSyncDate = Date()
+                    }
+                    return liveTracks
+                }
+            } catch {
+                print("⚠️ [AppleMusicProvider] MusicLibraryRequest failed, falling back to cached sample: \(error)")
+            }
+        }
+        #endif
+        
         return [
             UniversalTrack(
                 isrc: "USUM71703861",

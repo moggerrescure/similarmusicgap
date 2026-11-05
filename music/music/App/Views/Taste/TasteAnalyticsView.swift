@@ -360,8 +360,12 @@ private struct ShareImageSheet: View {
 }
 #endif
 
-#Preview {
-    NavigationStack {
-        TasteAnalyticsView()
+#if DEBUG
+struct TasteAnalyticsView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack {
+            TasteAnalyticsView()
+        }
     }
 }
+#endif

@@ -130,6 +130,10 @@ private struct DuplicateRowCard: View {
     }
 }
 
-#Preview {
-    DuplicatesInspectorView(duplicates: [])
+#if DEBUG
+struct DuplicatesInspectorView_Previews: PreviewProvider {
+    static var previews: some View {
+        DuplicatesInspectorView(duplicates: [])
+    }
 }
+#endif

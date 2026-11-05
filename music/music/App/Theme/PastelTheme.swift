@@ -117,6 +117,14 @@ public enum HapticManager {
         generator.notificationOccurred(.success)
         #endif
     }
+    
+    public static func errorNotification() {
+        #if os(iOS)
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.error)
+        #endif
+    }
 }
 
 // MARK: - Spring Physics Button Style (Emil Kowalski Philosophy)

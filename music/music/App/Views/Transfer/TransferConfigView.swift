@@ -399,8 +399,12 @@ public struct TransferConfigView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        TransferConfigView()
+#if DEBUG
+struct TransferConfigView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationStack {
+            TransferConfigView()
+        }
     }
 }
+#endif

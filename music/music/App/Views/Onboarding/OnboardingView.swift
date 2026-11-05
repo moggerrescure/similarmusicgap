@@ -224,7 +224,11 @@ private struct ServiceIconCircle: View {
     }
 }
 
-#Preview {
-    OnboardingView()
+#if DEBUG
+struct OnboardingView_Previews: PreviewProvider {
+    static var previews: some View {
+        OnboardingView()
+    }
 }
+#endif
 

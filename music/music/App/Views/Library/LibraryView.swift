@@ -424,6 +424,10 @@ private struct FilterChip: View {
     }
 }
 
-#Preview {
-    LibraryView()
+#if DEBUG
+struct LibraryView_Previews: PreviewProvider {
+    static var previews: some View {
+        LibraryView()
+    }
 }
+#endif
