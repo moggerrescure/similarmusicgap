@@ -129,15 +129,26 @@ public struct TransferConfigView: View {
                     showingProfileSheet = true
                 } label: {
                     ZStack {
-                        Circle()
-                            .fill(PastelTheme.cardSubtle)
-                            .frame(width: 32, height: 32)
-                            .overlay(
-                                Circle().stroke(PastelTheme.cardBorder, lineWidth: 1)
-                            )
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(PastelTheme.pastelOat)
+                        if let customImg = coordinator.customAvatarImage {
+                            customImg
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                                .overlay(
+                                    Circle().stroke(PastelTheme.pastelOat.opacity(0.8), lineWidth: 1.2)
+                                )
+                        } else {
+                            Circle()
+                                .fill(PastelTheme.cardSubtle)
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Circle().stroke(PastelTheme.cardBorder, lineWidth: 1)
+                                )
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundColor(PastelTheme.pastelOat)
+                        }
                     }
                 }
             }

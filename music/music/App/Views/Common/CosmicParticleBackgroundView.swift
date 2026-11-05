@@ -12,6 +12,7 @@ import AppKit
 /// Features a pure OLED Cashmere Charcoal canvas (#0E0F12) with subtle atmospheric depth
 /// and ultra-fine, quiet micro-stardust particles rendered directly on GPU via CoreAnimation.
 public struct CosmicParticleBackgroundView: View {
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     public var particleCount: Int = 30
     
     public init(particleCount: Int = 30) {
@@ -25,22 +26,26 @@ public struct CosmicParticleBackgroundView: View {
             
             // 2. Faint, Quiet Luxury Vignette (No loud colors, strictly elegant Apple dark space)
             RadialGradient(
-                colors: [Color(hex: "#14151C").opacity(0.35), Color.clear],
+                colors: [Color(hex: "#14151C").opacity(0.30), Color.clear],
                 center: .topTrailing,
                 startRadius: 50,
                 endRadius: 520
             )
             
             RadialGradient(
-                colors: [Color(hex: "#101217").opacity(0.25), Color.clear],
+                colors: [Color(hex: "#101217").opacity(0.20), Color.clear],
                 center: .bottomLeading,
                 startRadius: 80,
                 endRadius: 600
             )
             
             // 3. Hardware GPU CAEmitterLayer: Ultra-fine, subtle stardust (0% CPU, 120 FPS)
-            GPUMicroStardustEmitterRepresentable()
-                .opacity(0.45)
+            // Controlled by the user toggle in Profile & Vault
+            if coordinator.backgroundParticlesEnabled {
+                GPUMicroStardustEmitterRepresentable()
+                    .opacity(0.35)
+                    .transition(.opacity)
+            }
         }
         .ignoresSafeArea()
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// Luxury Apple HIG HUD Profile & Account Inspector Sheet
 public struct UserProfileSheet: View {
@@ -6,6 +7,7 @@ public struct UserProfileSheet: View {
     @ObservedObject private var coordinator = ServicesCoordinator.shared
     @ObservedObject private var navCoordinator = NavigationCoordinator.shared
     
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var cacheCleared: Bool = false
     @State private var cacheSizeText: String = "18.4 MB"
     @State private var showingExportSheet: Bool = false
@@ -25,25 +27,54 @@ public struct UserProfileSheet: View {
                         
                         // MARK: - Hero Profile Header
                         HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [PastelTheme.pastelOat.opacity(0.2), PastelTheme.cardSubtle],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 64, height: 64)
-                                    .overlay(
+                            // Avatar with PhotosPicker from Library
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                ZStack(alignment: .bottomTrailing) {
+                                    if let customImage = coordinator.customAvatarImage {
+                                        customImage
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 68, height: 68)
+                                            .clipShape(Circle())
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(PastelTheme.pastelOat, lineWidth: 1.5)
+                                            )
+                                    } else {
                                         Circle()
-                                            .stroke(PastelTheme.cardBorderFocused, lineWidth: 1.5)
-                                    )
-                                
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 38))
-                                    .foregroundColor(PastelTheme.pastelOat)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [PastelTheme.pastelOat.opacity(0.2), PastelTheme.cardSubtle],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .frame(width: 68, height: 68)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(PastelTheme.cardBorderFocused, lineWidth: 1.5)
+                                            )
+                                        
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(PastelTheme.pastelOat)
+                                    }
+                                    
+                                    // Camera edit badge
+                                    ZStack {
+                                        Circle()
+                                            .fill(PastelTheme.card)
+                                            .frame(width: 24, height: 24)
+                                            .overlay(Circle().stroke(PastelTheme.cardBorder, lineWidth: 1))
+                                        
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(PastelTheme.pastelOat)
+                                    }
+                                    .offset(x: 2, y: 2)
+                                }
                             }
+                            .buttonStyle(TouchFeedbackButtonStyle())
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(displayName)
@@ -58,6 +89,18 @@ public struct UserProfileSheet: View {
                                     Text(coordinator.activeProvidersCount > 0 ? "Synced & Protected" : "Local Vault Only")
                                         .font(.system(size: 12, weight: .medium, design: .rounded))
                                         .foregroundColor(PastelTheme.textSecondary)
+                                }
+                                
+                                if coordinator.customAvatarData != nil {
+                                    Button {
+                                        coordinator.clearCustomAvatar()
+                                    } label: {
+                                        Text("Удалить фото")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(PastelTheme.textTertiary)
+                                            .underline()
+                                    }
+                                    .padding(.top, 2)
                                 }
                             }
                         }
@@ -129,6 +172,36 @@ public struct UserProfileSheet: View {
                                     navCoordinator.navigateToServices()
                                 }
                             }
+                        }
+                        
+                        // MARK: - Appearance & Ambient Particles
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("APPEARANCE & PARTICLES")
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .tracking(0.6)
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .padding(.horizontal, 4)
+                            
+                            VStack(spacing: 12) {
+                                Toggle(isOn: $coordinator.backgroundParticlesEnabled) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Фоновые микрочастицы (Stardust)")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(PastelTheme.textPrimary)
+                                        Text(coordinator.backgroundParticlesEnabled ? "Мягкое космическое свечение (0% CPU, 120 FPS)" : "Чистый глубокий OLED-чёрный фон")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(PastelTheme.textSecondary)
+                                    }
+                                }
+                                .tint(PastelTheme.emeraldSuccess)
+                            }
+                            .padding(14)
+                            .background(PastelTheme.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                            )
                         }
                         
                         // MARK: - Storage & Cache Cleaner
@@ -260,6 +333,16 @@ public struct UserProfileSheet: View {
             .sheet(isPresented: $showingExportSheet) {
                 if let url = exportURL {
                     ProfileShareSheet(activityItems: [url])
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                guard let newItem else { return }
+                Task {
+                    if let data = try? await newItem.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            coordinator.saveCustomAvatar(data: data)
+                        }
+                    }
                 }
             }
         }

@@ -10,7 +10,6 @@ public struct TransferBridgeFlowView: View {
     // Animation state for flowing track capsules
     @State private var streamPhase: CGFloat = 0.0
     @State private var flowingTrackOffset: CGFloat = -180
-    @State private var showLandingSpark: Bool = false
     
     public init(source: MusicProviderType, destination: MusicProviderType) {
         self.source = source
@@ -141,18 +140,8 @@ public struct TransferBridgeFlowView: View {
                     .background(PastelTheme.cardSubtle)
                     .clipShape(Capsule())
                     .overlay(Capsule().stroke(PastelTheme.cardBorderFocused, lineWidth: 1))
-                    .shadow(color: PastelTheme.emeraldSuccess.opacity(0.2), radius: 8)
+                    .shadow(color: PastelTheme.emeraldSuccess.opacity(0.12), radius: 6)
                     .offset(x: flowingTrackOffset)
-                    
-                    // Target Landing Spark
-                    if showLandingSpark {
-                        Circle()
-                            .fill(PastelTheme.emeraldSuccess)
-                            .frame(width: 24, height: 24)
-                            .blur(radius: 4)
-                            .offset(x: 130)
-                            .transition(.scale.combined(with: .opacity))
-                    }
                 }
                 .padding(.horizontal, 20)
                 
@@ -233,16 +222,12 @@ public struct TransferBridgeFlowView: View {
     
     private func animateTrackCrossing() {
         flowingTrackOffset = -130
-        showLandingSpark = false
         
         withAnimation(.easeInOut(duration: 2.2)) {
             flowingTrackOffset = 130
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
-                showLandingSpark = true
-            }
             HapticManager.lightImpact()
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {

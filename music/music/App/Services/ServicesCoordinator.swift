@@ -15,7 +15,55 @@ public final class ServicesCoordinator: ObservableObject {
     @Published public var allTracks: [UniversalTrack] = []
     @Published public var allPlaylists: [UniversalPlaylist] = []
     
+    // MARK: - User Custom Avatar & Personalization
+    private static let avatarKey = "soundshift_user_custom_avatar_data"
+    private static let particlesKey = "soundshift_particles_enabled"
+    
+    @Published public var customAvatarData: Data? {
+        didSet {
+            if let data = customAvatarData {
+                UserDefaults.standard.set(data, forKey: Self.avatarKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.avatarKey)
+            }
+        }
+    }
+    
+    @Published public var backgroundParticlesEnabled: Bool = true {
+        didSet {
+            UserDefaults.standard.set(backgroundParticlesEnabled, forKey: Self.particlesKey)
+        }
+    }
+    
+    #if os(iOS)
+    public var customAvatarImage: Image? {
+        guard let data = customAvatarData, let uiImg = UIImage(data: data) else { return nil }
+        return Image(uiImage: uiImg)
+    }
+    #else
+    public var customAvatarImage: Image? {
+        guard let data = customAvatarData, let nsImg = NSImage(data: data) else { return nil }
+        return Image(nsImage: nsImg)
+    }
+    #endif
+    
+    public func saveCustomAvatar(data: Data) {
+        self.customAvatarData = data
+        HapticManager.successNotification()
+    }
+    
+    public func clearCustomAvatar() {
+        self.customAvatarData = nil
+        HapticManager.lightImpact()
+    }
+    
     private init() {
+        self.customAvatarData = UserDefaults.standard.data(forKey: Self.avatarKey)
+        if UserDefaults.standard.object(forKey: Self.particlesKey) != nil {
+            self.backgroundParticlesEnabled = UserDefaults.standard.bool(forKey: Self.particlesKey)
+        } else {
+            self.backgroundParticlesEnabled = true
+        }
         refreshAggregates()
     }
     
