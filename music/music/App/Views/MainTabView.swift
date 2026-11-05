@@ -7,40 +7,44 @@ public struct MainTabView: View {
     public init() {}
     
     public var body: some View {
-        TabView(selection: $selectedTab) {
-            // Tab 1: Services Hub
-            ServicesHubView()
-                .tabItem {
-                    Label("Services", systemImage: "link.circle.fill")
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                // Tab 1: Services Hub
+                ServicesHubView()
+                    .tabItem {
+                        Label("Services", systemImage: "link.circle.fill")
+                    }
+                    .tag(0)
+                
+                // Tab 2: Library
+                LibraryView()
+                    .tabItem {
+                        Label("Library", systemImage: "music.note.list")
+                    }
+                    .tag(1)
+                
+                // Tab 3: Transfer
+                NavigationStack {
+                    TransferConfigView()
                 }
-                .tag(0)
-            
-            // Tab 2: Library
-            LibraryView()
                 .tabItem {
-                    Label("Library", systemImage: "music.note.list")
+                    Label("Transfer", systemImage: "arrow.triangle.swap")
                 }
-                .tag(1)
+                .tag(2)
+                
+                // Tab 4: Taste Profile
+                NavigationStack {
+                    TasteAnalyticsView()
+                }
+                .tabItem {
+                    Label("Taste", systemImage: "chart.bar.fill")
+                }
+                .tag(3)
+            }
+            .tint(PastelTheme.pastelOat)
             
-            // Tab 3: Transfer
-            NavigationStack {
-                TransferConfigView()
-            }
-            .tabItem {
-                Label("Transfer", systemImage: "arrow.triangle.swap")
-            }
-            .tag(2)
-            
-            // Tab 4: Taste Profile
-            NavigationStack {
-                TasteAnalyticsView()
-            }
-            .tabItem {
-                Label("Taste", systemImage: "chart.bar.fill")
-            }
-            .tag(3)
+            FloatingMiniPlayerView()
         }
-        .tint(PastelTheme.pastelOat)
         .onAppear {
             customizeTabBarAppearance()
         }

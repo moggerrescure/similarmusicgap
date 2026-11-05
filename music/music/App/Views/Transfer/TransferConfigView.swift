@@ -14,6 +14,7 @@ public struct TransferConfigView: View {
     // Flow Sheet Triggers
     @State private var isAnalyzingDryRun: Bool = false
     @State private var showingLiveMigration: Bool = false
+    @State private var showingBridgeFlow: Bool = false
     @State private var showingRematchInbox: Bool = false
     @State private var completedReport: TransferExecutionReport?
     
@@ -306,23 +307,47 @@ public struct TransferConfigView: View {
                             }
                             .buttonStyle(TouchFeedbackButtonStyle())
                         } else {
-                            Button {
-                                HapticManager.successNotification()
-                                startLiveMigration()
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "arrow.right.circle.fill")
-                                        .font(.system(size: 18, weight: .bold))
-                                    Text("Begin Transfer")
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            VStack(spacing: 10) {
+                                Button {
+                                    HapticManager.successNotification()
+                                    startLiveMigration()
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .font(.system(size: 18, weight: .bold))
+                                        Text("Begin Transfer")
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    }
+                                    .foregroundColor(PastelTheme.textOnOat)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
+                                    .background(PastelTheme.emeraldSuccess)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
-                                .foregroundColor(PastelTheme.textOnOat)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(PastelTheme.emeraldSuccess)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .buttonStyle(TouchFeedbackButtonStyle())
+                                
+                                Button {
+                                    HapticManager.lightImpact()
+                                    showingBridgeFlow = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "waveform.path.ecg")
+                                            .font(.system(size: 14, weight: .semibold))
+                                        Text("View Interactive Bridge Stream")
+                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    }
+                                    .foregroundColor(PastelTheme.pastelOat)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                                    .background(PastelTheme.card)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(TouchFeedbackButtonStyle())
                             }
-                            .buttonStyle(TouchFeedbackButtonStyle())
                         }
                     }
                     .padding(.top, 4)
@@ -335,6 +360,9 @@ public struct TransferConfigView: View {
         .inlineNavigationBarTitle()
         .fullScreenOrSheet(isPresented: $showingLiveMigration) {
             LiveTransferHUDView()
+        }
+        .sheet(isPresented: $showingBridgeFlow) {
+            TransferBridgeFlowView(source: sourceProvider, destination: destinationProvider)
         }
         .sheet(item: $completedReport) { report in
             TransferReportView(report: report)

@@ -6,6 +6,7 @@ public struct TasteAnalyticsView: View {
     @State private var showingStorySheet: Bool = false
     @State private var generatedStoryImage: PlatformImage?
     @State private var showingShareSheet: Bool = false
+    @State private var selectedCluster: ListeningCluster? = nil
     
     public init() {}
     
@@ -147,31 +148,41 @@ public struct TasteAnalyticsView: View {
                             .foregroundColor(PastelTheme.textTertiary)
                         
                         ForEach(profile.clusters) { cluster in
-                            HStack(spacing: 12) {
-                                Image(systemName: cluster.icon)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(Color(hex: cluster.colorHex))
-                                    .frame(width: 32, height: 32)
-                                    .background(PastelTheme.cardSubtle)
-                                    .clipShape(Circle())
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack {
-                                        Text(cluster.title)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(PastelTheme.textPrimary)
-                                        Spacer()
-                                        Text("\(cluster.percentage)%")
-                                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                                            .foregroundColor(Color(hex: cluster.colorHex))
+                            Button {
+                                HapticManager.lightImpact()
+                                selectedCluster = cluster
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: cluster.icon)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Color(hex: cluster.colorHex))
+                                        .frame(width: 32, height: 32)
+                                        .background(PastelTheme.cardSubtle)
+                                        .clipShape(Circle())
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack {
+                                            Text(cluster.title)
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(PastelTheme.textPrimary)
+                                            Spacer()
+                                            Text("\(cluster.percentage)%")
+                                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                .foregroundColor(Color(hex: cluster.colorHex))
+                                        }
+                                        Text(cluster.description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(PastelTheme.textSecondary)
+                                            .lineLimit(1)
                                     }
-                                    Text(cluster.description)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(PastelTheme.textSecondary)
-                                        .lineLimit(1)
+                                    
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(PastelTheme.textTertiary)
                                 }
+                                .padding(.vertical, 6)
                             }
-                            .padding(.vertical, 6)
+                            .buttonStyle(PlainButtonStyle())
                             
                             if cluster.id != profile.clusters.last?.id {
                                 Divider().background(PastelTheme.cardBorder)
@@ -214,6 +225,9 @@ public struct TasteAnalyticsView: View {
         .inlineNavigationBarTitle()
         .sheet(isPresented: $showingStorySheet) {
             StoryPreviewModal(profile: profile)
+        }
+        .sheet(item: $selectedCluster) { cluster in
+            HabitDetailSheet(cluster: cluster)
         }
     }
 }
