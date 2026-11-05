@@ -3,6 +3,7 @@ import SwiftUI
 /// Floating HUD Mini-Player docking above bottom navigation with Left-to-Right 3D fluid water-fill progress
 public struct FloatingMiniPlayerView: View {
     @ObservedObject private var player = AudioPlayerManager.shared
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     @State private var showingFullPlayer: Bool = false
     
     public init() {}
@@ -14,13 +15,11 @@ public struct FloatingMiniPlayerView: View {
                 ZStack(alignment: .leading) {
                     PastelTheme.card
                     
-                    // Left-to-Right Fluid Water Fill Layer
+                    // Left-to-Right Dynamic Flask Fill Layer (Defaults to Chronos Stardust everywhere)
                     HorizontalLiquidWaveProgressView(
                         progress: player.progress,
                         currentTime: player.currentTime,
-                        duration: player.duration,
-                        primaryColor: PastelTheme.pastelOat,
-                        secondaryColor: PastelTheme.emeraldSuccess
+                        duration: player.duration
                     )
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -127,7 +126,7 @@ public struct FloatingMiniPlayerView: View {
                         Rectangle()
                             .fill(
                                 LinearGradient(
-                                    colors: [PastelTheme.emeraldSuccess, PastelTheme.pastelOat],
+                                    colors: [coordinator.flaskFillingStyle.primaryColor, coordinator.flaskFillingStyle.accentGlowColor],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )

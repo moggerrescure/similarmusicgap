@@ -18,6 +18,7 @@ public final class ServicesCoordinator: ObservableObject {
     // MARK: - User Custom Avatar & Personalization
     private static let avatarKey = "soundshift_user_custom_avatar_data"
     private static let particlesKey = "soundshift_particles_enabled"
+    private static let flaskStyleKey = "soundshift_flask_filling_style_key"
     
     @Published public var customAvatarData: Data? {
         didSet {
@@ -32,6 +33,12 @@ public final class ServicesCoordinator: ObservableObject {
     @Published public var backgroundParticlesEnabled: Bool = true {
         didSet {
             UserDefaults.standard.set(backgroundParticlesEnabled, forKey: Self.particlesKey)
+        }
+    }
+    
+    @Published public var flaskFillingStyle: FlaskFillingStyle = .chronosStardust {
+        didSet {
+            UserDefaults.standard.set(flaskFillingStyle.rawValue, forKey: Self.flaskStyleKey)
         }
     }
     
@@ -57,6 +64,11 @@ public final class ServicesCoordinator: ObservableObject {
         HapticManager.lightImpact()
     }
     
+    public func setFlaskFillingStyle(_ style: FlaskFillingStyle) {
+        self.flaskFillingStyle = style
+        HapticManager.lightImpact()
+    }
+    
     private init() {
         self.customAvatarData = UserDefaults.standard.data(forKey: Self.avatarKey)
         if UserDefaults.standard.object(forKey: Self.particlesKey) != nil {
@@ -64,6 +76,14 @@ public final class ServicesCoordinator: ObservableObject {
         } else {
             self.backgroundParticlesEnabled = true
         }
+        
+        if let savedStyleRaw = UserDefaults.standard.string(forKey: Self.flaskStyleKey),
+           let savedStyle = FlaskFillingStyle(rawValue: savedStyleRaw) {
+            self.flaskFillingStyle = savedStyle
+        } else {
+            self.flaskFillingStyle = .chronosStardust
+        }
+        
         refreshAggregates()
     }
     

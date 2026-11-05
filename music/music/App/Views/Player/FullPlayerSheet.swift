@@ -80,14 +80,12 @@ public struct FullPlayerSheet: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(PastelTheme.card)
                             
-                            // 3D Left-to-Right Liquid Wave Fill
+                            // 3D Left-to-Right Dynamic Flask Fill (Defaults to Chronos Stardust)
                             HorizontalLiquidWaveProgressView(
                                 progress: isDraggingScrubber ? dragProgress : player.progress,
                                 currentTime: player.currentTime,
                                 duration: player.duration,
-                                showSecondsHUD: false,
-                                primaryColor: PastelTheme.pastelOat,
-                                secondaryColor: PastelTheme.emeraldSuccess
+                                showSecondsHUD: false
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }

@@ -204,6 +204,132 @@ public struct UserProfileSheet: View {
                             )
                         }
                         
+                        // MARK: - Flask Filling Style Selector (Колба плеера)
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("ЗАПОЛНЕНИЕ МУЗЫКАЛЬНОЙ КОЛБЫ")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .tracking(0.6)
+                                    .foregroundColor(PastelTheme.textTertiary)
+                                
+                                Spacer()
+                                
+                                Text("HUD STYLE")
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundColor(coordinator.flaskFillingStyle.primaryColor)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(coordinator.flaskFillingStyle.primaryColor.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.horizontal, 4)
+                            
+                            // Live Interactive Mini-Flask Preview
+                            ZStack(alignment: .leading) {
+                                PastelTheme.cardSubtle
+                                
+                                HorizontalLiquidWaveProgressView(
+                                    progress: 0.58,
+                                    currentTime: 116,
+                                    duration: 200,
+                                    showSecondsHUD: false,
+                                    styleOverride: coordinator.flaskFillingStyle
+                                )
+                                
+                                HStack(spacing: 8) {
+                                    Image(systemName: coordinator.flaskFillingStyle.icon)
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(coordinator.flaskFillingStyle.primaryColor)
+                                    
+                                    Text(coordinator.flaskFillingStyle.title)
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundColor(PastelTheme.textPrimary)
+                                    
+                                    Spacer()
+                                    
+                                    Text("01:56 • Живой предпросмотр")
+                                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                        .foregroundColor(coordinator.flaskFillingStyle.primaryColor)
+                                }
+                                .padding(.horizontal, 12)
+                            }
+                            .frame(height: 44)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
+                            )
+                            
+                            // List of the 4 Style Options
+                            VStack(spacing: 8) {
+                                ForEach(FlaskFillingStyle.allCases) { style in
+                                    Button {
+                                        coordinator.setFlaskFillingStyle(style)
+                                    } label: {
+                                        HStack(spacing: 12) {
+                                            // Style Icon Circle
+                                            ZStack {
+                                                Circle()
+                                                    .fill(style == coordinator.flaskFillingStyle ? style.primaryColor.opacity(0.20) : PastelTheme.cardSubtle)
+                                                    .frame(width: 36, height: 36)
+                                                
+                                                Image(systemName: style.icon)
+                                                    .font(.system(size: 14, weight: .bold))
+                                                    .foregroundColor(style == coordinator.flaskFillingStyle ? style.primaryColor : PastelTheme.textSecondary)
+                                            }
+                                            
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                HStack(spacing: 6) {
+                                                    Text(style.title)
+                                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                        .foregroundColor(PastelTheme.textPrimary)
+                                                    
+                                                    if style == .chronosStardust {
+                                                        Text("DEFAULT")
+                                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                                            .foregroundColor(PastelTheme.textOnOat)
+                                                            .padding(.horizontal, 5)
+                                                            .padding(.vertical, 1.5)
+                                                            .background(PastelTheme.pastelOat)
+                                                            .clipShape(Capsule())
+                                                    }
+                                                }
+                                                
+                                                Text(style.subtitle)
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(PastelTheme.textSecondary)
+                                                    .lineLimit(1)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            // Radio Checkmark
+                                            ZStack {
+                                                Circle()
+                                                    .stroke(style == coordinator.flaskFillingStyle ? style.primaryColor : PastelTheme.cardBorder, lineWidth: 1.5)
+                                                    .frame(width: 20, height: 20)
+                                                
+                                                if style == coordinator.flaskFillingStyle {
+                                                    Circle()
+                                                        .fill(style.primaryColor)
+                                                        .frame(width: 10, height: 10)
+                                                }
+                                            }
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(PastelTheme.card)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                .stroke(style == coordinator.flaskFillingStyle ? style.primaryColor.opacity(0.4) : PastelTheme.cardBorder, lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                        
                         // MARK: - Storage & Cache Cleaner
                         VStack(alignment: .leading, spacing: 10) {
                             Text("CACHE & STORAGE")
