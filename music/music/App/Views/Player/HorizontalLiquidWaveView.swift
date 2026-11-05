@@ -116,8 +116,18 @@ public struct HorizontalLiquidWaveShape: Shape {
     }
 }
 
-/// Dynamic Left-to-Right Flask Fill View supporting all 4 visual styles
-/// Defaults to Chronos Stardust across the entire application, and reacts dynamically to profile selection.
+/// Internal animated stardust/bubble particle model for dynamic volumetric drift
+private struct FlaskInternalParticle: Identifiable {
+    let id: Int
+    let relX: CGFloat      // 0.0 ... 1.0 (relative phase in drift)
+    let relY: CGFloat      // 0.15 ... 0.85 (vertical lane)
+    let speed: CGFloat     // horizontal drift speed multiplier
+    let size: CGFloat      // particle point size
+    let isDiamond: Bool    // 4-point diamond star vs luminous circular mote
+    let baseOpacity: Double
+}
+
+/// Dynamic Left-to-Right Flask Fill View supporting all 4 visual styles with live moving particles & iridescent shimmer
 public struct HorizontalLiquidWaveProgressView: View {
     @ObservedObject private var coordinator = ServicesCoordinator.shared
     
@@ -131,6 +141,20 @@ public struct HorizontalLiquidWaveProgressView: View {
     public var styleOverride: FlaskFillingStyle? = nil
     
     @State private var phase: CGFloat = 0.0
+    
+    // Seeded internal stardust particles that continuously drift and twinkle inside the flask
+    private static let seededParticles: [FlaskInternalParticle] = [
+        FlaskInternalParticle(id: 0, relX: 0.10, relY: 0.28, speed: 0.35, size: 7.0, isDiamond: true, baseOpacity: 0.95),
+        FlaskInternalParticle(id: 1, relX: 0.25, relY: 0.72, speed: 0.50, size: 3.5, isDiamond: false, baseOpacity: 0.85),
+        FlaskInternalParticle(id: 2, relX: 0.40, relY: 0.35, speed: 0.42, size: 8.0, isDiamond: true, baseOpacity: 0.98),
+        FlaskInternalParticle(id: 3, relX: 0.55, relY: 0.78, speed: 0.62, size: 3.0, isDiamond: false, baseOpacity: 0.75),
+        FlaskInternalParticle(id: 4, relX: 0.68, relY: 0.22, speed: 0.46, size: 6.5, isDiamond: true, baseOpacity: 0.90),
+        FlaskInternalParticle(id: 5, relX: 0.82, relY: 0.62, speed: 0.54, size: 3.8, isDiamond: false, baseOpacity: 0.85),
+        FlaskInternalParticle(id: 6, relX: 0.32, relY: 0.52, speed: 0.30, size: 2.8, isDiamond: false, baseOpacity: 0.70),
+        FlaskInternalParticle(id: 7, relX: 0.62, relY: 0.44, speed: 0.48, size: 7.5, isDiamond: true, baseOpacity: 0.92),
+        FlaskInternalParticle(id: 8, relX: 0.90, relY: 0.30, speed: 0.68, size: 2.5, isDiamond: false, baseOpacity: 0.80),
+        FlaskInternalParticle(id: 9, relX: 0.18, relY: 0.82, speed: 0.38, size: 3.2, isDiamond: false, baseOpacity: 0.78)
+    ]
     
     public init(
         progress: Double,
@@ -159,6 +183,7 @@ public struct HorizontalLiquidWaveProgressView: View {
             let fillWidth = max(0, min(geo.size.width, geo.size.width * CGFloat(progress)))
             
             ZStack(alignment: .leading) {
+                // 1. Specific Filling Style Layer
                 switch activeStyle {
                 case .chronosStardust:
                     chronosStardustLayer(fillWidth: fillWidth, size: geo.size)
@@ -169,67 +194,136 @@ public struct HorizontalLiquidWaveProgressView: View {
                 case .acousticPrism:
                     acousticPrismLayer(fillWidth: fillWidth, size: geo.size)
                 }
+                
+                // 2. Crystal Flask Tube Specular Reflection (Красивый стеклянный перелив колбы)
+                glassTubeSpecularSheen(fillWidth: fillWidth, size: geo.size)
             }
         }
         .onAppear {
-            withAnimation(.linear(duration: 2.2).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: 2.6).repeatForever(autoreverses: false)) {
                 phase = .pi * 2
             }
         }
     }
     
+    // MARK: - Crystal Flask Glass Specular Sheen (Зеркальный перелив трубки)
+    @ViewBuilder
+    private func glassTubeSpecularSheen(fillWidth: CGFloat, size: CGSize) -> some View {
+        // Upper glass tube cylindrical highlight
+        VStack(spacing: 0) {
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.16),
+                    Color.white.opacity(0.04),
+                    Color.clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: size.height * 0.42)
+            
+            Spacer(minLength: 0)
+            
+            // Bottom rim glass reflection
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1.5)
+        }
+        .allowsHitTesting(false)
+        
+        // Moving diagonal iridescent light glint across the flask
+        let sweepOffset = (sin(phase * 0.6) * 0.5 + 0.5) * size.width
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color.white.opacity(0.0),
+                        Color.white.opacity(0.12),
+                        Color(hex: "#FFF8EC").opacity(0.20),
+                        Color.white.opacity(0.12),
+                        Color.white.opacity(0.0),
+                        Color.clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 48, height: size.height * 1.2)
+            .rotationEffect(.degrees(20))
+            .offset(x: sweepOffset - 24, y: -size.height * 0.1)
+            .allowsHitTesting(false)
+            .clipped()
+    }
+    
     // MARK: - 1. CHRONOS STARDUST («Хроно-Песок» - DEFAULT)
     @ViewBuilder
     private func chronosStardustLayer(fillWidth: CGFloat, size: CGSize) -> some View {
-        // Dune velvet wash
+        // A. Multi-stop Shimmering Dune Velvet Wash
         HorizontalLiquidWaveShape(
             progress: CGFloat(progress),
             phase: phase,
-            amplitude: 3.5
+            amplitude: 3.8
         )
         .fill(
             LinearGradient(
                 colors: [
-                    PastelTheme.pastelOat.opacity(0.10),
-                    PastelTheme.pastelOat.opacity(0.24),
-                    Color(hex: "#FFF8EC").opacity(0.44)
+                    PastelTheme.pastelOat.opacity(0.12),
+                    PastelTheme.pastelOat.opacity(0.26 + sin(phase * 0.8) * 0.05),
+                    Color(hex: "#FDE68A").opacity(0.28 + cos(phase * 0.8) * 0.06),
+                    Color(hex: "#FFF8EC").opacity(0.50 + sin(phase * 1.2) * 0.08)
                 ],
-                startPoint: .leading,
-                endPoint: .trailing
+                startPoint: UnitPoint(x: CGFloat(sin(phase * 0.5) * 0.15), y: 0),
+                endPoint: UnitPoint(x: 1.0 + CGFloat(cos(phase * 0.5) * 0.15), y: 1)
             )
         )
         
-        // Internal twinkling stardust crystals inside filled space
-        if fillWidth > 20 {
-            HStack(spacing: 0) {
-                ZStack {
-                    // Star granule 1
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 8))
-                        .foregroundColor(Color.white.opacity(0.85))
-                        .offset(x: fillWidth * 0.25 - fillWidth / 2, y: -size.height * 0.18 + sin(phase) * 2)
+        // B. Dynamic Moving Stardust Particles inside the filled volume
+        if fillWidth > 18 {
+            ZStack(alignment: .leading) {
+                ForEach(Self.seededParticles) { p in
+                    // Horizontal continuous cyclic drift within the filled water/sand volume
+                    let driftProgress = CGFloat((Double(p.relX) + (Double(phase) / (Double.pi * 2.0)) * Double(p.speed)).truncatingRemainder(dividingBy: 1.0))
+                    let normalizedX = driftProgress >= 0 ? driftProgress : driftProgress + 1.0
+                    let particleX = fillWidth * normalizedX
                     
-                    // Star granule 2
-                    Image(systemName: "sparkle")
-                        .font(.system(size: 6))
-                        .foregroundColor(PastelTheme.pastelOat.opacity(0.75))
-                        .offset(x: fillWidth * 0.60 - fillWidth / 2, y: size.height * 0.20 + cos(phase) * 2)
+                    // Vertical organic current oscillation
+                    let verticalSway = sin(phase * 1.6 + CGFloat(p.id)) * (size.height * 0.14)
+                    let particleY = size.height * p.relY + verticalSway
                     
-                    // Star granule 3
-                    Circle()
-                        .fill(Color.white.opacity(0.90))
-                        .frame(width: 2.5, height: 2.5)
-                        .offset(x: fillWidth * 0.82 - fillWidth / 2, y: -size.height * 0.05 + sin(phase * 1.5) * 1.5)
+                    // Twinkling shimmer brightness
+                    let twinkle = 0.60 + 0.40 * sin(phase * 2.5 + CGFloat(p.id) * 1.2)
+                    let opacity = p.baseOpacity * Double(twinkle)
+                    
+                    Group {
+                        if p.isDiamond {
+                            // 4-point diamond star crystal drifting
+                            Image(systemName: "sparkle")
+                                .font(.system(size: p.size))
+                                .foregroundColor(Color(hex: "#FFF8EC").opacity(opacity))
+                                .rotationEffect(.degrees(Double(phase * 40.0) + Double(p.id * 30)))
+                        } else {
+                            // Glowing circular celestial mote with soft halo
+                            ZStack {
+                                Circle()
+                                    .fill(PastelTheme.pastelOat.opacity(opacity * 0.35))
+                                    .frame(width: p.size * 2.0, height: p.size * 2.0)
+                                Circle()
+                                    .fill(Color.white.opacity(opacity))
+                                    .frame(width: p.size, height: p.size)
+                            }
+                        }
+                    }
+                    .position(x: particleX, y: particleY)
                 }
-                .frame(width: fillWidth, height: size.height)
-                
-                Spacer(minLength: 0)
             }
+            .frame(width: fillWidth, height: size.height)
             .clipped()
         }
         
-        // Leading luminous dune crest with glowing edge
+        // C. Shimmering Leading Dune Crest with Iridescent Specular Glint
         if progress > 0.01 && progress < 0.995 {
+            // Radiant edge line
             Rectangle()
                 .fill(
                     LinearGradient(
@@ -237,6 +331,7 @@ public struct HorizontalLiquidWaveProgressView: View {
                             Color.clear,
                             Color(hex: "#FFF8EC").opacity(0.6),
                             Color.white,
+                            Color(hex: "#FDE68A").opacity(0.8),
                             Color(hex: "#FFF8EC").opacity(0.6),
                             Color.clear
                         ],
@@ -244,27 +339,29 @@ public struct HorizontalLiquidWaveProgressView: View {
                         endPoint: .bottom
                     )
                 )
-                .frame(width: 2.2, height: size.height)
-                .offset(x: fillWidth - 1.0)
-                .blur(radius: 0.6)
+                .frame(width: 2.5, height: size.height)
+                .offset(x: fillWidth - 1.2)
+                .blur(radius: 0.5)
             
-            // Breakaway flying stardust embers ahead of the dune
+            // Breakaway flying stardust embers that dance into the open space ahead
             Circle()
                 .fill(Color.white.opacity(0.95))
-                .frame(width: 2, height: 2)
-                .offset(x: fillWidth + 6 + sin(phase * 2) * 4, y: size.height * 0.35 + cos(phase) * 3)
+                .frame(width: 2.5, height: 2.5)
+                .offset(x: fillWidth + 6 + sin(phase * 2.0) * 5, y: size.height * 0.30 + cos(phase * 1.5) * 4)
+                .shadow(color: Color(hex: "#FFF8EC"), radius: 3)
             
             Circle()
-                .fill(PastelTheme.pastelOat.opacity(0.85))
-                .frame(width: 1.5, height: 1.5)
-                .offset(x: fillWidth + 12 + cos(phase * 2) * 3, y: size.height * 0.65 + sin(phase) * 4)
+                .fill(Color(hex: "#FDE68A").opacity(0.90))
+                .frame(width: 2.0, height: 2.0)
+                .offset(x: fillWidth + 14 + cos(phase * 2.2) * 4, y: size.height * 0.70 + sin(phase * 1.8) * 5)
+                .shadow(color: PastelTheme.warmAmber, radius: 2)
         }
     }
     
     // MARK: - 2. MERCURY OCEAN («Меркури-Океан»)
     @ViewBuilder
     private func mercuryOceanLayer(fillWidth: CGFloat, size: CGSize) -> some View {
-        // Double-harmonic fluid body
+        // A. Double-harmonic fluid body with emerald iridescence
         HorizontalLiquidWaveShape(
             progress: CGFloat(progress),
             phase: phase * 0.8 + .pi / 4,
@@ -274,7 +371,7 @@ public struct HorizontalLiquidWaveProgressView: View {
             LinearGradient(
                 colors: [
                     PastelTheme.emeraldSuccess.opacity(0.08),
-                    PastelTheme.emeraldSuccess.opacity(0.20)
+                    PastelTheme.emeraldSuccess.opacity(0.22)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -290,50 +387,49 @@ public struct HorizontalLiquidWaveProgressView: View {
             LinearGradient(
                 colors: [
                     PastelTheme.emeraldSuccess.opacity(0.12),
-                    PastelTheme.emeraldSuccess.opacity(0.28),
-                    PastelTheme.emeraldSuccess.opacity(0.42)
+                    PastelTheme.emeraldSuccess.opacity(0.28 + sin(phase) * 0.05),
+                    Color(hex: "#34D399").opacity(0.45)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         )
         
-        // Rising champagne bubbles inside water
-        if fillWidth > 24 {
-            HStack(spacing: 0) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.70))
-                        .frame(width: 3.5, height: 3.5)
-                        .offset(x: fillWidth * 0.30 - fillWidth / 2, y: -sin(phase + 0.5) * (size.height * 0.35))
+        // B. Continuously Rising & Drifting Champagne Micro-Bubbles
+        if fillWidth > 20 {
+            ZStack(alignment: .leading) {
+                ForEach(Self.seededParticles.prefix(8)) { b in
+                    // Bubbles drift horizontally with current while rising vertically
+                    let driftProgress = CGFloat((Double(b.relX) + (Double(phase) / (Double.pi * 2.0)) * 0.3).truncatingRemainder(dividingBy: 1.0))
+                    let bubbleX = fillWidth * (driftProgress >= 0 ? driftProgress : driftProgress + 1.0)
+                    
+                    // Vertical continuous rising cycle
+                    let riseCycle = (CGFloat(b.relY) - (phase * 0.15 * b.speed)).truncatingRemainder(dividingBy: 1.0)
+                    let bubbleY = size.height * (riseCycle >= 0 ? riseCycle : riseCycle + 1.0)
+                    
+                    // Wobble
+                    let wobbleX = sin(phase * 2.0 + CGFloat(b.id)) * 2.5
                     
                     Circle()
-                        .fill(PastelTheme.emeraldSuccess.opacity(0.85))
-                        .frame(width: 2.5, height: 2.5)
-                        .offset(x: fillWidth * 0.65 - fillWidth / 2, y: -cos(phase + 1.2) * (size.height * 0.30))
-                    
-                    Circle()
-                        .fill(Color.white.opacity(0.80))
-                        .frame(width: 2.0, height: 2.0)
-                        .offset(x: fillWidth * 0.85 - fillWidth / 2, y: -sin(phase + 2.0) * (size.height * 0.32))
+                        .fill(b.id % 2 == 0 ? Color.white.opacity(0.85) : PastelTheme.emeraldSuccess.opacity(0.90))
+                        .frame(width: b.size * 0.6, height: b.size * 0.6)
+                        .position(x: bubbleX + wobbleX, y: bubbleY)
                 }
-                .frame(width: fillWidth, height: size.height)
-                
-                Spacer(minLength: 0)
             }
+            .frame(width: fillWidth, height: size.height)
             .clipped()
         }
         
-        // Specular caustic leading edge
+        // C. Specular caustic leading edge
         if progress > 0.01 && progress < 0.995 {
             Rectangle()
                 .fill(
                     LinearGradient(
                         colors: [
                             Color.clear,
-                            PastelTheme.emeraldSuccess.opacity(0.4),
-                            Color.white.opacity(0.85),
-                            PastelTheme.emeraldSuccess.opacity(0.4),
+                            PastelTheme.emeraldSuccess.opacity(0.5),
+                            Color.white,
+                            PastelTheme.emeraldSuccess.opacity(0.5),
                             Color.clear
                         ],
                         startPoint: .top,
@@ -342,7 +438,8 @@ public struct HorizontalLiquidWaveProgressView: View {
                 )
                 .frame(width: 2.2, height: size.height)
                 .offset(x: fillWidth - 1.0)
-                .blur(radius: 0.8)
+                .blur(radius: 0.6)
+                .shadow(color: PastelTheme.emeraldSuccess, radius: 6)
         }
     }
     
@@ -358,24 +455,43 @@ public struct HorizontalLiquidWaveProgressView: View {
             LinearGradient(
                 colors: [
                     PastelTheme.amberWarning.opacity(0.12),
-                    PastelTheme.amberWarning.opacity(0.32),
-                    Color(hex: "#FDE68A").opacity(0.50)
+                    PastelTheme.amberWarning.opacity(0.32 + sin(phase * 1.5) * 0.08),
+                    Color(hex: "#FDE68A").opacity(0.55 + cos(phase * 1.5) * 0.08)
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         )
         
-        // Intense plasma front
+        // Drifting plasma energy sparks inside
+        if fillWidth > 20 {
+            ZStack(alignment: .leading) {
+                ForEach(Self.seededParticles.prefix(6)) { s in
+                    let driftProgress = CGFloat((Double(s.relX) + (Double(phase) / (Double.pi * 2.0)) * 0.45).truncatingRemainder(dividingBy: 1.0))
+                    let sparkX = fillWidth * (driftProgress >= 0 ? driftProgress : driftProgress + 1.0)
+                    let sparkY = size.height * s.relY + sin(phase * 2.5 + CGFloat(s.id)) * (size.height * 0.15)
+                    
+                    Circle()
+                        .fill(Color(hex: "#FDE68A"))
+                        .frame(width: s.size * 0.7, height: s.size * 0.7)
+                        .position(x: sparkX, y: sparkY)
+                        .shadow(color: PastelTheme.amberWarning, radius: 4)
+                }
+            }
+            .frame(width: fillWidth, height: size.height)
+            .clipped()
+        }
+        
+        // Intense plasma leading front & floating magnetic droplet
         if progress > 0.01 && progress < 0.995 {
             Rectangle()
                 .fill(
                     LinearGradient(
                         colors: [
                             Color.clear,
-                            PastelTheme.amberWarning.opacity(0.8),
+                            PastelTheme.amberWarning.opacity(0.85),
                             Color.white,
-                            PastelTheme.amberWarning.opacity(0.8),
+                            PastelTheme.amberWarning.opacity(0.85),
                             Color.clear
                         ],
                         startPoint: .top,
@@ -385,27 +501,28 @@ public struct HorizontalLiquidWaveProgressView: View {
                 .frame(width: 2.5, height: size.height)
                 .offset(x: fillWidth - 1.0)
                 .blur(radius: 0.7)
+                .shadow(color: PastelTheme.amberWarning, radius: 8)
             
             // Floating magnetic plasma droplet
             Circle()
                 .fill(Color(hex: "#FDE68A"))
-                .frame(width: 4, height: 4)
+                .frame(width: 4.5, height: 4.5)
                 .offset(x: fillWidth + 7 + sin(phase * 2) * 5, y: size.height * 0.45)
-                .shadow(color: PastelTheme.amberWarning, radius: 4)
+                .shadow(color: PastelTheme.amberWarning, radius: 5)
         }
     }
     
     // MARK: - 4. ACOUSTIC PRISM («Звук-Призма»)
     @ViewBuilder
     private func acousticPrismLayer(fillWidth: CGFloat, size: CGSize) -> some View {
-        // Acoustic prism glass base
+        // Acoustic prism glass base with iridescent sheen
         Rectangle()
             .fill(
                 LinearGradient(
                     colors: [
-                        PastelTheme.slateBlue.opacity(0.08),
-                        PastelTheme.slateBlue.opacity(0.20),
-                        Color(hex: "#34D399").opacity(0.38)
+                        PastelTheme.slateBlue.opacity(0.10),
+                        PastelTheme.slateBlue.opacity(0.22 + sin(phase) * 0.05),
+                        Color(hex: "#34D399").opacity(0.40)
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
@@ -413,14 +530,14 @@ public struct HorizontalLiquidWaveProgressView: View {
             )
             .frame(width: fillWidth, height: size.height)
         
-        // Vertical spectral equalizer strings
+        // Vertical spectral equalizer strings dancing with music rhythm
         if fillWidth > 20 {
             HStack(spacing: 5) {
                 ForEach(0..<Int(fillWidth / 7.0), id: \.self) { i in
                     let norm = CGFloat(i) * 0.35
                     let barH = (sin(norm + phase * 2.5) * 0.4 + 0.6) * (size.height * 0.65)
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(i % 3 == 0 ? Color(hex: "#34D399").opacity(0.8) : PastelTheme.slateBlue.opacity(0.45))
+                        .fill(i % 3 == 0 ? Color(hex: "#34D399").opacity(0.85) : PastelTheme.slateBlue.opacity(0.50))
                         .frame(width: 2, height: max(4, barH))
                 }
                 Spacer(minLength: 0)
@@ -447,7 +564,7 @@ public struct HorizontalLiquidWaveProgressView: View {
                 )
                 .frame(width: 2.0, height: size.height)
                 .offset(x: fillWidth - 1.0)
-                .shadow(color: Color(hex: "#34D399"), radius: 4)
+                .shadow(color: Color(hex: "#34D399"), radius: 5)
         }
     }
 }
