@@ -188,7 +188,11 @@ public final class SpotifyProvider: MusicProviderProtocol, ObservableObject {
     
     // MARK: - Mock Fallback Data
     
-    private var sampleMockTracks: [UniversalTrack] {
+    public func fetchFavoritesFallback() -> [UniversalTrack] {
+        return sampleMockTracks
+    }
+    
+    public var sampleMockTracks: [UniversalTrack] {
         [
             UniversalTrack(
                 isrc: "USUM71703861",

@@ -205,6 +205,9 @@ public struct LibraryView: View {
                                         if player.currentTrack == track {
                                             player.toggleLoopMode()
                                         }
+                                    },
+                                    onRewindTap: {
+                                        player.skipBackward(by: 15)
                                     }
                                 )
                                 .listRowBackground(Color.clear)
@@ -237,6 +240,7 @@ private struct TrackRow: View {
     let onPlayTap: () -> Void
     let onFavoriteTap: () -> Void
     let onLoopTap: () -> Void
+    var onRewindTap: (() -> Void)? = nil
     
     var body: some View {
         HStack(spacing: 12) {
@@ -260,7 +264,7 @@ private struct TrackRow: View {
                     }
                 }
             }
-            .buttonStyle(TouchFeedbackButtonStyle())
+            .buttonStyle(BorderlessButtonStyle())
             
             // Title & Artist (tapping anywhere plays the song)
             VStack(alignment: .leading, spacing: 3) {
@@ -287,23 +291,36 @@ private struct TrackRow: View {
             
             Spacer()
             
+            // Rewind 15s Button (if active)
+            if isCurrent, let onRewindTap = onRewindTap {
+                Button(action: onRewindTap) {
+                    Image(systemName: "gobackward.15")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(PastelTheme.textSecondary)
+                        .frame(width: 26, height: 26)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+            }
+            
             // Loop Mode Indicator (if currently active)
             if let loop = loopMode {
                 Button(action: onLoopTap) {
                     Image(systemName: loop.iconName)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(loop != .off ? PastelTheme.pastelOat : PastelTheme.textTertiary)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 26, height: 26)
                 }
+                .buttonStyle(BorderlessButtonStyle())
             }
             
             // Favorite Button
             Button(action: onFavoriteTap) {
                 Image(systemName: isFavorite ? "heart.fill" : "heart")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(isFavorite ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 30, height: 30)
             }
+            .buttonStyle(BorderlessButtonStyle())
             
             // Platform Badges & Duration
             HStack(spacing: 5) {

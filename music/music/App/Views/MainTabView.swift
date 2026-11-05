@@ -2,13 +2,13 @@ import SwiftUI
 
 /// Root Tab Navigation Bar (Apple HIG HUD Standard)
 public struct MainTabView: View {
-    @State private var selectedTab: Int = 0
+    @ObservedObject private var navCoordinator = NavigationCoordinator.shared
     
     public init() {}
     
     public var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
+            TabView(selection: $navCoordinator.selectedTab) {
                 // Tab 1: Services Hub
                 ServicesHubView()
                     .tabItem {

@@ -22,17 +22,26 @@ public struct ServicesHubView: View {
                             HUDMetricBox(
                                 title: "TRACKS",
                                 value: "\(coordinator.totalTracksCount)",
-                                color: PastelTheme.pastelOat
+                                color: PastelTheme.pastelOat,
+                                onTap: {
+                                    NavigationCoordinator.shared.navigateToLibrary()
+                                }
                             )
                             HUDMetricBox(
                                 title: "CONNECTED",
                                 value: "\(coordinator.activeProvidersCount) of 3",
-                                color: coordinator.activeProvidersCount > 0 ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary
+                                color: coordinator.activeProvidersCount > 0 ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary,
+                                onTap: {
+                                    NavigationCoordinator.shared.navigateToServices()
+                                }
                             )
                             HUDMetricBox(
                                 title: "PLAYLISTS",
                                 value: "\(coordinator.allPlaylists.count)",
-                                color: PastelTheme.slateBlue
+                                color: PastelTheme.slateBlue,
+                                onTap: {
+                                    NavigationCoordinator.shared.navigateToLibrary()
+                                }
                             )
                         }
                         
@@ -189,29 +198,46 @@ private struct HUDMetricBox: View {
     let title: String
     let value: String
     let color: Color
+    var onTap: (() -> Void)? = nil
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .tracking(0.6)
-                .foregroundColor(PastelTheme.textTertiary)
-            
-            Text(value)
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
-                .foregroundColor(color)
-                .monospacedDigit()
-                .contentTransition(.numericText())
+        Button {
+            onTap?()
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(title)
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundColor(PastelTheme.textTertiary)
+                    
+                    Spacer()
+                    
+                    if onTap != nil {
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(PastelTheme.textTertiary.opacity(0.6))
+                    }
+                }
+                
+                Text(value)
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundColor(color)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .background(PastelTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PastelTheme.cardBorder, lineWidth: 1)
-        )
+        .buttonStyle(TouchFeedbackButtonStyle())
+        .disabled(onTap == nil)
     }
 }
 

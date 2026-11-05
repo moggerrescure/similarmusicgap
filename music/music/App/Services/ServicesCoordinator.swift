@@ -97,11 +97,16 @@ public final class ServicesCoordinator: ObservableObject {
             let playlists: [UniversalPlaylist]
         }
         
+        let exportTracks = allTracks.isEmpty ? spotify.sampleMockTracks : allTracks
+        let exportPlaylists = allPlaylists.isEmpty ? [
+            UniversalPlaylist(providerPlaylistId: "pl_backup", providerType: .spotify, title: "Favorites Vault", trackCount: exportTracks.count, tracks: exportTracks)
+        ] : allPlaylists
+        
         let payload = BackupPayload(
             exportedAt: Date(),
-            totalTracks: allTracks.count,
-            tracks: allTracks,
-            playlists: allPlaylists
+            totalTracks: exportTracks.count,
+            tracks: exportTracks,
+            playlists: exportPlaylists
         )
         
         let encoder = JSONEncoder()
@@ -113,6 +118,28 @@ public final class ServicesCoordinator: ObservableObject {
         let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("SoundShift_Universal_Backup_\(Int(Date().timeIntervalSince1970)).json")
         try? data.write(to: tempUrl)
         return tempUrl
+    }
+    
+    // MARK: - Universal Backup Import
+    @discardableResult
+    public func importUniversalJSON(from url: URL) -> Bool {
+        struct BackupPayload: Codable {
+            let exportedAt: Date
+            let totalTracks: Int
+            let tracks: [UniversalTrack]
+            let playlists: [UniversalPlaylist]
+        }
+        
+        guard let data = try? Data(contentsOf: url) else { return false }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        
+        guard let payload = try? decoder.decode(BackupPayload.self, from: data) else { return false }
+        
+        self.allTracks = payload.tracks
+        self.allPlaylists = payload.playlists
+        HapticManager.successNotification()
+        return true
     }
 }
 

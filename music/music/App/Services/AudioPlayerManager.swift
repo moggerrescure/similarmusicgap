@@ -225,6 +225,16 @@ public final class AudioPlayerManager: ObservableObject {
         seek(to: clamped * duration)
     }
     
+    public func skipForward(by seconds: Double = 15.0) {
+        seek(to: currentTime + seconds)
+        HapticManager.lightImpact()
+    }
+    
+    public func skipBackward(by seconds: Double = 15.0) {
+        seek(to: currentTime - seconds)
+        HapticManager.lightImpact()
+    }
+    
     // MARK: - Loop & Shuffle Modes
     public func toggleLoopMode() {
         HapticManager.lightImpact()
