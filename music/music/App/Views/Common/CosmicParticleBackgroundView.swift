@@ -7,14 +7,161 @@ import UIKit
 import AppKit
 #endif
 
-/// Zero-Lag, 120 FPS GPU-Accelerated Cosmic Background
-/// Inspired by the user's "SpaceParticles" & "Nebula" shaders (moggerrescure/cool & rpg-fitness).
-/// Renders entirely via CoreAnimation GPU hardware instancing (0% CPU overhead, zero stutter).
+// MARK: - 4-Pointed Astroid Star Shape (Variant C, Point 2 from moggerrescure.github.io/information)
+/// Mathematical 4-pointed concave astroid star diamond, replicating the exact
+/// radial-gradient mask from client's website:
+/// mask: radial-gradient(circle at corners) leaving a sharp concave central star.
+public struct AstroidStarShape: Shape {
+    public init() {}
+    
+    public func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let midX = rect.midX
+        let midY = rect.midY
+        let minX = rect.minX
+        let maxX = rect.maxX
+        let minY = rect.minY
+        let maxY = rect.maxY
+        
+        // Start at top tip (midX, minY)
+        path.move(to: CGPoint(x: midX, y: minY))
+        
+        // Concave curve to right tip (maxX, midY)
+        path.addQuadCurve(to: CGPoint(x: maxX, y: midY), control: CGPoint(x: midX, y: midY))
+        
+        // Concave curve to bottom tip (midX, maxY)
+        path.addQuadCurve(to: CGPoint(x: midX, y: maxY), control: CGPoint(x: midX, y: midY))
+        
+        // Concave curve to left tip (minX, midY)
+        path.addQuadCurve(to: CGPoint(x: minX, y: midY), control: CGPoint(x: midX, y: midY))
+        
+        // Concave curve back to top tip (midX, minY)
+        path.addQuadCurve(to: CGPoint(x: midX, y: minY), control: CGPoint(x: midX, y: midY))
+        
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - Single Animated Astroid Star Component
+public struct AstroidStarItemView: View {
+    public let color: Color
+    public let size: CGFloat
+    public let rotationAngle: Double
+    public let baseOpacity: Double
+    public let delay: Double
+    
+    @State private var isBreathing: Bool = false
+    
+    public init(
+        color: Color,
+        size: CGFloat,
+        rotationAngle: Double,
+        baseOpacity: Double,
+        delay: Double = 0.0
+    ) {
+        self.color = color
+        self.size = size
+        self.rotationAngle = rotationAngle
+        self.baseOpacity = baseOpacity
+        self.delay = delay
+    }
+    
+    public var body: some View {
+        AstroidStarShape()
+            .fill(color)
+            .frame(width: size, height: size)
+            .shadow(color: color.opacity(0.40), radius: size * 0.28)
+            .rotationEffect(.degrees(rotationAngle))
+            .scaleEffect(isBreathing ? 1.06 : 0.94)
+            .opacity(isBreathing ? baseOpacity * 1.25 : baseOpacity * 0.75)
+            .onAppear {
+                withAnimation(
+                    .easeInOut(duration: 4.2)
+                    .repeatForever(autoreverses: true)
+                    .delay(delay)
+                ) {
+                    isBreathing = true
+                }
+            }
+    }
+}
+
+// MARK: - Geometric Astroid Stars Background Layer
+public struct GeometricAstroidStarsLayer: View {
+    public init() {}
+    
+    public var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            
+            ZStack {
+                // 1. Warm Solar Amber Astroid (.star--o: #FF6A15, angle -32 deg)
+                AstroidStarItemView(
+                    color: Color(hex: "#FF6A15"),
+                    size: 68,
+                    rotationAngle: -32,
+                    baseOpacity: 0.52,
+                    delay: 0.0
+                )
+                .position(x: w * 0.86, y: h * 0.10)
+                
+                // 2. Pure Diamond White Astroid (.star--w: #FFFFFF, angle +24 deg)
+                AstroidStarItemView(
+                    color: Color.white,
+                    size: 40,
+                    rotationAngle: 24,
+                    baseOpacity: 0.48,
+                    delay: 1.2
+                )
+                .position(x: w * 0.06, y: h * 0.32)
+                
+                // 3. Ice Cyan / Crystal Blue Astroid (.star--b: #DFF1FF, angle -54 deg)
+                AstroidStarItemView(
+                    color: Color(hex: "#DFF1FF"),
+                    size: 88,
+                    rotationAngle: -54,
+                    baseOpacity: 0.30,
+                    delay: 2.1
+                )
+                .position(x: w * 0.94, y: h * 0.53)
+                
+                // 4. Subtle Ghost Slate Spark (.star--slate: #BBCFD3, angle +45 deg)
+                AstroidStarItemView(
+                    color: Color(hex: "#BBCFD3"),
+                    size: 32,
+                    rotationAngle: 45,
+                    baseOpacity: 0.20,
+                    delay: 0.6
+                )
+                .position(x: w * 0.10, y: h * 0.74)
+                
+                // 5. Electric Lime / Emerald Astroid (.star--lime: #C4F449, angle -18 deg)
+                AstroidStarItemView(
+                    color: Color(hex: "#C4F449"),
+                    size: 54,
+                    rotationAngle: -18,
+                    baseOpacity: 0.50,
+                    delay: 1.8
+                )
+                .position(x: w * 0.84, y: h * 0.88)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Master Zero-Lag 120 FPS Background
+/// Combines the OLED Cashmere Dark Canvas, Procedural Deep Nebula,
+/// the 4-Point Astroid Stars from client's website, and GPU CoreAnimation micro-particles.
 public struct CosmicParticleBackgroundView: View {
     public var particleCount: Int = 45
+    public var showAstroidStars: Bool = true
     
-    public init(particleCount: Int = 45) {
+    public init(particleCount: Int = 45, showAstroidStars: Bool = true) {
         self.particleCount = particleCount
+        self.showAstroidStars = showAstroidStars
     }
     
     public var body: some View {
@@ -22,8 +169,7 @@ public struct CosmicParticleBackgroundView: View {
             // 1. OLED Cashmere Deep Canvas (#0E0F12)
             PastelTheme.canvas
             
-            // 2. Procedural Deep-Space Nebula Clouds (Inspired by Nebula.jsx from moggerrescure/cool)
-            // Two soft, non-animating or slow radial glows that add cinematic depth with ZERO redraw cost
+            // 2. Procedural Deep-Space Nebula Clouds (Inspired by Nebula.jsx from cool)
             RadialGradient(
                 colors: [Color(hex: "#161324").opacity(0.45), Color.clear],
                 center: .topTrailing,
@@ -38,9 +184,14 @@ public struct CosmicParticleBackgroundView: View {
                 endRadius: 600
             )
             
-            // 3. Hardware GPU CAEmitterLayer Particle Stream (CoreAnimation Render Server)
+            // 3. Geometric Astroid Stars (Variant C, Point 2 from moggerrescure.github.io/information)
+            if showAstroidStars {
+                GeometricAstroidStarsLayer()
+            }
+            
+            // 4. Hardware GPU CAEmitterLayer Particle Stream (CoreAnimation Render Server)
             GPUParticleEmitterRepresentable()
-                .opacity(0.75)
+                .opacity(0.65)
         }
         .ignoresSafeArea()
     }
@@ -96,7 +247,7 @@ private final class EmitterContainerView: UIView {
         oatCell.alphaSpeed = -0.05
         oatCell.color = UIColor(red: 0.94, green: 0.89, blue: 0.83, alpha: 0.75).cgColor
         
-        // Cell 2: Muted Cyan / Slate Blue Dust (like in cool/SpaceParticles.jsx)
+        // Cell 2: Muted Cyan / Slate Blue Dust
         let cyanCell = CAEmitterCell()
         cyanCell.contents = particleImage
         cyanCell.birthRate = 3
@@ -186,14 +337,14 @@ private final class EmitterContainerView: NSView {
         oatCell.lifetime = 16
         oatCell.velocity = 18
         oatCell.velocityRange = 8
-        oatCell.emissionLongitude = -.pi / 2 // Downward in AppKit flipped/unflipped coords
+        oatCell.emissionLongitude = -.pi / 2
         oatCell.emissionRange = .pi / 10
         oatCell.scale = 0.22
         oatCell.scaleRange = 0.16
         oatCell.alphaSpeed = -0.05
         oatCell.color = CGColor(red: 0.94, green: 0.89, blue: 0.83, alpha: 0.75)
         
-        // Cell 2: Muted Cyan / Slate Blue Dust (like in cool/SpaceParticles.jsx)
+        // Cell 2: Muted Cyan / Slate Blue Dust
         let cyanCell = CAEmitterCell()
         cyanCell.contents = particleImage
         cyanCell.birthRate = 3
