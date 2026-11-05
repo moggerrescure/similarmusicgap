@@ -8,8 +8,9 @@ public struct MainTabView: View {
     
     public var body: some View {
         ZStack(alignment: .bottom) {
-            // Ambient Deep Cosmos Stardust Particle Field (App-wide)
-            CosmicParticleBackgroundView(particleCount: 65)
+            // Deep OLED Canvas Base
+            PastelTheme.canvas
+                .ignoresSafeArea()
             
             TabView(selection: $navCoordinator.selectedTab) {
                 // Tab 1: Services Hub
