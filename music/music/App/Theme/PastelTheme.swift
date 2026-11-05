@@ -54,10 +54,13 @@ public enum PastelTheme {
     public static let emeraldSuccess = Color(hex: "#10B981")
     /// Partial match, active transfer, streaks
     public static let amberWarning = Color(hex: "#FBBF24")
+    public static let warmAmber = amberWarning
     /// Duration, metadata, streaming bitrate
     public static let slateBlue = Color(hex: "#60A5FA")
+    public static let pastelSlate = slateBlue
     /// AI Taste profile, acoustic embeddings
     public static let lavenderAI = Color(hex: "#A78BFA")
+    public static let pastelLavender = lavenderAI
     
     // MARK: - Typography Colors
     public static let textPrimary = Color.white

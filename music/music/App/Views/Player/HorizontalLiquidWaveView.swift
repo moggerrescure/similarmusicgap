@@ -40,8 +40,8 @@ public enum FlaskFillingStyle: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .chronosStardust: return PastelTheme.pastelOat
         case .mercuryOcean: return PastelTheme.emeraldSuccess
-        case .quantumPlasma: return PastelTheme.warmAmber
-        case .acousticPrism: return PastelTheme.pastelSlate
+        case .quantumPlasma: return PastelTheme.amberWarning
+        case .acousticPrism: return PastelTheme.slateBlue
         }
     }
     
@@ -357,8 +357,8 @@ public struct HorizontalLiquidWaveProgressView: View {
         .fill(
             LinearGradient(
                 colors: [
-                    PastelTheme.warmAmber.opacity(0.12),
-                    PastelTheme.warmAmber.opacity(0.32),
+                    PastelTheme.amberWarning.opacity(0.12),
+                    PastelTheme.amberWarning.opacity(0.32),
                     Color(hex: "#FDE68A").opacity(0.50)
                 ],
                 startPoint: .leading,
@@ -373,9 +373,9 @@ public struct HorizontalLiquidWaveProgressView: View {
                     LinearGradient(
                         colors: [
                             Color.clear,
-                            PastelTheme.warmAmber.opacity(0.8),
+                            PastelTheme.amberWarning.opacity(0.8),
                             Color.white,
-                            PastelTheme.warmAmber.opacity(0.8),
+                            PastelTheme.amberWarning.opacity(0.8),
                             Color.clear
                         ],
                         startPoint: .top,
@@ -391,7 +391,7 @@ public struct HorizontalLiquidWaveProgressView: View {
                 .fill(Color(hex: "#FDE68A"))
                 .frame(width: 4, height: 4)
                 .offset(x: fillWidth + 7 + sin(phase * 2) * 5, y: size.height * 0.45)
-                .shadow(color: PastelTheme.warmAmber, radius: 4)
+                .shadow(color: PastelTheme.amberWarning, radius: 4)
         }
     }
     
@@ -403,8 +403,8 @@ public struct HorizontalLiquidWaveProgressView: View {
             .fill(
                 LinearGradient(
                     colors: [
-                        PastelTheme.pastelSlate.opacity(0.08),
-                        PastelTheme.pastelSlate.opacity(0.20),
+                        PastelTheme.slateBlue.opacity(0.08),
+                        PastelTheme.slateBlue.opacity(0.20),
                         Color(hex: "#34D399").opacity(0.38)
                     ],
                     startPoint: .leading,
@@ -420,7 +420,7 @@ public struct HorizontalLiquidWaveProgressView: View {
                     let norm = CGFloat(i) * 0.35
                     let barH = (sin(norm + phase * 2.5) * 0.4 + 0.6) * (size.height * 0.65)
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(i % 3 == 0 ? Color(hex: "#34D399").opacity(0.8) : PastelTheme.pastelSlate.opacity(0.45))
+                        .fill(i % 3 == 0 ? Color(hex: "#34D399").opacity(0.8) : PastelTheme.slateBlue.opacity(0.45))
                         .frame(width: 2, height: max(4, barH))
                 }
                 Spacer(minLength: 0)
