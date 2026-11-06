@@ -198,7 +198,7 @@ public struct OnboardingView: View {
                 isCompleted = true
                 hasCompletedOnboarding = true
             }
-            print("🚀 Onboarding completed. Transitioning to Service Connect Hub...")
+            print("[Onboarding] Completed. Transitioning to Service Connect Hub...")
         }
     }
 }

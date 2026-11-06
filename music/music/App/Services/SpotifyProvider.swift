@@ -59,7 +59,7 @@ public final class SpotifyProvider: MusicProviderProtocol, ObservableObject {
                 UserDefaults.standard.set(self.userDisplayName, forKey: "spotify_user_display_name")
             }
         } catch {
-            print("⚠️ [SpotifyProvider] Silent profile refresh skipped: \(error.localizedDescription)")
+            print("[SpotifyProvider] Silent profile refresh skipped: \(error.localizedDescription)")
         }
     }
     

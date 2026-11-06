@@ -46,18 +46,20 @@ public struct FloatingMiniPlayerView: View {
                         }
                     }
                     
-                    // Title, Artist, & Live Seconds HUD
+                    // Title, Artist, & Live Seconds HUD (Seamless Crossfade)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(track.title)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
                             .lineLimit(1)
+                            .contentTransition(.opacity)
                         
                         HStack(spacing: 5) {
                             Text(track.primaryArtist)
                                 .font(.system(size: 12, weight: .regular))
                                 .foregroundColor(PastelTheme.textSecondary)
                                 .lineLimit(1)
+                                .contentTransition(.opacity)
                             
                             Text("•")
                                 .font(.system(size: 10))
@@ -70,10 +72,11 @@ public struct FloatingMiniPlayerView: View {
                                 .contentTransition(.numericText())
                         }
                     }
+                    .animation(.smooth(duration: 0.35), value: track.id)
                     
                     Spacer()
                     
-                    // Favorite Toggle Button (Independent Tap Zone)
+                    // Favorite Toggle Button (Clean borderless)
                     Button {
                         HapticManager.lightImpact()
                         player.toggleFavorite(track: track)
@@ -84,9 +87,9 @@ public struct FloatingMiniPlayerView: View {
                             .frame(width: 34, height: 34)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(BorderlessButtonStyle())
+                    .buttonStyle(PlayerCleanButtonStyle())
                     
-                    // Play/Pause Button
+                    // Play/Pause Button (Clean solid Oat circle, no outer stroke)
                     Button {
                         HapticManager.lightImpact()
                         player.togglePlayPause()
@@ -94,13 +97,13 @@ public struct FloatingMiniPlayerView: View {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 15, weight: .bold))
                             .foregroundColor(PastelTheme.textOnOat)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 36, height: 36)
                             .background(PastelTheme.pastelOat)
                             .clipShape(Circle())
                     }
-                    .buttonStyle(BorderlessButtonStyle())
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.94))
                     
-                    // Next Track Button
+                    // Next Track Button (Clean borderless)
                     Button {
                         HapticManager.lightImpact()
                         player.playNext()
@@ -108,10 +111,10 @@ public struct FloatingMiniPlayerView: View {
                         Image(systemName: "forward.fill")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(PastelTheme.textPrimary)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 34, height: 34)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(BorderlessButtonStyle())
+                    .buttonStyle(PlayerCleanButtonStyle())
                 }
                 .padding(.horizontal, 14)
                 .frame(height: 58)

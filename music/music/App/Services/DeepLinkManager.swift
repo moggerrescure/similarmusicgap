@@ -40,11 +40,11 @@ public enum DeepLinkManager {
         UIApplication.shared.open(finalURL, options: [:]) { success in
             if !success {
                 // Fallback to web search
-                print("⚠️ [DeepLinkManager] Native app not installed. Opening browser fallback: \(finalURL)")
+                print("[DeepLinkManager] Native app not installed. Opening browser fallback: \(finalURL)")
             }
         }
         #else
-        print("🔗 [DeepLinkManager] Opening URL: \(finalURL)")
+        print("[DeepLinkManager] Opening URL: \(finalURL)")
         #endif
     }
 }

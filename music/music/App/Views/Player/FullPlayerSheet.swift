@@ -51,17 +51,21 @@ public struct FullPlayerSheet: View {
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
                             .lineLimit(1)
+                            .contentTransition(.opacity)
                         
                         Text(track.primaryArtist)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(PastelTheme.textSecondary)
                             .lineLimit(1)
+                            .contentTransition(.opacity)
                     }
+                    .animation(.smooth(duration: 0.35), value: track.id)
                     
                     Spacer()
                     
-                    // Favorite Toggle
+                    // Favorite Toggle (Clean borderless)
                     Button {
+                        HapticManager.lightImpact()
                         player.toggleFavorite(track: track)
                     } label: {
                         Image(systemName: player.isFavorite(track: track) ? "heart.fill" : "heart")
@@ -69,6 +73,7 @@ public struct FullPlayerSheet: View {
                             .foregroundColor(player.isFavorite(track: track) ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
                             .frame(width: 44, height: 44)
                     }
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
                 }
                 .padding(.horizontal, 28)
                 
@@ -124,7 +129,7 @@ public struct FullPlayerSheet: View {
                 }
                 .padding(.horizontal, 28)
                 
-                // MARK: - Playback Controls
+                // MARK: - Playback Controls (Clean Borderless Spotify Design)
                 HStack(spacing: 28) {
                     // Shuffle
                     Button {
@@ -133,8 +138,9 @@ public struct FullPlayerSheet: View {
                         Image(systemName: "shuffle")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(player.isShuffled ? PastelTheme.pastelOat : PastelTheme.textTertiary)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 40, height: 40)
                     }
+                    .buttonStyle(PlayerCleanButtonStyle())
                     
                     // Previous
                     Button {
@@ -143,9 +149,11 @@ public struct FullPlayerSheet: View {
                         Image(systemName: "backward.fill")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(PastelTheme.textPrimary)
+                            .frame(width: 44, height: 44)
                     }
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.90))
                     
-                    // Big Play/Pause CTA
+                    // Big Play/Pause CTA (Solid Oat Circle, Clean without outer stroke)
                     Button {
                         player.togglePlayPause()
                     } label: {
@@ -158,7 +166,7 @@ public struct FullPlayerSheet: View {
                                     .foregroundColor(PastelTheme.textOnOat)
                             )
                     }
-                    .buttonStyle(TouchFeedbackButtonStyle())
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.95))
                     
                     // Next
                     Button {
@@ -167,7 +175,9 @@ public struct FullPlayerSheet: View {
                         Image(systemName: "forward.fill")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(PastelTheme.textPrimary)
+                            .frame(width: 44, height: 44)
                     }
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.90))
                     
                     // Loop Mode
                     Button {
@@ -176,33 +186,56 @@ public struct FullPlayerSheet: View {
                         Image(systemName: player.loopMode.iconName)
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(player.loopMode != .off ? PastelTheme.pastelOat : PastelTheme.textTertiary)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 40, height: 40)
                     }
+                    .buttonStyle(PlayerCleanButtonStyle())
                 }
                 .padding(.top, 8)
                 
                 Spacer()
                 
-                // Service deep link chip
+                // Service deep link chip (Marble White Capsule)
                 HStack(spacing: 8) {
                     if let yandexId = track.yandexId {
                         Button { DeepLinkManager.openTrack(track: track, in: .yandexMusic) } label: {
                             Label("Yandex", systemImage: "arrow.up.right")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundColor(PastelTheme.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(PastelTheme.cardSubtle)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(PastelTheme.marbleBorder, lineWidth: 1))
                         }
+                        .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
                     if let spotifyId = track.spotifyId {
                         Button { DeepLinkManager.openTrack(track: track, in: .spotify) } label: {
                             Label("Spotify", systemImage: "arrow.up.right")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundColor(PastelTheme.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(PastelTheme.cardSubtle)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(PastelTheme.marbleBorder, lineWidth: 1))
                         }
+                        .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
                     if let appleId = track.appleMusicId {
                         Button { DeepLinkManager.openTrack(track: track, in: .appleMusic) } label: {
                             Label("Apple Music", systemImage: "arrow.up.right")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundColor(PastelTheme.textSecondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(PastelTheme.cardSubtle)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(PastelTheme.marbleBorder, lineWidth: 1))
                         }
+                        .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
                 }
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(PastelTheme.textSecondary)
                 .padding(.bottom, 20)
             }
         }

@@ -19,7 +19,8 @@ public enum LoopMode: String, CaseIterable {
     }
 }
 
-/// Core audio playback engine with Dynamic Island, Lock Screen, and background audio support
+/// Core audio playback engine with Spotify-grade Dual-Deck Crossfade, Gapless Transitions,
+/// Dynamic Island, Lock Screen, and background audio support
 @MainActor
 public final class AudioPlayerManager: ObservableObject {
     public static let shared = AudioPlayerManager()
@@ -30,6 +31,10 @@ public final class AudioPlayerManager: ObservableObject {
     @Published public private(set) var currentTime: Double = 0.0
     @Published public private(set) var duration: Double = 210.0
     @Published public private(set) var progress: Double = 0.0 // 0.0 to 1.0
+    
+    // Spotify-Grade Crossfade
+    @Published public var crossfadeDuration: Double = 3.5 // seconds of equal-power overlap
+    @Published public private(set) var isCrossfading: Bool = false
     
     // Loop & Shuffle
     @Published public var loopMode: LoopMode = .off
@@ -63,11 +68,18 @@ public final class AudioPlayerManager: ObservableObject {
         return String(format: "%d:%02d", min, s)
     }
     
-    // Audio Player & Timer
-    private var avPlayer: AVPlayer?
+    // Dual-Deck Audio Players for Seamless Crossfading
+    private var primaryPlayer: AVPlayer?
+    private var secondaryPlayer: AVPlayer?
+    private var prebufferedTrack: UniversalTrack?
+    
     private var displayLinkTimer: Timer?
     private var playlistQueue: [UniversalTrack] = []
     private var currentIndex: Int = 0
+    
+    // Royalty-free preview stream for seamless testing
+    private let defaultPreviewStreamURL = URL(string: "https://commondatastorage.googleapis.com/codeskulptor-demos/riceracer_assets/music/race.ogg")
+        ?? URL(fileURLWithPath: "/dev/null")
     
     private init() {
         setupAudioSession()
@@ -82,7 +94,7 @@ public final class AudioPlayerManager: ObservableObject {
             try session.setCategory(.playback, mode: .default, options: [])
             try session.setActive(true)
         } catch {
-            print("⚠️ [AudioPlayerManager] Failed to configure AVAudioSession: \(error)")
+            print("Failed to configure AVAudioSession: \(error)")
         }
         #endif
     }
@@ -151,7 +163,7 @@ public final class AudioPlayerManager: ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
     
-    // MARK: - Playback Control
+    // MARK: - Playback Control (with Smooth Micro-Crossfade on track switch)
     public func play(track: UniversalTrack, in playlist: [UniversalTrack] = []) {
         if let idx = playlist.firstIndex(of: track) {
             self.playlistQueue = playlist
@@ -161,19 +173,43 @@ public final class AudioPlayerManager: ObservableObject {
             self.currentIndex = 0
         }
         
+        let previousPlayer = primaryPlayer
+        let wasPlaying = isPlaying
+        
+        // Prepare new primary deck
+        let playerItem = AVPlayerItem(url: defaultPreviewStreamURL)
+        let newPlayer = AVPlayer(playerItem: playerItem)
+        newPlayer.volume = wasPlaying ? 0.0 : 1.0
+        newPlayer.play()
+        
+        self.primaryPlayer = newPlayer
         self.currentTrack = track
         self.duration = Double(track.durationMs) / 1000.0
         self.currentTime = 0.0
         self.progress = 0.0
-        
-        // High-fidelity royalty-free ambient music stream preview for live testing
-        let previewStreamURL = URL(string: "https://commondatastorage.googleapis.com/codeskulptor-demos/riceracer_assets/music/race.ogg")
-            ?? URL(fileURLWithPath: "/dev/null")
-        
-        let playerItem = AVPlayerItem(url: previewStreamURL)
-        self.avPlayer = AVPlayer(playerItem: playerItem)
-        self.avPlayer?.play()
         self.isPlaying = true
+        self.isCrossfading = false
+        self.secondaryPlayer = nil
+        self.prebufferedTrack = nil
+        
+        // Equal-Power 350ms micro-fade if transitioning from another track
+        if let oldPlayer = previousPlayer, wasPlaying {
+            let steps = 7
+            let interval = 0.35 / Double(steps)
+            for i in 1...steps {
+                let frac = Double(i) / Double(steps)
+                DispatchQueue.main.asyncAfter(deadline: .now() + (Double(i) * interval)) { [weak self, weak oldPlayer, weak newPlayer] in
+                    guard let _ = self else { return }
+                    let outVol = Float(cos(Double.pi / 2.0 * frac))
+                    let inVol = Float(sin(Double.pi / 2.0 * frac))
+                    oldPlayer?.volume = outVol
+                    newPlayer?.volume = inVol
+                    if i == steps {
+                        oldPlayer?.pause()
+                    }
+                }
+            }
+        }
         
         startTimer()
         updateNowPlayingInfo()
@@ -189,7 +225,8 @@ public final class AudioPlayerManager: ObservableObject {
     }
     
     public func pause() {
-        avPlayer?.pause()
+        primaryPlayer?.pause()
+        secondaryPlayer?.pause()
         isPlaying = false
         stopTimer()
         updateNowPlayingInfo()
@@ -198,7 +235,10 @@ public final class AudioPlayerManager: ObservableObject {
     
     public func resume() {
         guard currentTrack != nil else { return }
-        avPlayer?.play()
+        primaryPlayer?.play()
+        if isCrossfading {
+            secondaryPlayer?.play()
+        }
         isPlaying = true
         startTimer()
         updateNowPlayingInfo()
@@ -241,7 +281,17 @@ public final class AudioPlayerManager: ObservableObject {
         currentTime = min(max(0, time), duration)
         progress = duration > 0 ? (currentTime / duration) : 0
         let targetTime = CMTime(seconds: currentTime, preferredTimescale: 600)
-        avPlayer?.seek(to: targetTime)
+        primaryPlayer?.seek(to: targetTime)
+        
+        // Reset crossfade if user scrubbed back
+        if currentTime < duration - crossfadeDuration {
+            secondaryPlayer?.pause()
+            secondaryPlayer = nil
+            isCrossfading = false
+            prebufferedTrack = nil
+            primaryPlayer?.volume = 1.0
+        }
+        
         updateNowPlayingInfo()
     }
     
@@ -292,7 +342,7 @@ public final class AudioPlayerManager: ObservableObject {
         }
     }
     
-    // MARK: - Timer for 60fps Smooth Progress & Waveform
+    // MARK: - 100ms High-Precision Crossfade & Gapless Automix Engine
     private func startTimer() {
         stopTimer()
         displayLinkTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -303,20 +353,96 @@ public final class AudioPlayerManager: ObservableObject {
                 self.progress = min(1.0, self.currentTime / self.duration)
             }
             
-            // Handle track completion
+            let timeLeft = self.duration - self.currentTime
+            
+            // 1. Pre-buffer next track at 6 seconds remaining
+            if timeLeft <= 6.0 && self.secondaryPlayer == nil && !self.playlistQueue.isEmpty {
+                self.prepareNextTrackDeck()
+            }
+            
+            // 2. Initiate Equal-Power Crossfade when inside crossfadeDuration window
+            if timeLeft <= self.crossfadeDuration && timeLeft > 0 {
+                self.performCrossfadeTick(timeLeft: timeLeft)
+            }
+            
+            // 3. Finalize transition when track reaches completion
             if self.currentTime >= self.duration {
-                switch self.loopMode {
-                case .single:
-                    self.seek(to: 0)
-                case .all:
-                    self.playNext()
-                case .off:
-                    if self.currentIndex < self.playlistQueue.count - 1 {
-                        self.playNext()
-                    } else {
-                        self.pause()
-                        self.seek(to: 0)
-                    }
+                self.finalizeTrackTransition()
+            }
+        }
+    }
+    
+    private func prepareNextTrackDeck() {
+        let nextIndex: Int
+        if loopMode == .single {
+            nextIndex = currentIndex
+        } else if isShuffled {
+            nextIndex = Int.random(in: 0..<playlistQueue.count)
+        } else {
+            nextIndex = (currentIndex + 1) % playlistQueue.count
+        }
+        
+        guard nextIndex < playlistQueue.count else { return }
+        let nextTrack = playlistQueue[nextIndex]
+        self.prebufferedTrack = nextTrack
+        
+        let playerItem = AVPlayerItem(url: defaultPreviewStreamURL)
+        let deckB = AVPlayer(playerItem: playerItem)
+        deckB.volume = 0.0
+        self.secondaryPlayer = deckB
+    }
+    
+    private func performCrossfadeTick(timeLeft: Double) {
+        guard let deckB = secondaryPlayer else { return }
+        
+        if !isCrossfading {
+            isCrossfading = true
+            deckB.play()
+        }
+        
+        let elapsedFade = crossfadeDuration - timeLeft
+        let frac = min(1.0, max(0.0, elapsedFade / crossfadeDuration))
+        
+        // Equal-Power Law (sin / cos curve): maintains total acoustic energy
+        let outVol = Float(cos(Double.pi / 2.0 * frac))
+        let inVol = Float(sin(Double.pi / 2.0 * frac))
+        
+        primaryPlayer?.volume = outVol
+        deckB.volume = inVol
+    }
+    
+    private func finalizeTrackTransition() {
+        if isCrossfading, let deckB = secondaryPlayer, let nextTrack = prebufferedTrack {
+            // Seamless Deck Swap with ZERO pause or click
+            primaryPlayer?.pause()
+            deckB.volume = 1.0
+            
+            self.primaryPlayer = deckB
+            self.secondaryPlayer = nil
+            self.isCrossfading = false
+            
+            if let idx = playlistQueue.firstIndex(of: nextTrack) {
+                self.currentIndex = idx
+            }
+            self.currentTrack = nextTrack
+            self.duration = Double(nextTrack.durationMs) / 1000.0
+            self.currentTime = 0.0
+            self.progress = 0.0
+            self.prebufferedTrack = nil
+            
+            updateNowPlayingInfo()
+        } else {
+            switch loopMode {
+            case .single:
+                seek(to: 0)
+            case .all:
+                playNext()
+            case .off:
+                if currentIndex < playlistQueue.count - 1 {
+                    playNext()
+                } else {
+                    pause()
+                    seek(to: 0)
                 }
             }
         }

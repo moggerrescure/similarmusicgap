@@ -94,7 +94,7 @@ public final class AppleMusicProvider: MusicProviderProtocol, ObservableObject {
                     return liveTracks
                 }
             } catch {
-                print("⚠️ [AppleMusicProvider] MusicLibraryRequest failed, falling back to cached sample: \(error)")
+                print("[AppleMusicProvider] MusicLibraryRequest failed, falling back to cached sample: \(error)")
             }
         }
         #endif

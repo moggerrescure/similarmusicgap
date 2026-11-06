@@ -63,7 +63,7 @@ public struct LooperVideoPlayerView: UIViewRepresentable {
                 ?? URL(fileURLWithPath: "App/Resources/Videos/\(videoName).mp4")
             
             guard FileManager.default.fileExists(atPath: url.path) else {
-                print("⚠️ [LooperVideoPlayerView] Video not found at path: \(url.path)")
+                print("[LooperVideoPlayerView] Video not found at path: \(url.path)")
                 return
             }
             

@@ -276,10 +276,10 @@ public struct LibraryView: View {
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(isSel ? Color.clear : PastelTheme.cardBorder, lineWidth: 1)
+                                .stroke(isSel ? Color.clear : PastelTheme.marbleBorder, lineWidth: 1)
                         )
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                 }
             }
             .padding(.horizontal, 16)
@@ -308,16 +308,16 @@ public struct LibraryView: View {
                             .font(.system(size: 11, weight: isSel ? .bold : .medium, design: .rounded))
                             .foregroundColor(isSel ? PastelTheme.textPrimary : PastelTheme.textSecondary)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(isSel ? Color(hex: provider.brandColorHex).opacity(0.18) : PastelTheme.cardSubtle)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(Capsule())
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(isSel ? Color(hex: provider.brandColorHex).opacity(0.4) : PastelTheme.cardBorder, lineWidth: 1)
+                        Capsule()
+                            .stroke(isSel ? Color(hex: provider.brandColorHex).opacity(0.5) : PastelTheme.marbleBorder, lineWidth: 1)
                     )
                 }
-                .buttonStyle(PlainButtonStyle())
+                .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
             }
             Spacer()
         }
@@ -512,7 +512,7 @@ public struct LibraryView: View {
             ForEach(filteredTracks) { track in
                 trackRowView(for: track)
                     .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowSeparator(.hidden)
             }
             .onMove(perform: moveTracks)
@@ -597,137 +597,151 @@ private struct TrackRow: View {
     var onAddToPlaylistTap: (() -> Void)? = nil
     
     var body: some View {
-        HStack(spacing: 12) {
-            // MARK: - Independent Artwork / Playback Button
-            Button(action: onPlayTap) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isCurrent ? PastelTheme.pastelOat.opacity(0.18) : PastelTheme.cardSubtle)
-                        .frame(width: 44, height: 44)
-                    
-                    if isPlaying {
-                        WaveformBarsView()
-                    } else if isCurrent {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(PastelTheme.pastelOat)
-                    } else {
-                        Image(systemName: "music.note")
-                            .font(.system(size: 15))
-                            .foregroundColor(PastelTheme.textTertiary)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // MARK: - Independent Artwork / Playback Button
+                Button(action: onPlayTap) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(isCurrent ? PastelTheme.pastelOat.opacity(0.18) : PastelTheme.cardSubtle)
+                            .frame(width: 44, height: 44)
+                        
+                        if isPlaying {
+                            WaveformBarsView()
+                        } else if isCurrent {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(PastelTheme.pastelOat)
+                        } else {
+                            Image(systemName: "music.note")
+                                .font(.system(size: 15))
+                                .foregroundColor(PastelTheme.textTertiary)
+                        }
                     }
                 }
-            }
-            .buttonStyle(BorderlessButtonStyle())
-            
-            // MARK: - Song Title & Artist (Tap to Play)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(track.title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(isCurrent ? PastelTheme.pastelOat : PastelTheme.textPrimary)
-                    .lineLimit(1)
+                .buttonStyle(BorderlessButtonStyle())
                 
-                HStack(spacing: 4) {
-                    Text(track.primaryArtist)
-                        .foregroundColor(PastelTheme.textSecondary)
-                    if let album = track.album {
-                        Text("•")
-                            .foregroundColor(PastelTheme.textTertiary)
-                        Text(album)
-                            .foregroundColor(PastelTheme.textTertiary)
-                            .lineLimit(1)
+                // MARK: - Song Title & Artist (Tap to Play)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(track.title)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundColor(isCurrent ? PastelTheme.pastelOat : PastelTheme.textPrimary)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Text(track.primaryArtist)
+                            .foregroundColor(PastelTheme.textSecondary)
+                        if let album = track.album {
+                            Text("•")
+                                .foregroundColor(PastelTheme.textTertiary)
+                            Text(album)
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .lineLimit(1)
+                        }
                     }
+                    .font(.system(size: 12))
                 }
-                .font(.system(size: 12))
-            }
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onPlayTap)
-            
-            Spacer()
-            
-            // Rewind 15s Button (if active)
-            if isCurrent, let onRewindTap = onRewindTap {
-                Button(action: onRewindTap) {
-                    Image(systemName: "gobackward.15")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(PastelTheme.textSecondary)
-                        .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onPlayTap)
+                
+                Spacer()
+                
+                // Rewind 15s Button (if active)
+                if isCurrent, let onRewindTap = onRewindTap {
+                    Button(action: onRewindTap) {
+                        Image(systemName: "gobackward.15")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(PastelTheme.textSecondary)
+                            .frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                }
+                
+                // Loop Mode Indicator (if currently active)
+                if let loop = loopMode {
+                    Button(action: onLoopTap) {
+                        Image(systemName: loop.iconName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(loop != .off ? PastelTheme.pastelOat : PastelTheme.textTertiary)
+                            .frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(BorderlessButtonStyle())
+                }
+                
+                // MARK: - Independent Favorite Heart (Clickable on ANY Track)
+                Button(action: onFavoriteTap) {
+                    Image(systemName: isFavorite ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isFavorite ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
+                        .scaleEffect(isFavorite ? 1.15 : 1.0)
+                        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isFavorite)
+                        .frame(width: 34, height: 34)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(BorderlessButtonStyle())
-            }
-            
-            // Loop Mode Indicator (if currently active)
-            if let loop = loopMode {
-                Button(action: onLoopTap) {
-                    Image(systemName: loop.iconName)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(loop != .off ? PastelTheme.pastelOat : PastelTheme.textTertiary)
-                        .frame(width: 26, height: 26)
-                }
-                .buttonStyle(BorderlessButtonStyle())
-            }
-            
-            // MARK: - Independent Favorite Heart (Clickable on ANY Track)
-            Button(action: onFavoriteTap) {
-                Image(systemName: isFavorite ? "heart.fill" : "heart")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(isFavorite ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                    .scaleEffect(isFavorite ? 1.15 : 1.0)
-                    .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isFavorite)
-                    .frame(width: 34, height: 34)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(BorderlessButtonStyle())
-            
-            // MARK: - Options 3-Dots Menu
-            Menu {
-                if let onAddToPlaylistTap = onAddToPlaylistTap {
+                
+                // MARK: - Options 3-Dots Menu
+                Menu {
+                    if let onAddToPlaylistTap = onAddToPlaylistTap {
+                        Button {
+                            onAddToPlaylistTap()
+                        } label: {
+                            Label("Add to Playlist...", systemImage: "text.badge.plus")
+                        }
+                    }
                     Button {
-                        onAddToPlaylistTap()
+                        onFavoriteTap()
                     } label: {
-                        Label("Add to Playlist...", systemImage: "text.badge.plus")
+                        Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
+                    }
+                    Button {
+                        onPlayTap()
+                    } label: {
+                        Label("Play Now", systemImage: "play.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .frame(width: 26, height: 32)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+                
+                // Official Platform Badges
+                HStack(spacing: 4) {
+                    if track.spotifyId != nil {
+                        PlatformBrandBadgeView(type: .spotify, size: 14)
+                    }
+                    if track.appleMusicId != nil {
+                        PlatformBrandBadgeView(type: .appleMusic, size: 14)
+                    }
+                    if track.yandexId != nil {
+                        PlatformBrandBadgeView(type: .yandexMusic, size: 14)
                     }
                 }
-                Button {
-                    onFavoriteTap()
-                } label: {
-                    Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
-                }
-                Button {
-                    onPlayTap()
-                } label: {
-                    Label("Play Now", systemImage: "play.circle")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(PastelTheme.textTertiary)
-                    .frame(width: 26, height: 32)
             }
-            .buttonStyle(BorderlessButtonStyle())
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                isLifted
+                    ? PastelTheme.cardSubtle
+                    : (isCurrent ? PastelTheme.pastelOat.opacity(0.08) : Color.clear)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: isCurrent || isLifted ? 12 : 0, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isLifted ? PastelTheme.amberWarning : (isCurrent ? PastelTheme.marbleBorder : Color.clear), lineWidth: 1)
+            )
+            .shadow(color: isLifted ? PastelTheme.amberWarning.opacity(0.3) : Color.clear, radius: 10, y: 4)
             
-            // Official Platform Badges
-            HStack(spacing: 4) {
-                if track.spotifyId != nil {
-                    PlatformBrandBadgeView(type: .spotify, size: 14)
-                }
-                if track.appleMusicId != nil {
-                    PlatformBrandBadgeView(type: .appleMusic, size: 14)
-                }
-                if track.yandexId != nil {
-                    PlatformBrandBadgeView(type: .yandexMusic, size: 14)
-                }
+            // Seamless noble divider between songs with 68pt leading inset under artwork
+            if !isLifted {
+                Rectangle()
+                    .fill(Color(hex: "#F5F5F7").opacity(0.06))
+                    .frame(height: 0.5)
+                    .padding(.leading, 68)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(isCurrent ? PastelTheme.cardBorderFocused.opacity(0.12) : PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isLifted ? PastelTheme.amberWarning : (isCurrent ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder), lineWidth: isLifted ? 2 : 1)
-        )
-        .shadow(color: isLifted ? PastelTheme.amberWarning.opacity(0.3) : Color.clear, radius: 10, y: 4)
     }
 }
 

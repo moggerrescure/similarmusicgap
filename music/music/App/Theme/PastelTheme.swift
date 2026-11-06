@@ -62,6 +62,14 @@ public enum PastelTheme {
     public static let lavenderAI = Color(hex: "#A78BFA")
     public static let pastelLavender = lavenderAI
     
+    // MARK: - Marble Porcelain Borders (Strict Non-Gradient Luxury)
+    /// Pure refined marble white for functional button strokes
+    public static let marbleWhite = Color(hex: "#F5F5F7")
+    /// Subtle resting marble border (24% opacity)
+    public static let marbleBorder = Color(hex: "#F5F5F7").opacity(0.24)
+    /// Tactile highlighted marble border when pressed (55% opacity)
+    public static let marbleBorderFocused = Color(hex: "#F5F5F7").opacity(0.55)
+    
     // MARK: - Typography Colors
     public static let textPrimary = Color.white
     public static let textSecondary = Color(hex: "#9CA3AF")
@@ -153,4 +161,56 @@ public struct TouchFeedbackButtonStyle: ButtonStyle {
             }
     }
 }
+
+// MARK: - Luxury Oval/Capsule Functional Button with Marble-White Polished Border & Tactile Press Physics
+public struct MarbleCapsuleButtonStyle: ButtonStyle {
+    public var strokeWidth: CGFloat
+    
+    public init(strokeWidth: CGFloat = 1.2) {
+        self.strokeWidth = strokeWidth
+    }
+    
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(
+                        configuration.isPressed
+                            ? PastelTheme.marbleBorderFocused
+                            : PastelTheme.marbleBorder,
+                        lineWidth: strokeWidth
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.975 : 1.0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    HapticManager.lightImpact()
+                }
+            }
+    }
+}
+
+// MARK: - Borderless Clean Icon Button Style for Spotify/Apple Music Player Controls
+public struct PlayerCleanButtonStyle: ButtonStyle {
+    public var scale: CGFloat
+    
+    public init(scale: CGFloat = 0.92) {
+        self.scale = scale
+    }
+    
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1.0)
+            .opacity(configuration.isPressed ? 0.72 : 1.0)
+            .animation(.spring(response: 0.20, dampingFraction: 0.75), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    HapticManager.lightImpact()
+                }
+            }
+    }
+}
+
 

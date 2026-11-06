@@ -188,19 +188,22 @@ public struct TransferBridgeFlowView: View {
                 
                 Spacer()
                 
-                // Done / Dismiss Button
+                // Done / Dismiss Button (Marble Oval)
                 Button {
                     dismiss()
                 } label: {
                     Text("Done")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundColor(PastelTheme.textOnOat)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                         .background(PastelTheme.pastelOat)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
+                        )
                 }
-                .buttonStyle(TouchFeedbackButtonStyle())
+                .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
                 .padding(.horizontal, 20)
                 .padding(.bottom, 16)
             }

@@ -200,13 +200,13 @@ public struct TransferConfigView: View {
                     .frame(height: 44)
                     .background(isSelected ? PastelTheme.pastelOat : PastelTheme.card)
                     .foregroundColor(isSelected ? PastelTheme.textOnOat : PastelTheme.textSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(Capsule())
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(isSelected ? Color.clear : PastelTheme.cardBorder, lineWidth: 1)
+                        Capsule()
+                            .stroke(isSelected ? Color.clear : PastelTheme.marbleBorder, lineWidth: 1)
                     )
                 }
-                .buttonStyle(TouchFeedbackButtonStyle())
+                .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
             }
         }
     }
@@ -540,10 +540,10 @@ public struct TransferConfigView: View {
                         .foregroundColor(isSelected ? PastelTheme.textOnOat : PastelTheme.textSecondary)
                         .clipShape(Capsule())
                         .overlay(
-                            Capsule().stroke(isSelected ? Color.clear : PastelTheme.cardBorder, lineWidth: 1)
+                            Capsule().stroke(isSelected ? Color.clear : PastelTheme.marbleBorder, lineWidth: 1)
                         )
                     }
-                    .buttonStyle(TouchFeedbackButtonStyle())
+                    .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                 }
             }
             .padding(.top, 4)
@@ -649,7 +649,7 @@ public struct TransferConfigView: View {
             
             // Primary Big CTA Button
             if mainMode == .serviceTransfer {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Button {
                         HapticManager.successNotification()
                         startLiveMigration()
@@ -664,11 +664,15 @@ public struct TransferConfigView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(PastelTheme.pastelOat)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
+                        )
                     }
-                    .buttonStyle(TouchFeedbackButtonStyle())
+                    .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
                     
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
                         Button {
                             HapticManager.lightImpact()
                             runDryRun()
@@ -685,15 +689,15 @@ public struct TransferConfigView: View {
                             }
                             .foregroundColor(PastelTheme.pastelOat)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 42)
-                            .background(PastelTheme.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .frame(height: 44)
+                            .background(PastelTheme.cardSubtle)
+                            .clipShape(Capsule())
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                                Capsule()
+                                    .stroke(PastelTheme.marbleBorder, lineWidth: 1.2)
                             )
                         }
-                        .buttonStyle(TouchFeedbackButtonStyle())
+                        .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.2))
                         
                         Button {
                             HapticManager.lightImpact()
@@ -706,16 +710,16 @@ public struct TransferConfigView: View {
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                             }
                             .foregroundColor(PastelTheme.pastelOat)
-                            .frame(width: 120)
-                            .frame(height: 42)
-                            .background(PastelTheme.card)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .frame(width: 130)
+                            .frame(height: 44)
+                            .background(PastelTheme.cardSubtle)
+                            .clipShape(Capsule())
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                                Capsule()
+                                    .stroke(PastelTheme.marbleBorder, lineWidth: 1.2)
                             )
                         }
-                        .buttonStyle(TouchFeedbackButtonStyle())
+                        .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.2))
                     }
                 }
             } else {
@@ -733,10 +737,14 @@ public struct TransferConfigView: View {
                     .foregroundColor(PastelTheme.textOnOat)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(PastelTheme.emeraldSuccess)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(PastelTheme.pastelOat)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
+                    )
                 }
-                .buttonStyle(TouchFeedbackButtonStyle())
+                .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
             }
         }
     }

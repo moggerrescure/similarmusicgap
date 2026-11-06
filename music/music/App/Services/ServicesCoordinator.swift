@@ -116,7 +116,7 @@ public final class ServicesCoordinator: ObservableObject {
             _ = try await provider(for: type).authenticate()
             await syncAll()
         } catch {
-            print("❌ Authentication failed for \(type.displayName): \(error)")
+            print("[ServicesCoordinator] Authentication failed for \(type.displayName): \(error)")
         }
     }
     
@@ -125,7 +125,7 @@ public final class ServicesCoordinator: ObservableObject {
             try await provider(for: type).revoke()
             refreshAggregates()
         } catch {
-            print("❌ Revoke failed for \(type.displayName): \(error)")
+            print("[ServicesCoordinator] Revoke failed for \(type.displayName): \(error)")
         }
     }
     
