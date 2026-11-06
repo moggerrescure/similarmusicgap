@@ -178,6 +178,14 @@ public struct HorizontalLiquidWaveProgressView: View {
         styleOverride ?? coordinator.flaskFillingStyle
     }
     
+    private func sineOscillation(_ multiplier: CGFloat = 1.0, amplitude: Double = 0.05) -> Double {
+        Double(sin(phase * multiplier)) * amplitude
+    }
+    
+    private func cosineOscillation(_ multiplier: CGFloat = 1.0, amplitude: Double = 0.06) -> Double {
+        Double(cos(phase * multiplier)) * amplitude
+    }
+    
     public var body: some View {
         GeometryReader { geo in
             let fillWidth = max(0, min(geo.size.width, geo.size.width * CGFloat(progress)))
@@ -269,9 +277,9 @@ public struct HorizontalLiquidWaveProgressView: View {
             LinearGradient(
                 colors: [
                     PastelTheme.pastelOat.opacity(0.12),
-                    PastelTheme.pastelOat.opacity(0.26 + sin(phase * 0.8) * 0.05),
-                    Color(hex: "#FDE68A").opacity(0.28 + cos(phase * 0.8) * 0.06),
-                    Color(hex: "#FFF8EC").opacity(0.50 + sin(phase * 1.2) * 0.08)
+                    PastelTheme.pastelOat.opacity(0.26 + sineOscillation(0.8, amplitude: 0.05)),
+                    Color(hex: "#FDE68A").opacity(0.28 + cosineOscillation(0.8, amplitude: 0.06)),
+                    Color(hex: "#FFF8EC").opacity(0.50 + sineOscillation(1.2, amplitude: 0.08))
                 ],
                 startPoint: UnitPoint(x: CGFloat(sin(phase * 0.5) * 0.15), y: 0),
                 endPoint: UnitPoint(x: 1.0 + CGFloat(cos(phase * 0.5) * 0.15), y: 1)
@@ -292,8 +300,8 @@ public struct HorizontalLiquidWaveProgressView: View {
                     let particleY = size.height * p.relY + verticalSway
                     
                     // Twinkling shimmer brightness
-                    let twinkle = 0.60 + 0.40 * sin(phase * 2.5 + CGFloat(p.id) * 1.2)
-                    let opacity = p.baseOpacity * Double(twinkle)
+                    let twinkle = 0.60 + 0.40 * Double(sin(phase * 2.5 + CGFloat(p.id) * 1.2))
+                    let opacity = p.baseOpacity * twinkle
                     
                     Group {
                         if p.isDiamond {
@@ -387,7 +395,7 @@ public struct HorizontalLiquidWaveProgressView: View {
             LinearGradient(
                 colors: [
                     PastelTheme.emeraldSuccess.opacity(0.12),
-                    PastelTheme.emeraldSuccess.opacity(0.28 + sin(phase) * 0.05),
+                    PastelTheme.emeraldSuccess.opacity(0.28 + sineOscillation(1.0, amplitude: 0.05)),
                     Color(hex: "#34D399").opacity(0.45)
                 ],
                 startPoint: .leading,
@@ -455,8 +463,8 @@ public struct HorizontalLiquidWaveProgressView: View {
             LinearGradient(
                 colors: [
                     PastelTheme.amberWarning.opacity(0.12),
-                    PastelTheme.amberWarning.opacity(0.32 + sin(phase * 1.5) * 0.08),
-                    Color(hex: "#FDE68A").opacity(0.55 + cos(phase * 1.5) * 0.08)
+                    PastelTheme.amberWarning.opacity(0.32 + sineOscillation(1.5, amplitude: 0.08)),
+                    Color(hex: "#FDE68A").opacity(0.55 + cosineOscillation(1.5, amplitude: 0.08))
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
@@ -521,7 +529,7 @@ public struct HorizontalLiquidWaveProgressView: View {
                 LinearGradient(
                     colors: [
                         PastelTheme.slateBlue.opacity(0.10),
-                        PastelTheme.slateBlue.opacity(0.22 + sin(phase) * 0.05),
+                        PastelTheme.slateBlue.opacity(0.22 + sineOscillation(1.0, amplitude: 0.05)),
                         Color(hex: "#34D399").opacity(0.40)
                     ],
                     startPoint: .leading,
