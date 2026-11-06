@@ -196,7 +196,7 @@ public struct FullPlayerSheet: View {
                 
                 // Service deep link chip (Marble White Capsule)
                 HStack(spacing: 8) {
-                    if let yandexId = track.yandexId {
+                    if track.yandexId != nil {
                         Button { DeepLinkManager.openTrack(track: track, in: .yandexMusic) } label: {
                             Label("Yandex", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -209,7 +209,7 @@ public struct FullPlayerSheet: View {
                         }
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
-                    if let spotifyId = track.spotifyId {
+                    if track.spotifyId != nil {
                         Button { DeepLinkManager.openTrack(track: track, in: .spotify) } label: {
                             Label("Spotify", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -222,7 +222,7 @@ public struct FullPlayerSheet: View {
                         }
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
-                    if let appleId = track.appleMusicId {
+                    if track.appleMusicId != nil {
                         Button { DeepLinkManager.openTrack(track: track, in: .appleMusic) } label: {
                             Label("Apple Music", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))

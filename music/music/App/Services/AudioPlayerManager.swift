@@ -346,28 +346,30 @@ public final class AudioPlayerManager: ObservableObject {
     private func startTimer() {
         stopTimer()
         displayLinkTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self, self.isPlaying else { return }
-            
-            self.currentTime += 0.1
-            if self.duration > 0 {
-                self.progress = min(1.0, self.currentTime / self.duration)
-            }
-            
-            let timeLeft = self.duration - self.currentTime
-            
-            // 1. Pre-buffer next track at 6 seconds remaining
-            if timeLeft <= 6.0 && self.secondaryPlayer == nil && !self.playlistQueue.isEmpty {
-                self.prepareNextTrackDeck()
-            }
-            
-            // 2. Initiate Equal-Power Crossfade when inside crossfadeDuration window
-            if timeLeft <= self.crossfadeDuration && timeLeft > 0 {
-                self.performCrossfadeTick(timeLeft: timeLeft)
-            }
-            
-            // 3. Finalize transition when track reaches completion
-            if self.currentTime >= self.duration {
-                self.finalizeTrackTransition()
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isPlaying else { return }
+                
+                self.currentTime += 0.1
+                if self.duration > 0 {
+                    self.progress = min(1.0, self.currentTime / self.duration)
+                }
+                
+                let timeLeft = self.duration - self.currentTime
+                
+                // 1. Pre-buffer next track at 6 seconds remaining
+                if timeLeft <= 6.0 && self.secondaryPlayer == nil && !self.playlistQueue.isEmpty {
+                    self.prepareNextTrackDeck()
+                }
+                
+                // 2. Initiate Equal-Power Crossfade when inside crossfadeDuration window
+                if timeLeft <= self.crossfadeDuration && timeLeft > 0 {
+                    self.performCrossfadeTick(timeLeft: timeLeft)
+                }
+                
+                // 3. Finalize transition when track reaches completion
+                if self.currentTime >= self.duration {
+                    self.finalizeTrackTransition()
+                }
             }
         }
     }
