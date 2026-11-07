@@ -247,7 +247,7 @@ private struct TurntablePlayerDeckView: View {
                             TonearmAssemblyView(
                                 angle: tonearmAngle
                             )
-                            .position(x: 104, y: 54)
+                            .position(x: 104, y: 52)
                         }
                     }
                 }
@@ -350,100 +350,31 @@ private struct TurntableSpinningPlatterDisc: View {
     }
 }
 
-// MARK: - Audiophile High-Precision Tonearm Assembly
+// MARK: - Audiophile High-Precision Monolithic Tonearm Assembly
 
 private struct TonearmAssemblyView: View {
     let angle: Double
     
     var body: some View {
         ZStack {
-            // 1. Static Gimbal Base & Cueing Assembly (Anchored to Chassis)
-            ZStack {
-                // Outer CNC-machined mounting ring
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(hex: "#2B2D35"), Color(hex: "#15161A")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+            // 1. Static Recessed Bearing Base (Milled into chassis under the pivot hub)
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "#2B2D35"), Color(hex: "#15161A")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-                    .frame(width: 22, height: 22)
-                    .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
-                    .shadow(color: Color.black.opacity(0.6), radius: 3, y: 2)
-                
-                // Chrome Gimbal Bearing Ring
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF"), Color(hex: "#2D3036")],
-                            center: .center,
-                            startRadius: 1,
-                            endRadius: 8
-                        )
-                    )
-                    .frame(width: 15, height: 15)
-                    .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.5))
-                
-                // Cueing Lifter Rest Arm (Микролифт демпфера)
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(hex: "#3E414A"), Color(hex: "#1A1B20")],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(width: 9, height: 2.5)
-                    .offset(x: -7, y: 9)
-                
-                // Center Sapphire Jewel Bearing
-                Circle()
-                    .fill(Color(hex: "#0E0F12"))
-                    .frame(width: 5, height: 5)
-                    .overlay(Circle().stroke(PastelTheme.pastelOat.opacity(0.6), lineWidth: 0.6))
-            }
-            .position(x: 24, y: 14)
+                )
+                .frame(width: 22, height: 22)
+                .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
+                .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
+                .position(x: 24, y: 18)
             
-            // 2. Rotating Tonearm Assembly (Wand, Headshell, Cartridge, Needle, Counterweight)
-            // Rotates around the exact center of the pivot bearing at (x: 24, y: 14)
+            // 2. Continuous Rotating Tonearm Assembly (Rotates around exact pivot at x: 24, y: 18)
+            // Monolithic structural integrity: shaft, counterweight, gimbal hub, wand, and cartridge are ONE piece!
             ZStack {
-                // A. Machined Metallic Counterweight (Behind pivot, y < 14)
-                ZStack {
-                    // Counterweight Stub Shaft
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#D1D5DB"), Color(hex: "#4B5563")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 3.5, height: 11)
-                        .offset(y: 8)
-                    
-                    // Heavy Cylindrical Balance Weight with Calibrated Knurling
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#A3A7AF"), Color(hex: "#374151")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 11, height: 8)
-                        .overlay(
-                            VStack(spacing: 1.5) {
-                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
-                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
-                            }
-                        )
-                        .shadow(color: Color.black.opacity(0.5), radius: 2, y: 1)
-                        .offset(y: 6)
-                }
-                .position(x: 24, y: 6)
-                
-                // B. Aerospace Titanium Tonearm Wand (Tube extending from pivot to cartridge)
+                // A. Continuous Aerospace Titanium Shaft (Unbroken rod from counterweight to headshell)
                 Capsule()
                     .fill(
                         LinearGradient(
@@ -457,18 +388,70 @@ private struct TonearmAssemblyView: View {
                             endPoint: .bottom
                         )
                     )
-                    .frame(width: 3.2, height: 56)
-                    .shadow(color: Color.black.opacity(0.5), radius: 2.5, x: -1, y: 1)
-                    .position(x: 24, y: 44)
+                    .frame(width: 3.2, height: 68)
+                    .shadow(color: Color.black.opacity(0.45), radius: 2, x: -1, y: 1)
+                    .position(x: 24, y: 39)
                 
-                // C. Bayonet Connector Collar (Муфта крепления шелла)
+                // B. Heavy Calibrated Knurled Counterweight (Clamped at the top of the shaft, y: 7)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 2.2)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#A3A7AF"), Color(hex: "#374151")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 11, height: 8.5)
+                        .overlay(
+                            VStack(spacing: 1.5) {
+                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
+                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
+                            }
+                        )
+                        .shadow(color: Color.black.opacity(0.5), radius: 2, y: 1)
+                }
+                .position(x: 24, y: 7)
+                
+                // C. Precision Gimbal Bearing Hub (Centered directly on the shaft at the pivot x: 24, y: 18)
+                // Rotates WITH the arm for 100% mechanical alignment and zero visual fracture
+                ZStack {
+                    // Outer Machined Spherical Ring
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF"), Color(hex: "#2D3036")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.75))
+                        .shadow(color: Color.black.opacity(0.4), radius: 2, y: 1)
+                    
+                    // Central Bearing Jewel Cap
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#6B7280"), Color(hex: "#111113")],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 3
+                            )
+                        )
+                        .frame(width: 6, height: 6)
+                        .overlay(Circle().stroke(PastelTheme.pastelOat.opacity(0.8), lineWidth: 0.6))
+                }
+                .position(x: 24, y: 18)
+                
+                // D. Bayonet Connector Collar (Муфта крепления шелла на конце стержня)
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Color(hex: "#1E2026"))
                     .frame(width: 5, height: 3)
                     .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
                     .position(x: 24, y: 72)
                 
-                // D. Audiophile Headshell, Cartridge Body & Stylus
+                // E. Audiophile Headshell, Cartridge Body & Stylus
                 ZStack(alignment: .topTrailing) {
                     // Cartridge Body (Athletic Emerald Jewel with Chamfered Trim)
                     RoundedRectangle(cornerRadius: 2.2)
@@ -524,10 +507,10 @@ private struct TonearmAssemblyView: View {
                 .rotationEffect(.degrees(22))
                 .position(x: 21, y: 81)
             }
-            .frame(width: 48, height: 94)
-            .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 24.0 / 48.0, y: 14.0 / 94.0))
+            .frame(width: 48, height: 96)
+            .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 24.0 / 48.0, y: 18.0 / 96.0))
         }
-        .frame(width: 48, height: 94)
+        .frame(width: 48, height: 96)
     }
 }
 
