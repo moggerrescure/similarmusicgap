@@ -92,10 +92,126 @@ public struct VinylTurntableHorizonView: View {
     public init() {}
     
     private var currentActiveVinyl: ColoredVinylItem {
-        if activeVinylIndex >= 0 && activeVinylIndex < vinyls.count {
-            return vinyls[activeVinylIndex]
+        guard let current = player.currentTrack else {
+            if activeVinylIndex >= 0 && activeVinylIndex < vinyls.count {
+                return vinyls[activeVinylIndex]
+            }
+            return vinyls[0]
         }
-        return vinyls[0]
+        
+        let cTitle = current.title
+        let cArtist = current.artists.first ?? ""
+        let cAlbum = current.album ?? ""
+        let cId = current.spotifyId ?? ""
+        let cIsrc = current.isrc
+        
+        // 1. Direct match with top 6 vinyls
+        for item in vinyls {
+            if cId == "vn_\(item.id)" ||
+               item.title.localizedCaseInsensitiveContains(cTitle) ||
+               cTitle.localizedCaseInsensitiveContains(item.title) ||
+               (!cArtist.isEmpty && item.artist.localizedCaseInsensitiveContains(cArtist)) {
+                return item
+            }
+        }
+        
+        // 2. Drop of the Week ("New Music Friday")
+        if cTitle.localizedCaseInsensitiveContains("New Music") || cIsrc == "DROP-NMF-2024" {
+            return ColoredVinylItem(
+                id: 999,
+                title: "New Music Friday",
+                artist: "Friday Drop",
+                symbolOrInitial: "star.fill",
+                waxGradient: [Color(hex: "#2B2D37"), Color(hex: "#090A0D"), Color(hex: "#1F212A")],
+                labelGradient: [Color(hex: "#FEF08A"), Color(hex: "#FBBF24"), Color(hex: "#D97706")],
+                labelTextColor: Color(hex: "#0E0F12"),
+                glowColor: PastelTheme.warmAmber
+            )
+        }
+        
+        // 3. Vault Albums (Travis Scott, SZA, Olivia Rodrigo, JPEGMAFIA)
+        if cAlbum.localizedCaseInsensitiveContains("UTOPIA") || cTitle.localizedCaseInsensitiveContains("UTOPIA") {
+            return ColoredVinylItem(
+                id: 301,
+                title: "UTOPIA",
+                artist: "Travis Scott",
+                symbolOrInitial: "TS",
+                waxGradient: [Color(hex: "#4B5563"), Color(hex: "#1F2937"), Color(hex: "#111827")],
+                labelGradient: [Color(hex: "#EFE3D3"), Color(hex: "#D1D5DB")],
+                labelTextColor: Color(hex: "#0E0F12"),
+                glowColor: Color(hex: "#EFE3D3")
+            )
+        }
+        if cAlbum.localizedCaseInsensitiveContains("SOS") || cTitle.localizedCaseInsensitiveContains("SOS") || current.artists.contains("SZA") {
+            return ColoredVinylItem(
+                id: 302,
+                title: "SOS",
+                artist: "SZA",
+                symbolOrInitial: "SZA",
+                waxGradient: [Color(hex: "#2563EB"), Color(hex: "#1D4ED8"), Color(hex: "#0F172A")],
+                labelGradient: [Color(hex: "#60A5FA"), Color(hex: "#2563EB")],
+                labelTextColor: Color.white,
+                glowColor: Color(hex: "#60A5FA")
+            )
+        }
+        if cAlbum.localizedCaseInsensitiveContains("GUTS") || cTitle.localizedCaseInsensitiveContains("GUTS") || current.artists.contains("Olivia Rodrigo") {
+            return ColoredVinylItem(
+                id: 303,
+                title: "GUTS",
+                artist: "Olivia Rodrigo",
+                symbolOrInitial: "OR",
+                waxGradient: [Color(hex: "#9333EA"), Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+                labelGradient: [Color(hex: "#C084FC"), Color(hex: "#7E22CE")],
+                labelTextColor: Color.white,
+                glowColor: Color(hex: "#C084FC")
+            )
+        }
+        if cAlbum.localizedCaseInsensitiveContains("SCARING") || current.artists.contains("JPEGMAFIA") {
+            return ColoredVinylItem(
+                id: 304,
+                title: "SCARING THE HOES",
+                artist: "JPEGMAFIA",
+                symbolOrInitial: "SH",
+                waxGradient: [Color(hex: "#DC2626"), Color(hex: "#991B1B"), Color(hex: "#2B0B0B")],
+                labelGradient: [Color(hex: "#F87171"), Color(hex: "#B91C1C")],
+                labelTextColor: Color.white,
+                glowColor: Color(hex: "#EF4444")
+            )
+        }
+        
+        // 4. Any other track currently playing
+        let initial = String(cTitle.prefix(1)).uppercased()
+        return ColoredVinylItem(
+            id: 888,
+            title: cTitle,
+            artist: cArtist.isEmpty ? "Vault Live" : cArtist,
+            symbolOrInitial: initial.isEmpty ? "LP" : initial,
+            waxGradient: [Color(hex: "#374151"), Color(hex: "#1F2937"), Color(hex: "#111827")],
+            labelGradient: [PastelTheme.pastelOat, Color(hex: "#9CA3AF")],
+            labelTextColor: Color(hex: "#0E0F12"),
+            glowColor: PastelTheme.pastelOat
+        )
+    }
+    
+    private func isVinylActive(index: Int) -> Bool {
+        guard let current = player.currentTrack else {
+            return activeVinylIndex == index
+        }
+        let item = vinyls[index]
+        let cTitle = current.title
+        let cArtist = current.artists.first ?? ""
+        let cId = current.spotifyId ?? ""
+        
+        if cId == "vn_\(item.id)" {
+            return true
+        }
+        if item.title.localizedCaseInsensitiveContains(cTitle) || cTitle.localizedCaseInsensitiveContains(item.title) {
+            return true
+        }
+        if !cArtist.isEmpty && item.artist.localizedCaseInsensitiveContains(cArtist) {
+            return true
+        }
+        return false
     }
     
     public var body: some View {
@@ -118,10 +234,11 @@ public struct VinylTurntableHorizonView: View {
                 
                 // 2. THE LARGE COLORFUL ROTATING VINYL DISCS IN ROW
                 ForEach(Array(vinyls.enumerated()), id: \.element.id) { index, item in
+                    let active = isVinylActive(index: index)
                     StandaloneVinylRecordCard(
                         item: item,
                         isPlaying: player.isPlaying,
-                        isActive: activeVinylIndex == index,
+                        isActive: active,
                         onTap: {
                             selectAndPlayVinyl(at: index)
                         }
@@ -527,7 +644,36 @@ private struct TonearmAssemblyView: View {
     }
 }
 
-// MARK: - 2. Standalone Rotating Colored Vinyl in Row
+// MARK: - 2. Standalone Rotating Colored Vinyl in Row with Ambient Idle Drift
+
+/// Continuous angular motion tracker ensuring seamless acceleration & deceleration without angle jumps
+private final class VinylDriftMotionTracker: ObservableObject {
+    @Published var tick: Bool = false
+    var currentAngle: Double = 0.0
+    var lastDate: Date? = nil
+    
+    func advance(currentDate: Date, isPlaying: Bool, isActive: Bool) -> Double {
+        guard isPlaying else {
+            lastDate = nil
+            return currentAngle
+        }
+        
+        if let last = lastDate {
+            let delta = currentDate.timeIntervalSince(last)
+            if delta > 0 && delta < 0.5 {
+                // Active speed: 360° in 3.2s = 112.5°/sec (Full 33 ⅓ RPM)
+                // Inactive drift: 360° in 54.0s = 6.667°/sec (Barely perceptible meditative analog drift)
+                let speedDegPerSec: Double = isActive ? (360.0 / 3.2) : (360.0 / 54.0)
+                currentAngle += delta * speedDegPerSec
+                if currentAngle >= 360000.0 {
+                    currentAngle = currentAngle.truncatingRemainder(dividingBy: 360.0)
+                }
+            }
+        }
+        lastDate = currentDate
+        return currentAngle
+    }
+}
 
 private struct StandaloneVinylRecordCard: View {
     let item: VinylTurntableHorizonView.ColoredVinylItem
@@ -535,13 +681,18 @@ private struct StandaloneVinylRecordCard: View {
     let isActive: Bool
     let onTap: () -> Void
     
+    @StateObject private var motionTracker = VinylDriftMotionTracker()
+    
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 8) {
                 // Large Colored Vinyl Disc (82 x 82)
                 TimelineView(.animation(paused: !isPlaying)) { timeline in
-                    let time = timeline.date.timeIntervalSinceReferenceDate
-                    let rotation = (time.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
+                    let rotation = motionTracker.advance(
+                        currentDate: timeline.date,
+                        isPlaying: isPlaying,
+                        isActive: isActive
+                    )
                     
                     ZStack {
                         // Colored Wax Base with Marbled Angular Swirl (Unmistakable visible spin)
@@ -563,11 +714,11 @@ private struct StandaloneVinylRecordCard: View {
                             .frame(width: 82, height: 82)
                             .overlay(
                                 Circle().stroke(
-                                    isActive ? PastelTheme.cardBorderFocused : Color.white.opacity(0.16),
-                                    lineWidth: isActive ? 1.5 : 0.8
+                                    isActive && isPlaying ? PastelTheme.cardBorderFocused : Color.white.opacity(0.16),
+                                    lineWidth: isActive && isPlaying ? 1.5 : 0.8
                                 )
                             )
-                            .shadow(color: item.glowColor.opacity(isActive ? 0.55 : 0.25), radius: isActive ? 12 : 6)
+                            .shadow(color: item.glowColor.opacity(isActive && isPlaying ? 0.6 : 0.2), radius: isActive && isPlaying ? 12 : 5)
                         
                         // Micro Grooves
                         Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 74, height: 74)
@@ -634,8 +785,8 @@ private struct StandaloneVinylRecordCard: View {
                 
                 // Track / Artist Title
                 Text(item.title)
-                    .font(.system(size: 11, weight: isActive ? .bold : .medium, design: .rounded))
-                    .foregroundColor(isActive ? PastelTheme.textPrimary : PastelTheme.textSecondary)
+                    .font(.system(size: 11, weight: isActive && isPlaying ? .bold : .medium, design: .rounded))
+                    .foregroundColor(isActive && isPlaying ? PastelTheme.textPrimary : PastelTheme.textSecondary)
                     .lineLimit(1)
                     .frame(width: 82)
             }
