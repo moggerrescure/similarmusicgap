@@ -22,7 +22,8 @@ public struct PlaylistDetailSheet: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                CosmicParticleBackgroundView(particleCount: 40)
+                // Dynamic Ambient Gradient Wash
+                AmbientWashBackgroundView()
                 
                 VStack(spacing: 0) {
                     headerSection

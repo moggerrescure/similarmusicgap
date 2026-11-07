@@ -12,7 +12,7 @@ public struct ServicesHubView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                CosmicParticleBackgroundView(particleCount: 45)
+                AmbientWashBackgroundView()
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {

@@ -415,10 +415,8 @@ public struct LibraryView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                PastelTheme.canvas
-                    .ignoresSafeArea()
-                
-                CosmicParticleBackgroundView(particleCount: 40)
+                // Dynamic Ambient Gradient Wash
+                AmbientWashBackgroundView()
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {

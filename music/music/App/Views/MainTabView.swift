@@ -8,8 +8,8 @@ public struct MainTabView: View {
     
     public var body: some View {
         ZStack(alignment: .bottom) {
-            // Pure Pitch Black Base (#121212)
-            Color(hex: "#121212")
+            // OLED Cashmere Charcoal Base (#0E0F12)
+            PastelTheme.canvas
                 .ignoresSafeArea()
             
             TabView(selection: $navCoordinator.selectedTab) {

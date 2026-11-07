@@ -12,7 +12,7 @@ public struct TasteAnalyticsView: View {
     
     public var body: some View {
         ZStack {
-            CosmicParticleBackgroundView(particleCount: 45)
+            AmbientWashBackgroundView()
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {

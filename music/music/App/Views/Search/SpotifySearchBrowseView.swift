@@ -65,11 +65,8 @@ public struct SpotifySearchBrowseView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                // OLED Cashmere Charcoal Base (#0E0F12)
-                PastelTheme.canvas
-                    .ignoresSafeArea()
-                
-                CosmicParticleBackgroundView(particleCount: 30)
+                // Dynamic Ambient Gradient Wash
+                AmbientWashBackgroundView()
                 
                 VStack(spacing: 0) {
                     // Header Title

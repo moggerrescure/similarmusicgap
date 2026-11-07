@@ -129,10 +129,8 @@ public struct UserPersonalLibrarySheet: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                PastelTheme.canvas
-                    .ignoresSafeArea()
-                
-                CosmicParticleBackgroundView(particleCount: 40)
+                // Dynamic Ambient Gradient Wash
+                AmbientWashBackgroundView()
                 
                 VStack(spacing: 0) {
                     // Search Bar

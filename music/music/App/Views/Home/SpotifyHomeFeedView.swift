@@ -185,9 +185,8 @@ public struct SpotifyHomeFeedView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                // Pitch Black Base (#121212)
-                Color(hex: "#121212")
-                    .ignoresSafeArea()
+                // Dynamic Ambient Gradient Wash (changes on each session)
+                AmbientWashBackgroundView()
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
