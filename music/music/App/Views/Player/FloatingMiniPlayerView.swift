@@ -113,13 +113,13 @@ public struct FloatingMiniPlayerView: View {
             .frame(height: 2)
         }
         .frame(height: 56)
-        .padding(.horizontal, 8) // margin: 0 8px
-        .padding(.bottom, 66)    // positioned right above 64px bottom nav bar
         .contentShape(Rectangle())
         .onTapGesture {
             HapticManager.lightImpact()
             showingFullPlayer = true
         }
+        .padding(.horizontal, 8) // margin: 0 8px
+        .padding(.bottom, 54)    // floats cleanly above the bottom tab bar without intercepting taps
         .sheet(isPresented: $showingFullPlayer) {
             FullPlayerSheet(track: activeTrack)
         }
