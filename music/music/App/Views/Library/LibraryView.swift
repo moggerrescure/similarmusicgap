@@ -575,8 +575,13 @@ public struct LibraryView: View {
     }
     
     private func moveTracks(from source: IndexSet, to destination: Int) {
+        guard !customOrderedTracks.isEmpty else { return }
+        guard let maxIdx = source.max(), maxIdx < customOrderedTracks.count else { return }
+        guard destination >= 0 && destination <= customOrderedTracks.count else { return }
         customOrderedTracks.move(fromOffsets: source, toOffset: destination)
-        coordinator.reorderTracks(fromOffsets: source, toOffset: destination)
+        if !coordinator.allTracks.isEmpty && coordinator.allTracks.count == customOrderedTracks.count {
+            coordinator.reorderTracks(fromOffsets: source, toOffset: destination)
+        }
         HapticManager.lightImpact()
     }
 }

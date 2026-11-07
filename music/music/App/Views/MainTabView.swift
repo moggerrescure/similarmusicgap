@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Root Tab Navigation Bar (Apple HIG HUD Standard)
+/// Root Tab Navigation Bar replicating Spotify Production Standard
 public struct MainTabView: View {
     @ObservedObject private var navCoordinator = NavigationCoordinator.shared
     
@@ -8,70 +8,73 @@ public struct MainTabView: View {
     
     public var body: some View {
         ZStack(alignment: .bottom) {
-            // Deep OLED Canvas Base
-            PastelTheme.canvas
+            // Pure Pitch Black Base (#121212)
+            Color(hex: "#121212")
                 .ignoresSafeArea()
             
             TabView(selection: $navCoordinator.selectedTab) {
-                // Tab 1: Services Hub
-                ServicesHubView()
+                // Tab 1: Home (Personalized Feed)
+                SpotifyHomeFeedView()
                     .tabItem {
-                        Label("Services", systemImage: "link.circle.fill")
+                        Image(systemName: navCoordinator.selectedTab == 0 ? "house.fill" : "house")
+                        Text("Home")
                     }
                     .tag(0)
                 
-                // Tab 2: Library
-                LibraryView()
+                // Tab 2: Search (Search & Browse All Genres)
+                SpotifySearchBrowseView()
                     .tabItem {
-                        Label("Library", systemImage: "music.note.list")
+                        Image(systemName: "magnifyingglass")
+                        Text("Search")
                     }
                     .tag(1)
                 
-                // Tab 3: Transfer
+                // Tab 3: Your Library
+                LibraryView()
+                    .tabItem {
+                        Image(systemName: navCoordinator.selectedTab == 2 ? "books.vertical.fill" : "books.vertical")
+                        Text("Your Library")
+                    }
+                    .tag(2)
+                
+                // Tab 4: Create / Transfer
                 NavigationStack {
                     TransferConfigView()
                 }
                 .tabItem {
-                    Label("Transfer", systemImage: "arrow.triangle.swap")
-                }
-                .tag(2)
-                
-                // Tab 4: Taste Profile
-                NavigationStack {
-                    TasteAnalyticsView()
-                }
-                .tabItem {
-                    Label("Taste", systemImage: "chart.bar.fill")
+                    Image(systemName: "plus")
+                    Text("Create")
                 }
                 .tag(3)
             }
-            .tint(PastelTheme.pastelOat)
+            .tint(Color.white)
             
+            // Spotify-Grade Floating Mini-Player (docked above bottom nav bar)
             FloatingMiniPlayerView()
         }
         .onAppear {
-            customizeTabBarAppearance()
+            customizeSpotifyTabBarAppearance()
         }
     }
     
-    private func customizeTabBarAppearance() {
+    private func customizeSpotifyTabBarAppearance() {
         #if os(iOS)
         let appearance = UITabBarAppearance()
         appearance.configureWithDefaultBackground()
         appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
-        appearance.backgroundColor = UIColor(PastelTheme.canvas).withAlphaComponent(0.85)
+        appearance.backgroundColor = UIColor(Color(hex: "#090909")).withAlphaComponent(0.94)
         
-        // Unselected items
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(PastelTheme.textTertiary)
+        // Unselected items (muted gray #B3B3B3)
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color(hex: "#B3B3B3"))
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(PastelTheme.textTertiary),
+            .foregroundColor: UIColor(Color(hex: "#B3B3B3")),
             .font: UIFont.systemFont(ofSize: 10, weight: .medium)
         ]
         
-        // Selected items
-        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(PastelTheme.pastelOat)
+        // Selected items (pure white #FFFFFF)
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor.white
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor(PastelTheme.pastelOat),
+            .foregroundColor: UIColor.white,
             .font: UIFont.systemFont(ofSize: 10, weight: .bold)
         ]
         
@@ -88,4 +91,3 @@ struct MainTabView_Previews: PreviewProvider {
     }
 }
 #endif
-

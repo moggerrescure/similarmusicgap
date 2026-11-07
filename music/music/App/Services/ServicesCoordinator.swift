@@ -200,6 +200,9 @@ public final class ServicesCoordinator: ObservableObject {
     }
     
     public func reorderTracks(fromOffsets: IndexSet, toOffset: Int) {
+        guard !allTracks.isEmpty else { return }
+        guard let maxIdx = fromOffsets.max(), maxIdx < allTracks.count else { return }
+        guard toOffset >= 0 && toOffset <= allTracks.count else { return }
         allTracks.move(fromOffsets: fromOffsets, toOffset: toOffset)
         refreshAggregates()
         HapticManager.lightImpact()

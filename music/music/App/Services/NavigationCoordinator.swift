@@ -1,21 +1,26 @@
 import SwiftUI
 import Combine
 
-/// App Tab Identifiers
+/// App Tab Identifiers (Matching Spotify Production 4-Tab Standard)
 public enum AppTab: Int, CaseIterable, Identifiable {
-    case services = 0
-    case library = 1
-    case transfer = 2
-    case taste = 3
+    case home = 0
+    case search = 1
+    case library = 2
+    case create = 3
+    
+    // Aliases for compatibility
+    public static let services = AppTab.home
+    public static let transfer = AppTab.create
+    public static let taste = AppTab.create
     
     public var id: Int { rawValue }
     
     public var title: String {
         switch self {
-        case .services: return "Services"
-        case .library: return "Library"
-        case .transfer: return "Transfer"
-        case .taste: return "Taste"
+        case .home: return "Home"
+        case .search: return "Search"
+        case .library: return "Your Library"
+        case .create: return "Create"
         }
     }
 }
@@ -25,7 +30,7 @@ public enum AppTab: Int, CaseIterable, Identifiable {
 public final class NavigationCoordinator: ObservableObject {
     public static let shared = NavigationCoordinator()
     
-    @Published public var selectedTab: Int = AppTab.services.rawValue
+    @Published public var selectedTab: Int = AppTab.home.rawValue
     
     private init() {}
     
@@ -36,20 +41,31 @@ public final class NavigationCoordinator: ObservableObject {
         }
     }
     
+    public func navigateToHome() {
+        navigateTo(tab: .home)
+    }
+    
+    public func navigateToSearch() {
+        navigateTo(tab: .search)
+    }
+    
     public func navigateToLibrary() {
         navigateTo(tab: .library)
     }
     
+    public func navigateToCreate() {
+        navigateTo(tab: .create)
+    }
+    
     public func navigateToServices() {
-        navigateTo(tab: .services)
+        navigateTo(tab: .home)
     }
     
     public func navigateToTransfer() {
-        navigateTo(tab: .transfer)
+        navigateTo(tab: .create)
     }
     
     public func navigateToTaste() {
-        navigateTo(tab: .taste)
+        navigateTo(tab: .create)
     }
 }
-

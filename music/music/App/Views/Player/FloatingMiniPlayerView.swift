@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Floating HUD Mini-Player docking above bottom navigation with Left-to-Right 3D fluid water-fill progress
+/// Floating HUD Mini-Player replicating Spotify Mobile Production UI
 public struct FloatingMiniPlayerView: View {
     @ObservedObject private var player = AudioPlayerManager.shared
     @ObservedObject private var coordinator = ServicesCoordinator.shared
@@ -8,149 +8,121 @@ public struct FloatingMiniPlayerView: View {
     
     public init() {}
     
+    private var activeTrack: UniversalTrack {
+        player.currentTrack ?? UniversalTrack(
+            isrc: "SP-DEMO-01",
+            title: "будка",
+            artists: ["CUPSIZE"],
+            album: "Single",
+            durationMs: 165000,
+            spotifyId: "demo_budka"
+        )
+    }
+    
     public var body: some View {
-        if let track = player.currentTrack {
-            ZStack(alignment: .bottom) {
-                // Background Card with Horizontal Left-to-Right Liquid Wave Fill
-                ZStack(alignment: .leading) {
-                    PastelTheme.card
+        ZStack(alignment: .bottom) {
+            // Container: 56px height, background #282828, border-radius 8px
+            Color(hex: "#282828")
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            
+            // Content Row
+            HStack(spacing: 10) {
+                // Left Thumbnail: 40px x 40px rounded square (4px radius)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color(hex: "#1E1E1E"))
+                        .frame(width: 40, height: 40)
                     
-                    // Left-to-Right Dynamic Flask Fill Layer (Defaults to Chronos Stardust everywhere)
-                    HorizontalLiquidWaveProgressView(
-                        progress: player.progress,
-                        currentTime: player.currentTime,
-                        duration: player.duration
-                    )
+                    Image(systemName: "music.note")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color(hex: "#B3B3B3"))
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
-                )
+                .padding(.leading, 8)
                 
-                // Content Row
-                HStack(spacing: 12) {
-                    // Artwork / Playback Pulse
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(PastelTheme.cardSubtle)
-                            .frame(width: 40, height: 40)
-                        
-                        if player.isPlaying {
-                            WaveformBarsView()
-                                .frame(width: 24, height: 16)
-                        } else {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(PastelTheme.pastelOat)
-                        }
-                    }
+                // Track Info (Title: white #FFFFFF, 14px bold; Artist: muted gray #B3B3B3, 12px)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(activeTrack.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color.white)
+                        .lineLimit(1)
+                        .contentTransition(.opacity)
                     
-                    // Title, Artist, & Live Seconds HUD (Seamless Crossfade)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(track.title)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundColor(PastelTheme.textPrimary)
-                            .lineLimit(1)
-                            .contentTransition(.opacity)
-                        
-                        HStack(spacing: 5) {
-                            Text(track.primaryArtist)
-                                .font(.system(size: 12, weight: .regular))
-                                .foregroundColor(PastelTheme.textSecondary)
-                                .lineLimit(1)
-                                .contentTransition(.opacity)
-                            
-                            Text("•")
-                                .font(.system(size: 10))
-                                .foregroundColor(PastelTheme.textTertiary)
-                            
-                            // High-legibility Seconds Counter (Left-to-Right Water Sync)
-                            Text(player.secondsHUDText)
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                                .foregroundColor(PastelTheme.emeraldSuccess)
-                                .contentTransition(.numericText())
-                        }
-                    }
-                    .animation(.smooth(duration: 0.35), value: track.id)
-                    
-                    Spacer()
-                    
-                    // Favorite Toggle Button (Clean borderless)
+                    Text(activeTrack.primaryArtist)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(Color(hex: "#B3B3B3"))
+                        .lineLimit(1)
+                        .contentTransition(.opacity)
+                }
+                .animation(.smooth(duration: 0.35), value: activeTrack.id)
+                
+                Spacer()
+                
+                // Right Controls (3 icons with 16px gap)
+                HStack(spacing: 16) {
+                    // 1. Connect Device / Speaker icon
                     Button {
                         HapticManager.lightImpact()
-                        player.toggleFavorite(track: track)
                     } label: {
-                        Image(systemName: player.isFavorite(track: track) ? "heart.fill" : "heart")
+                        Image(systemName: "speaker.wave.2.fill")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(player.isFavorite(track: track) ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                            .frame(width: 34, height: 34)
-                            .contentShape(Rectangle())
+                            .foregroundColor(Color.white)
+                            .frame(width: 28, height: 32)
                     }
                     .buttonStyle(PlayerCleanButtonStyle())
                     
-                    // Play/Pause Button (Clean solid Oat circle, no outer stroke)
+                    // 2. Plus inside circle icon (⊕ / favorite / add to playlist)
+                    Button {
+                        HapticManager.lightImpact()
+                        player.toggleFavorite(track: activeTrack)
+                    } label: {
+                        Image(systemName: player.isFavorite(track: activeTrack) ? "checkmark.circle.fill" : "plus.circle")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundColor(player.isFavorite(track: activeTrack) ? Color(hex: "#1ED760") : Color.white)
+                            .frame(width: 28, height: 32)
+                    }
+                    .buttonStyle(PlayerCleanButtonStyle())
+                    
+                    // 3. Solid white Play / Pause triangle icon
                     Button {
                         HapticManager.lightImpact()
                         player.togglePlayPause()
                     } label: {
                         Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(PastelTheme.textOnOat)
-                            .frame(width: 36, height: 36)
-                            .background(PastelTheme.pastelOat)
-                            .clipShape(Circle())
+                            .font(.system(size: 19, weight: .bold))
+                            .foregroundColor(Color.white)
+                            .frame(width: 28, height: 32)
                     }
-                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.94))
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.90))
+                }
+                .padding(.trailing, 12)
+            }
+            .frame(height: 56)
+            
+            // Thin 2px progress bar along bottom edge: #4D4D4D track, #FFFFFF fill
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color(hex: "#4D4D4D"))
+                        .frame(height: 2)
                     
-                    // Next Track Button (Clean borderless)
-                    Button {
-                        HapticManager.lightImpact()
-                        player.playNext()
-                    } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(PastelTheme.textPrimary)
-                            .frame(width: 34, height: 34)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlayerCleanButtonStyle())
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: max(0, geo.size.width * CGFloat(player.progress)), height: 2)
                 }
-                .padding(.horizontal, 14)
-                .frame(height: 58)
-                
-                // Luminous 2pt bottom progress indicator with specular glint
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .fill(PastelTheme.cardBorder)
-                            .frame(height: 2)
-                        
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [coordinator.flaskFillingStyle.primaryColor, coordinator.flaskFillingStyle.accentGlowColor],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: max(0, geo.size.width * CGFloat(player.progress)), height: 2)
-                    }
-                }
-                .frame(height: 2)
             }
-            .frame(height: 58)
-            .padding(.horizontal, 12)
-            .padding(.bottom, 54) // floats right above the bottom tab bar
-            .contentShape(Rectangle())
-            .onTapGesture {
-                HapticManager.lightImpact()
-                showingFullPlayer = true
-            }
-            .fullScreenOrSheet(isPresented: $showingFullPlayer) {
-                FullPlayerSheet(track: track)
-            }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .frame(height: 2)
         }
+        .frame(height: 56)
+        .padding(.horizontal, 8) // margin: 0 8px
+        .padding(.bottom, 66)    // positioned right above 64px bottom nav bar
+        .contentShape(Rectangle())
+        .onTapGesture {
+            HapticManager.lightImpact()
+            showingFullPlayer = true
+        }
+        .fullScreenOrSheet(isPresented: $showingFullPlayer) {
+            FullPlayerSheet(track: activeTrack)
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }
