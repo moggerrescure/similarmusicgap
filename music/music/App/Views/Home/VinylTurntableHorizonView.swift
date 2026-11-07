@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Collector's Edition Colored Vinyl Horizon & Animated Turntable Deck
 /// Features:
@@ -107,7 +108,11 @@ public struct VinylTurntableHorizonView: View {
                     progress: player.progress,
                     onTogglePlayPause: {
                         HapticManager.mediumImpact()
-                        player.togglePlayPause()
+                        if player.currentTrack == nil {
+                            selectAndPlayVinyl(at: activeVinylIndex)
+                        } else {
+                            player.togglePlayPause()
+                        }
                     }
                 )
                 
@@ -148,28 +153,35 @@ public struct VinylTurntableHorizonView: View {
 
 // MARK: - 1. Animated Turntable Deck (Rotating Vinyl + Calm Continuous Tonearm)
 
+private final class TurntableMotionTracker: ObservableObject {
+    @Published var tick: Bool = false
+    var accumulatedTime: Double = 0.0
+    var lastDate: Date? = nil
+    
+    func advance(currentDate: Date, isPlaying: Bool) -> Double {
+        guard isPlaying else {
+            lastDate = nil
+            return accumulatedTime
+        }
+        
+        if let last = lastDate {
+            let delta = currentDate.timeIntervalSince(last)
+            if delta > 0 && delta < 0.5 {
+                accumulatedTime += delta
+            }
+        }
+        lastDate = currentDate
+        return accumulatedTime
+    }
+}
+
 private struct TurntablePlayerDeckView: View {
     let activeVinyl: VinylTurntableHorizonView.ColoredVinylItem
     let isPlaying: Bool
     let progress: Double
     let onTogglePlayPause: () -> Void
     
-    @ObservedObject private var player = AudioPlayerManager.shared
-    
-    // Tonearm always rests naturally on the record (starting at 10.0° on the outer groove)
-    // As the song plays, it calmly glides closer to the center (22.0°) and further away (10.0°) over a 26-second cycle.
-    // When paused, it freezes right where it is on the vinyl - ZERO teleportation!
-    // When playback resumes, it continues seamlessly from that exact position.
-    private var tonearmAngle: Double {
-        let phase = (player.currentTime / 26.0) * Double.pi * 2.0
-        let cycleProgress = (1.0 - cos(phase)) * 0.5
-        return 10.0 + (cycleProgress * 12.0)
-    }
-    
-    // Cumulative continuous vinyl rotation (stops when paused, resumes without jumping)
-    private var vinylRotationAngle: Double {
-        (player.currentTime / 3.5) * 360.0
-    }
+    @StateObject private var motionTracker = TurntableMotionTracker()
     
     var body: some View {
         Button(action: onTogglePlayPause) {
@@ -205,29 +217,40 @@ private struct TurntablePlayerDeckView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 1))
                         .position(x: 62, y: 64)
                     
-                    // Rotating Vinyl Platter on Turntable (60/120 FPS continuous physical rotation)
+                    // Synchronized Platter & Tonearm Engine (60/120 FPS ProMotion hardware loop)
                     TimelineView(.animation(paused: !isPlaying)) { timeline in
-                        let time = timeline.date.timeIntervalSinceReferenceDate
-                        let rotation = (time.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+                        let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
                         
-                        TurntableSpinningPlatterDisc(
-                            waxGradient: activeVinyl.waxGradient,
-                            labelGradient: activeVinyl.labelGradient,
-                            symbolOrInitial: activeVinyl.symbolOrInitial,
-                            labelTextColor: activeVinyl.labelTextColor
-                        )
-                        .rotationEffect(.degrees(rotation))
+                        // 1. Physical 33⅓ RPM Platter Spin (3.0s per revolution)
+                        let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+                        
+                        // 2. Physical Tonearm Motion (12.0s graceful analog cycle: 6s inward to inner groove, 6s outward to outer rim)
+                        // Smooth harmonic sinusoidal motion: zero jerk, zero teleportation, authentic vinyl tracking
+                        let tonearmCycle = 12.0
+                        let phase = (playTime.truncatingRemainder(dividingBy: tonearmCycle) / tonearmCycle) * Double.pi * 2.0
+                        let cycleProgress = (1.0 - cos(phase)) * 0.5
+                        let tonearmAngle = 10.0 + (cycleProgress * 14.0) // 10.0° (outer groove) to 24.0° (inner groove)
+                        
+                        ZStack(alignment: .topTrailing) {
+                            // Rotating Vinyl Platter on Turntable
+                            TurntableSpinningPlatterDisc(
+                                waxGradient: activeVinyl.waxGradient,
+                                labelGradient: activeVinyl.labelGradient,
+                                symbolOrInitial: activeVinyl.symbolOrInitial,
+                                labelTextColor: activeVinyl.labelTextColor
+                            )
+                            .rotationEffect(.degrees(rotation))
+                            .frame(width: 92, height: 92)
+                            .position(x: 62, y: 64)
+                            
+                            // Tonearm with Stylus Needle (smoothly glides across disc grooves)
+                            TonearmAssemblyView(
+                                angle: tonearmAngle
+                            )
+                            .frame(width: 44, height: 80)
+                            .offset(x: -6, y: 8)
+                        }
                     }
-                    .frame(width: 92, height: 92)
-                    .position(x: 62, y: 64)
-                    
-                    // Tonearm with Stylus Needle (calmly glides closer/further on the disc, zero teleportation)
-                    TonearmAssemblyView(
-                        angle: tonearmAngle
-                    )
-                    .animation(isPlaying ? .linear(duration: 0.05) : nil, value: tonearmAngle)
-                    .frame(width: 44, height: 80)
-                    .offset(x: -6, y: 8)
                 }
                 .frame(width: 134, height: 134)
                 
