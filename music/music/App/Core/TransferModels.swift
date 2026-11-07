@@ -21,10 +21,16 @@ public enum ConflictPolicy: String, Codable, CaseIterable, Identifiable {
 public struct TransferScope: Codable, Equatable {
     public var transferFavorites: Bool = true
     public var selectedPlaylistIds: Set<UUID> = []
+    public var selectedTrackIds: Set<UUID>? = nil
     
-    public init(transferFavorites: Bool = true, selectedPlaylistIds: Set<UUID> = []) {
+    public init(
+        transferFavorites: Bool = true,
+        selectedPlaylistIds: Set<UUID> = [],
+        selectedTrackIds: Set<UUID>? = nil
+    ) {
         self.transferFavorites = transferFavorites
         self.selectedPlaylistIds = selectedPlaylistIds
+        self.selectedTrackIds = selectedTrackIds
     }
 }
 

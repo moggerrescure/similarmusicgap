@@ -55,6 +55,11 @@ public final class TransferManager: ObservableObject {
             }
         }
         
+        // If specific tracks are selected in the archive, filter by them
+        if let selectedIds = scope.selectedTrackIds {
+            sourceTracks = sourceTracks.filter { selectedIds.contains($0.id) }
+        }
+        
         // Remove duplicates in source queue
         let uniqueTracks = Array(Dictionary(grouping: sourceTracks, by: { "\($0.title)_\($0.primaryArtist)" }).values.compactMap { $0.first })
         
@@ -119,11 +124,14 @@ public final class TransferManager: ObservableObject {
         let destinationProvider = servicesCoordinator.provider(for: destinationType)
         
         // Load tracks to transfer
-        let tracks = (try? await sourceProvider.fetchFavorites()) ?? []
-        self.totalToProcess = max(tracks.count, 24)
+        var tracks = (try? await sourceProvider.fetchFavorites()) ?? servicesCoordinator.tracks(for: sourceType)
+        if let selectedIds = scope.selectedTrackIds {
+            tracks = tracks.filter { selectedIds.contains($0.id) }
+        }
+        self.totalToProcess = max(tracks.count, 1)
         
         var successfulCount = 0
-        var missingList: [UniversalTrack] = []
+        let missingList: [UniversalTrack] = []
         
         // Stream progress with haptic ticks
         for (index, track) in tracks.enumerated() {

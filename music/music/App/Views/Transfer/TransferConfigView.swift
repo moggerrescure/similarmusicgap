@@ -63,6 +63,11 @@ public struct TransferConfigView: View {
     @State private var matchingSensitivity: MatchingSensitivity = .strict
     @State private var autoSyncEnabled: Bool = false
     
+    // Source Archive Track Selection State
+    @State private var selectedTrackIds: Set<UUID> = []
+    @State private var trackSearchText: String = ""
+    @State private var isArchiveExpanded: Bool = true
+    
     // UI Expandable State
     @State private var showAdvancedSettings: Bool = false
     @State private var isAnalyzingDryRun: Bool = false
@@ -103,12 +108,15 @@ public struct TransferConfigView: View {
                         step2ExportFormatSection
                     }
                     
-                    // 5. Match Preview if Dry-Run was run
+                    // 5. Source Tracks Archive & Granular Selection
+                    sourceTracksArchiveSection
+                    
+                    // 6. Match Preview if Dry-Run was run
                     if transferManager.lastDryRun != nil && mainMode == .serviceTransfer {
                         dryRunSection
                     }
                     
-                    // 6. Step 3: Big CTA Action Button
+                    // 7. Step 3: Big CTA Action Button
                     step3ActionButtonSection
                     
                     // 7. Advanced Fine-Tuning Accordion
@@ -175,6 +183,11 @@ public struct TransferConfigView: View {
         .sheet(isPresented: $showingExportSheet) {
             if let exportURL = exportURL {
                 TransferShareSheet(activityItems: [exportURL])
+            }
+        }
+        .onAppear {
+            if selectedTrackIds.isEmpty {
+                selectedTrackIds = Set(coordinator.tracks(for: sourceProvider).map(\.id))
             }
         }
     }
@@ -278,6 +291,8 @@ public struct TransferConfigView: View {
                     Button {
                         HapticManager.lightImpact()
                         sourceProvider = opt
+                        selectedTrackIds = Set(coordinator.tracks(for: opt).map(\.id))
+                        trackSearchText = ""
                         if destinationProvider == opt {
                             destinationProvider = MusicProviderType.allCases.first { $0 != opt } ?? .appleMusic
                         }
@@ -350,6 +365,8 @@ public struct TransferConfigView: View {
                         let temp = sourceProvider
                         sourceProvider = destinationProvider
                         destinationProvider = temp
+                        selectedTrackIds = Set(coordinator.tracks(for: sourceProvider).map(\.id))
+                        trackSearchText = ""
                         transferManager.lastDryRun = nil
                     }
                 } label: {
@@ -535,6 +552,200 @@ public struct TransferConfigView: View {
         }
     }
     
+    // MARK: - 4.5. Source Track Archive & Selection Section
+    @ViewBuilder
+    private var sourceTracksArchiveSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: Step Label + Platform Badge + Live Selection Counter
+            HStack {
+                HStack(spacing: 6) {
+                    Text("ШАГ 2.5 • АРХИВ ТРЕКОВ И ВЫБОР")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .tracking(0.6)
+                        .foregroundColor(PastelTheme.textTertiary)
+                    
+                    PlatformBrandBadgeView(type: sourceProvider, size: 14)
+                }
+                
+                Spacer()
+                
+                Text("Выбрано \(selectedTrackIds.count) из \(sourceTracks.count)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(selectedTrackIds.isEmpty ? PastelTheme.amberWarning : PastelTheme.emeraldSuccess)
+                    .monospacedDigit()
+            }
+            .padding(.horizontal, 4)
+            
+            // Action Toolbar: Select All / Deselect All + Collapse / Expand
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    // "Select All" / "Deselect All" Capsule Button
+                    Button {
+                        toggleSelectAll()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: selectedTrackIds.count == sourceTracks.count ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 12, weight: .bold))
+                            Text(selectedTrackIds.count == sourceTracks.count ? "Снять все" : "Выбрать все (\(sourceTracks.count))")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(selectedTrackIds.count == sourceTracks.count ? PastelTheme.textOnOat : PastelTheme.pastelOat)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(selectedTrackIds.count == sourceTracks.count ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(PastelTheme.cardBorder, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(TouchFeedbackButtonStyle())
+                    
+                    Spacer()
+                    
+                    // Collapse/Expand Toggle
+                    Button {
+                        HapticManager.lightImpact()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            isArchiveExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(isArchiveExpanded ? "Свернуть" : "Развернуть")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            Image(systemName: isArchiveExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundColor(PastelTheme.textSecondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(PastelTheme.cardSubtle)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(PastelTheme.cardBorder, lineWidth: 0.8)
+                        )
+                    }
+                    .buttonStyle(TouchFeedbackButtonStyle())
+                }
+                
+                // Search Field (when expanded)
+                if isArchiveExpanded {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(PastelTheme.textTertiary)
+                        
+                        TextField("Поиск по трекам архива...", text: $trackSearchText)
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(PastelTheme.textPrimary)
+                            .tint(PastelTheme.pastelOat)
+                            .autocorrectionDisabled()
+                        
+                        if !trackSearchText.isEmpty {
+                            Button {
+                                HapticManager.lightImpact()
+                                trackSearchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(PastelTheme.textTertiary)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 38)
+                    .background(PastelTheme.cardSubtle)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+            
+            // Track List
+            if isArchiveExpanded {
+                if filteredSourceTracks.isEmpty {
+                    Text("В архиве нет подходящих треков")
+                        .font(.system(size: 13))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .padding(.vertical, 14)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    LazyVStack(spacing: 6) {
+                        ForEach(filteredSourceTracks) { track in
+                            sourceTrackRow(track: track)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+    
+    private func sourceTrackRow(track: UniversalTrack) -> some View {
+        let isSelected = selectedTrackIds.contains(track.id)
+        
+        return Button {
+            toggleTrackSelection(id: track.id)
+        } label: {
+            HStack(spacing: 12) {
+                // Interactive Checkbox
+                ZStack {
+                    if isSelected {
+                        Circle()
+                            .fill(PastelTheme.pastelOat)
+                            .frame(width: 22, height: 22)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundColor(PastelTheme.textOnOat)
+                    } else {
+                        Circle()
+                            .stroke(PastelTheme.cardBorder, lineWidth: 1.5)
+                            .frame(width: 22, height: 22)
+                    }
+                }
+                .frame(width: 32, height: 32)
+                
+                // Track Info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(track.title)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(isSelected ? PastelTheme.textPrimary : PastelTheme.textSecondary)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Text(track.primaryArtist)
+                            .foregroundColor(PastelTheme.textSecondary)
+                        if let album = track.album, !album.isEmpty {
+                            Text("•")
+                                .foregroundColor(PastelTheme.textTertiary)
+                            Text(album)
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .font(.system(size: 12))
+                }
+                
+                Spacer()
+                
+                // Duration, strictly aligned on the same horizontal level across every row
+                Text(formatDuration(track.durationMs))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(PastelTheme.textTertiary)
+                    .monospacedDigit()
+                    .frame(height: 32, alignment: .center)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(isSelected ? PastelTheme.card.opacity(0.9) : PastelTheme.cardSubtle.opacity(0.4))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? PastelTheme.cardBorderFocused : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
     // MARK: - 5. Match Compatibility Dry-Run Bar
     @ViewBuilder
     private var dryRunSection: some View {
@@ -607,20 +818,21 @@ public struct TransferConfigView: View {
     @ViewBuilder
     private var step3ActionButtonSection: some View {
         VStack(spacing: 12) {
-            let trackCount = tracksAvailable(for: sourceProvider)
+            let trackCount = selectedTrackIds.count
+            let hasSelection = trackCount > 0
             
             // Readiness Status Pill
             HStack(spacing: 8) {
                 Circle()
-                    .fill(PastelTheme.emeraldSuccess)
+                    .fill(hasSelection ? PastelTheme.emeraldSuccess : PastelTheme.amberWarning)
                     .frame(width: 8, height: 8)
                 
                 if mainMode == .serviceTransfer {
-                    Text("Готово к переносу: \(trackCount) треков из \(sourceProvider.displayName) в \(destinationProvider.displayName)")
+                    Text(hasSelection ? "Готово к переносу: \(trackCount) треков из \(sourceProvider.displayName) в \(destinationProvider.displayName)" : "Выберите треки для переноса в архиве выше")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundColor(PastelTheme.textSecondary)
                 } else {
-                    Text("Готово к выкачиванию: \(trackCount) треков в формате \(selectedExportFormat.rawValue)")
+                    Text(hasSelection ? "Готово к выкачиванию: \(trackCount) треков в формате \(selectedExportFormat.rawValue)" : "Выберите треки для выкачивания в архиве выше")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundColor(PastelTheme.textSecondary)
                 }
@@ -632,29 +844,32 @@ public struct TransferConfigView: View {
             if mainMode == .serviceTransfer {
                 VStack(spacing: 12) {
                     Button {
+                        guard hasSelection else { return }
                         HapticManager.successNotification()
                         startLiveMigration()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.system(size: 18, weight: .bold))
-                            Text("Начать перенос треков (\(trackCount) шт)")
+                            Text(hasSelection ? "Начать перенос треков (\(trackCount) шт)" : "Выберите треки для переноса")
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                         }
-                        .foregroundColor(PastelTheme.textOnOat)
+                        .foregroundColor(hasSelection ? PastelTheme.textOnOat : PastelTheme.textTertiary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(PastelTheme.pastelOat)
+                        .background(hasSelection ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
+                                .stroke(hasSelection ? PastelTheme.marbleWhite.opacity(0.40) : PastelTheme.cardBorder, lineWidth: 1.5)
                         )
                     }
+                    .disabled(!hasSelection)
                     .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
                     
                     HStack(spacing: 10) {
                         Button {
+                            guard hasSelection else { return }
                             HapticManager.lightImpact()
                             runDryRun()
                         } label: {
@@ -668,16 +883,17 @@ public struct TransferConfigView: View {
                                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 }
                             }
-                            .foregroundColor(PastelTheme.pastelOat)
+                            .foregroundColor(hasSelection ? PastelTheme.pastelOat : PastelTheme.textTertiary)
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                             .background(PastelTheme.cardSubtle)
                             .clipShape(Capsule())
                             .overlay(
                                 Capsule()
-                                    .stroke(PastelTheme.marbleBorder, lineWidth: 1.2)
+                                    .stroke(hasSelection ? PastelTheme.marbleBorder : PastelTheme.cardBorder.opacity(0.4), lineWidth: 1.2)
                             )
                         }
+                        .disabled(!hasSelection)
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.2))
                         
                         Button {
@@ -706,25 +922,27 @@ public struct TransferConfigView: View {
             } else {
                 // Direct Export Button
                 Button {
+                    guard hasSelection else { return }
                     HapticManager.successNotification()
                     executeDirectExport()
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "arrow.down.circle.fill")
                             .font(.system(size: 20, weight: .bold))
-                        Text("Выкачать \(trackCount) треков в \(selectedExportFormat.rawValue)")
+                        Text(hasSelection ? "Выкачать \(trackCount) треков в \(selectedExportFormat.rawValue)" : "Выберите треки для выкачивания")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                     }
-                    .foregroundColor(PastelTheme.textOnOat)
+                    .foregroundColor(hasSelection ? PastelTheme.textOnOat : PastelTheme.textTertiary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(PastelTheme.pastelOat)
+                    .background(hasSelection ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
+                            .stroke(hasSelection ? PastelTheme.marbleWhite.opacity(0.40) : PastelTheme.cardBorder, lineWidth: 1.5)
                     )
                 }
+                .disabled(!hasSelection)
                 .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
             }
         }
@@ -859,34 +1077,80 @@ public struct TransferConfigView: View {
     
     // MARK: - Logic Helpers
     
+    private var sourceTracks: [UniversalTrack] {
+        coordinator.tracks(for: sourceProvider)
+    }
+    
+    private var filteredSourceTracks: [UniversalTrack] {
+        let query = trackSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if query.isEmpty {
+            return sourceTracks
+        }
+        return sourceTracks.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.primaryArtist.lowercased().contains(query) ||
+            ($0.album?.lowercased().contains(query) ?? false)
+        }
+    }
+    
+    private func toggleSelectAll() {
+        HapticManager.lightImpact()
+        if selectedTrackIds.count == sourceTracks.count {
+            selectedTrackIds.removeAll()
+        } else {
+            selectedTrackIds = Set(sourceTracks.map(\.id))
+        }
+    }
+    
+    private func toggleTrackSelection(id: UUID) {
+        HapticManager.lightImpact()
+        if selectedTrackIds.contains(id) {
+            selectedTrackIds.remove(id)
+        } else {
+            selectedTrackIds.insert(id)
+        }
+    }
+    
+    private func formatDuration(_ ms: Int) -> String {
+        let totalSeconds = max(0, ms / 1000)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
     private func isProviderAuthenticated(_ type: MusicProviderType) -> Bool {
         coordinator.provider(for: type).isAuthenticated
     }
     
     private func tracksAvailable(for type: MusicProviderType) -> Int {
-        let count = coordinator.tracks(for: type).count
-        return count > 0 ? count : 48
+        coordinator.tracks(for: type).count
     }
     
     private func runDryRun() {
+        guard !selectedTrackIds.isEmpty else { return }
         isAnalyzingDryRun = true
+        var dryRunScope = scope
+        dryRunScope.selectedTrackIds = selectedTrackIds
         Task {
             _ = await transferManager.executeDryRun(
                 sourceType: sourceProvider,
                 destinationType: destinationProvider,
-                scope: scope
+                scope: dryRunScope
             )
             isAnalyzingDryRun = false
         }
     }
     
     private func startLiveMigration() {
+        guard !selectedTrackIds.isEmpty else { return }
         showingLiveMigration = true
+        var migrationScope = scope
+        migrationScope.selectedTrackIds = selectedTrackIds
         Task {
             let report = await transferManager.startMigration(
                 sourceType: sourceProvider,
                 destinationType: destinationProvider,
-                scope: scope,
+                scope: migrationScope,
                 policy: conflictPolicy
             )
             showingLiveMigration = false
@@ -895,8 +1159,10 @@ public struct TransferConfigView: View {
     }
     
     private func executeDirectExport() {
-        let tracks = coordinator.tracks(for: sourceProvider)
-        let filename = "SoundShift_\(sourceProvider.displayName)"
+        let allTracks = coordinator.tracks(for: sourceProvider)
+        let tracks = allTracks.filter { selectedTrackIds.contains($0.id) }
+        guard !tracks.isEmpty else { return }
+        let filename = "SoundShift_\(sourceProvider.displayName)_\(tracks.count)_tracks"
         var fileURL: URL? = nil
         
         switch selectedExportFormat {
