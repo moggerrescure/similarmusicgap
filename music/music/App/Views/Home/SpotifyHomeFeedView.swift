@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Spotify-Grade "Home" Personalized Feed Tab
 /// Layout:
@@ -38,6 +39,27 @@ public struct SpotifyHomeFeedView: View {
         public let accentColor: Color
     }
     
+    public struct CassetteItem: Identifiable {
+        public let id: Int
+        public let title: String
+        public let subtitle: String
+        public let sideText: String
+        public let tapeType: String
+        public let tapeLength: String
+        public let labelGradient: [Color]
+        public let accentColor: Color
+        public let trackIsrc: String
+    }
+    
+    public struct VaultAlbumItem: Identifiable {
+        public let id: Int
+        public let title: String
+        public let artist: String
+        public let trackCount: String
+        public let gradientColors: [Color]
+        public let accentColor: Color
+    }
+    
     // MARK: - Data (Zero Emojis, High-Contrast Palette)
     
     private let shortcuts: [RecentShortcut] = [
@@ -49,6 +71,88 @@ public struct SpotifyHomeFeedView: View {
         RecentShortcut(id: 6, title: "Zemfira", artist: "Zemfira", isArtist: true, isPlayingNow: false, isLikedSongs: false, coverHex: "#3B4252", initialOrSymbol: "person.fill"),
         RecentShortcut(id: 7, title: "неуравновешеннолетние", artist: "CUPSIZE", isArtist: false, isPlayingNow: false, isLikedSongs: false, coverHex: "#BF616A", initialOrSymbol: "music.note"),
         RecentShortcut(id: 8, title: "дели на два", artist: "CUPSIZE", isArtist: false, isPlayingNow: false, isLikedSongs: false, coverHex: "#5E81AC", initialOrSymbol: "music.note.list")
+    ]
+    
+    private let cassetteDrops: [CassetteItem] = [
+        CassetteItem(
+            id: 201,
+            title: "Night Drive Pulse",
+            subtitle: "Dark Synthwave • 44:20",
+            sideText: "SIDE A",
+            tapeType: "TYPE II • HIGH BIAS",
+            tapeLength: "60 MIN",
+            labelGradient: [Color(hex: "#C2410C"), Color(hex: "#7C2D12")],
+            accentColor: Color(hex: "#F97316"),
+            trackIsrc: "TAPE-201"
+        ),
+        CassetteItem(
+            id: 202,
+            title: "Silk Lo-Fi Flow",
+            subtitle: "Chill Focus Beats • 38:15",
+            sideText: "SIDE A",
+            tapeType: "CHROME CrO2",
+            tapeLength: "45 MIN",
+            labelGradient: [Color(hex: "#4338CA"), Color(hex: "#312E81")],
+            accentColor: Color(hex: "#818CF8"),
+            trackIsrc: "TAPE-202"
+        ),
+        CassetteItem(
+            id: 203,
+            title: "Tokyo Drift Phonk",
+            subtitle: "Drift Wave & Cowbell • 52:10",
+            sideText: "SIDE A",
+            tapeType: "METAL TAPE IV",
+            tapeLength: "60 MIN",
+            labelGradient: [Color(hex: "#065F46"), Color(hex: "#022C22")],
+            accentColor: Color(hex: "#10B981"),
+            trackIsrc: "TAPE-203"
+        ),
+        CassetteItem(
+            id: 204,
+            title: "Club Mix Surge",
+            subtitle: "138+ BPM Peak Beats • 64:00",
+            sideText: "SIDE A",
+            tapeType: "TYPE I • NORMAL",
+            tapeLength: "90 MIN",
+            labelGradient: [Color(hex: "#831843"), Color(hex: "#500724")],
+            accentColor: Color(hex: "#F43F5E"),
+            trackIsrc: "TAPE-204"
+        )
+    ]
+    
+    private let vaultAlbums: [VaultAlbumItem] = [
+        VaultAlbumItem(
+            id: 301,
+            title: "UTOPIA",
+            artist: "Travis Scott",
+            trackCount: "19 tracks",
+            gradientColors: [Color(hex: "#2F3136"), Color(hex: "#141518")],
+            accentColor: Color(hex: "#EFE3D3")
+        ),
+        VaultAlbumItem(
+            id: 302,
+            title: "SOS",
+            artist: "SZA",
+            trackCount: "23 tracks",
+            gradientColors: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+            accentColor: Color(hex: "#60A5FA")
+        ),
+        VaultAlbumItem(
+            id: 303,
+            title: "GUTS",
+            artist: "Olivia Rodrigo",
+            trackCount: "12 tracks",
+            gradientColors: [Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+            accentColor: Color(hex: "#A78BFA")
+        ),
+        VaultAlbumItem(
+            id: 304,
+            title: "SCARING THE HOES",
+            artist: "JPEGMAFIA, Danny Brown",
+            trackCount: "14 tracks",
+            gradientColors: [Color(hex: "#991B1B"), Color(hex: "#1E293B")],
+            accentColor: Color(hex: "#FDE68A")
+        )
     ]
     
     private let newMusicFridayItems: [AlbumCardItem] = [
@@ -200,23 +304,14 @@ public struct SpotifyHomeFeedView: View {
                         // 3. ПОИСКОВАЯ СТРОКА ПОСЕРЕДИНЕ (Sticky Search Bar)
                         prominentSearchBar
                         
-                        // 4. КРАСИВАЯ КАРУСЕЛЬ АЛЬБОМОВ 1 (New Music Friday)
-                        albumCarouselSection(
-                            title: "It's New Music Friday!",
-                            items: newMusicFridayItems
-                        )
+                        // 4. HERO RELEASE SLEEVE (Vinyl Disc Initially Protruding + Rotating)
+                        heroVinylSleeveSection
                         
-                        // 5. КРАСИВАЯ КАРУСЕЛЬ АЛЬБОМОВ 2 (Picked for you)
-                        albumCarouselSection(
-                            title: "Friday drops picked for you",
-                            items: pickedForYouItems
-                        )
+                        // 5. AUTHENTIC COMPACT CASSETTES (Picked for You - Authentic Philips Tape Decks)
+                        cassetteTapesSection
                         
-                        // 6. КРАСИВАЯ КАРУСЕЛЬ АЛЬБОМОВ 3 (Top Albums & Vaults)
-                        albumCarouselSection(
-                            title: "Top Albums",
-                            items: topAlbumsItems
-                        )
+                        // 6. TOP VAULT ALBUMS (Vinyl Crate Shelf with Peeking Discs)
+                        topAlbumsCrateSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 120) // Full clearance for Floating Mini Player
@@ -426,85 +521,264 @@ public struct SpotifyHomeFeedView: View {
         .shadow(color: Color.black.opacity(0.35), radius: 6, y: 2)
     }
     
-    // MARK: - 4. Красивая карусель альбомов (Album Carousel Section)
-    private func albumCarouselSection(title: String, items: [AlbumCardItem]) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.white)
+    // MARK: - 4. Hero Release Sleeve (Vinyl Disc Initially Protruding)
+    private var isHeroPlaying: Bool {
+        player.isPlaying && player.currentTrack?.isrc == "DROP-NMF-2024"
+    }
+    
+    private var heroVinylSleeveSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("HERO DROP OF THE WEEK")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Spacer()
+                
+                Text("VINYL SLEEVE")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(PastelTheme.warmAmber)
+            }
+            
+            // Hero Sleeve Card
+            Button {
+                HapticManager.lightImpact()
+                toggleHeroPlayback()
+            } label: {
+                HStack(spacing: 16) {
+                    // Left: Sleeve Case with initially protruding vinyl disc
+                    ZStack(alignment: .leading) {
+                        // 1. Vinyl Record - INITIALLY PROTRUDING BY 38pt
+                        ProtrudingVinylDiscView(
+                            isPlaying: isHeroPlaying,
+                            diameter: 112
+                        )
+                        .offset(x: 38)
+                        
+                        // 2. Sleeve Jacket (Covers left part of disc)
+                        ZStack(alignment: .bottomLeading) {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(hex: "#23242A"), Color(hex: "#121316")],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 112, height: 112)
+                            
+                            // Subtle texture and border
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                                .frame(width: 112, height: 112)
+                            
+                            // Sleeve Mouth Drop Shadow (adds realistic physical depth on the protruding disc)
+                            HStack {
+                                Spacer()
+                                LinearGradient(
+                                    colors: [Color.black.opacity(0.8), Color.clear],
+                                    startPoint: .trailing,
+                                    endPoint: .leading
+                                )
+                                .frame(width: 14, height: 112)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .frame(width: 112, height: 112)
+                            
+                            // Cover Content
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("NEW MUSIC\nFRIDAY")
+                                    .font(.system(size: 12, weight: .black))
+                                    .foregroundColor(.white)
+                                    .lineSpacing(1)
+                                
+                                Spacer()
+                                
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(PastelTheme.emeraldSuccess)
+                                        .frame(width: 4, height: 4)
+                                    Text("FLAC 24-BIT")
+                                        .font(.system(size: 8, weight: .black))
+                                        .foregroundColor(Color(hex: "#9CA3AF"))
+                                }
+                            }
+                            .padding(10)
+                            .frame(width: 112, height: 112, alignment: .topLeading)
+                        }
+                    }
+                    .frame(width: 154, height: 114)
+                    
+                    // Right: Information & Capsule Action
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(PastelTheme.warmAmber)
+                                .frame(width: 6, height: 6)
+                            Text("NEW DROP")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundColor(PastelTheme.warmAmber)
+                        }
+                        
+                        Text("New Music Friday")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Text("Dominic Fike, LISA, Anderson .Paak, John Summit")
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(Color(hex: "#9CA3AF"))
+                            .lineLimit(2)
+                            .lineSpacing(2)
+                        
+                        Spacer(minLength: 4)
+                        
+                        // Oat Capsule CTA
+                        HStack(spacing: 6) {
+                            Image(systemName: isHeroPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 10, weight: .bold))
+                            Text(isHeroPlaying ? "Pause Drop" : "Play Drop")
+                                .font(.system(size: 11, weight: .heavy))
+                        }
+                        .foregroundColor(PastelTheme.textOnOat)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(PastelTheme.pastelOat)
+                        .clipShape(Capsule())
+                        .shadow(color: PastelTheme.pastelOat.opacity(0.2), radius: 6, y: 2)
+                    }
+                    .frame(maxHeight: 114)
+                }
+                .padding(14)
+                .background(PastelTheme.card)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(isHeroPlaying ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    // MARK: - 5. Authentic Compact Cassettes (Picked For You)
+    private var cassetteTapesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("FRIDAY DROPS PICKED FOR YOU")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Spacer()
+                
+                Text("CASSETTE DECK")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(PastelTheme.warmAmber)
+            }
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 14) {
-                    ForEach(items) { card in
-                        albumCard(card: card)
+                    ForEach(cassetteDrops) { drop in
+                        let isPlaying = player.isPlaying && player.currentTrack?.isrc == drop.trackIsrc
+                        CassetteTapeCard(
+                            item: drop,
+                            isPlaying: isPlaying,
+                            onTogglePlay: {
+                                HapticManager.lightImpact()
+                                toggleCassettePlayback(drop)
+                            }
+                        )
                     }
                 }
             }
         }
     }
     
-    private func albumCard(card: AlbumCardItem) -> some View {
-        Button {
-            HapticManager.lightImpact()
-            playMockAlbum(card)
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                // Square Artwork Container (156x156)
-                ZStack(alignment: .bottomLeading) {
-                    LinearGradient(
-                        colors: card.gradientColors,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .frame(width: 156, height: 156)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    
-                    // Central or Top Icon
-                    VStack(alignment: .leading, spacing: 0) {
-                        Image(systemName: card.systemImage)
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(card.accentColor)
-                            .padding([.top, .leading], 12)
-                        
-                        Spacer()
-                        
-                        // Optional Badge Title (e.g. NEW MUSIC FRIDAY)
-                        if let badge = card.badgeText {
-                            Text(badge)
-                                .font(.system(size: 14, weight: .heavy))
-                                .foregroundColor(card.accentColor)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.leading)
-                                .padding([.bottom, .leading], 12)
-                        }
+    // MARK: - 6. Top Albums Crate Shelf (Vinyl Records Floating Out)
+    private var topAlbumsCrateSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("TOP VAULT ALBUMS")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Spacer()
+                
+                Text("VINYL CRATE")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(PastelTheme.slateBlue)
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(vaultAlbums) { album in
+                        let isPlaying = player.isPlaying && player.currentTrack?.title == album.title
+                        VaultAlbumCrateCard(
+                            album: album,
+                            isPlaying: isPlaying,
+                            onTogglePlay: {
+                                HapticManager.lightImpact()
+                                toggleVaultAlbumPlayback(album)
+                            }
+                        )
                     }
                 }
-                .frame(width: 156, height: 156)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(PastelTheme.cardBorder, lineWidth: 0.8)
-                )
-                .shadow(color: Color.black.opacity(0.25), radius: 8, y: 4)
-                
-                // Card Title
-                Text(card.title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .frame(width: 156, alignment: .leading)
-                
-                // Card Subtitle
-                Text(card.subtitle)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(Color(hex: "#A7A7A7"))
-                    .lineLimit(2)
-                    .frame(width: 156, alignment: .leading)
             }
         }
-        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - Playback Helpers
+    private func toggleHeroPlayback() {
+        if isHeroPlaying {
+            player.togglePlayPause()
+        } else {
+            let track = UniversalTrack(
+                isrc: "DROP-NMF-2024",
+                title: "New Music Friday",
+                artists: ["Dominic Fike", "LISA", "Anderson .Paak"],
+                album: "Friday Vault Drop",
+                durationMs: 204000,
+                spotifyId: "hero_nmf_2024"
+            )
+            player.play(track: track)
+        }
+    }
+    
+    private func toggleCassettePlayback(_ item: CassetteItem) {
+        if player.isPlaying && player.currentTrack?.isrc == item.trackIsrc {
+            player.togglePlayPause()
+        } else {
+            let track = UniversalTrack(
+                isrc: item.trackIsrc,
+                title: item.title,
+                artists: ["Cassette Vault Masters"],
+                album: item.title,
+                durationMs: 198000,
+                spotifyId: "tape_\(item.id)"
+            )
+            player.play(track: track)
+        }
+    }
+    
+    private func toggleVaultAlbumPlayback(_ album: VaultAlbumItem) {
+        if player.isPlaying && player.currentTrack?.title == album.title {
+            player.togglePlayPause()
+        } else {
+            let track = UniversalTrack(
+                isrc: "VAULT-\(album.id)",
+                title: album.title,
+                artists: [album.artist],
+                album: album.title,
+                durationMs: 215000,
+                spotifyId: "vault_\(album.id)"
+            )
+            player.play(track: track)
+        }
+    }
+    
     private func playMockShortcut(_ item: RecentShortcut) {
         let track = UniversalTrack(
             isrc: "SP-\(item.id)",
@@ -516,17 +790,484 @@ public struct SpotifyHomeFeedView: View {
         )
         player.play(track: track)
     }
+}
+
+// MARK: - Supporting Components
+
+/// Motion Tracker for analog audio rotating mechanisms
+private final class AnalogRotationTracker: ObservableObject {
+    @Published var tick: Bool = false
+    var accumulatedTime: Double = 0.0
+    var lastDate: Date? = nil
     
-    private func playMockAlbum(_ card: AlbumCardItem) {
-        let track = UniversalTrack(
-            isrc: "ALB-\(card.id)",
-            title: card.title,
-            artists: ["Featured Artists"],
-            album: card.title,
-            durationMs: 210000,
-            spotifyId: "alb_\(card.id)"
-        )
-        player.play(track: track)
+    func advance(currentDate: Date, isPlaying: Bool) -> Double {
+        guard isPlaying else {
+            lastDate = nil
+            return accumulatedTime
+        }
+        
+        if let last = lastDate {
+            let delta = currentDate.timeIntervalSince(last)
+            if delta > 0 && delta < 0.5 {
+                accumulatedTime += delta
+            }
+        }
+        lastDate = currentDate
+        return accumulatedTime
+    }
+}
+
+/// Protruding Vinyl Record that peaks out of the sleeve initially by default
+public struct ProtrudingVinylDiscView: View {
+    let isPlaying: Bool
+    let diameter: CGFloat
+    
+    @StateObject private var motionTracker = AnalogRotationTracker()
+    
+    public var body: some View {
+        TimelineView(.animation(paused: !isPlaying)) { timeline in
+            let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
+            let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+            
+            ZStack {
+                // Base Vinyl Wax (Charcoal Deep Black)
+                Circle()
+                    .fill(Color(hex: "#0C0D10"))
+                    .frame(width: diameter, height: diameter)
+                
+                // Concentric Sound Grooves
+                ForEach(0..<4) { i in
+                    let inset = CGFloat(8 + (i * 9))
+                    Circle()
+                        .stroke(
+                            Color.white.opacity(0.06),
+                            lineWidth: 0.8
+                        )
+                        .frame(width: max(0, diameter - (inset * 2)), height: max(0, diameter - (inset * 2)))
+                }
+                
+                // Specular Luster (Angular sheen across grooves)
+                Circle()
+                    .fill(
+                        AngularGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color.clear,
+                                Color.white.opacity(0.12),
+                                Color.clear,
+                                Color.white.opacity(0.12)
+                            ],
+                            center: .center
+                        )
+                    )
+                    .frame(width: diameter, height: diameter)
+                    .blendMode(.plusLighter)
+                
+                // Vinyl Outer Rim Stroke
+                Circle()
+                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    .frame(width: diameter, height: diameter)
+                
+                // Center Amber Label (34pt)
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(hex: "#FBBF24"), Color(hex: "#B45309")],
+                                center: .center,
+                                startRadius: 4,
+                                endRadius: 18
+                            )
+                        )
+                        .frame(width: 34, height: 34)
+                    
+                    Circle()
+                        .stroke(Color(hex: "#0E0F12"), lineWidth: 2)
+                        .frame(width: 34, height: 34)
+                    
+                    // Spindle Center Hole
+                    Circle()
+                        .fill(Color(hex: "#0E0F12"))
+                        .frame(width: 7, height: 7)
+                }
+            }
+            .rotationEffect(.degrees(rotation))
+        }
+    }
+}
+
+/// Authentic Philips Compact Cassette Card
+public struct CassetteTapeCard: View {
+    let item: SpotifyHomeFeedView.CassetteItem
+    let isPlaying: Bool
+    let onTogglePlay: () -> Void
+    
+    @StateObject private var motionTracker = AnalogRotationTracker()
+    
+    public var body: some View {
+        Button(action: onTogglePlay) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Cassette Chassis (178 x 112)
+                TimelineView(.animation(paused: !isPlaying)) { timeline in
+                    let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
+                    let spoolAngle = (playTime.truncatingRemainder(dividingBy: 2.4) / 2.4) * 360.0
+                    
+                    ZStack(alignment: .top) {
+                        // 1. Dark Polymer Shell Base
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(hex: "#16171B"))
+                            .frame(width: 178, height: 112)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(isPlaying ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: 1)
+                            )
+                        
+                        // 2. Four Corner Screws (Cross-head metallic rivets)
+                        VStack {
+                            HStack {
+                                screwView
+                                Spacer()
+                                screwView
+                            }
+                            Spacer()
+                            HStack {
+                                screwView
+                                Spacer()
+                                screwView
+                            }
+                        }
+                        .padding(5)
+                        .frame(width: 178, height: 112)
+                        
+                        // 3. Cassette Contents (Label + Clear Window + Bottom Head Wedge)
+                        VStack(spacing: 4) {
+                            // Top Vintage Label Strip
+                            VStack(spacing: 2) {
+                                HStack {
+                                    Text(item.sideText)
+                                        .font(.system(size: 7, weight: .black, design: .monospaced))
+                                        .foregroundColor(Color.white.opacity(0.85))
+                                    Spacer()
+                                    Text(item.tapeLength)
+                                        .font(.system(size: 7, weight: .black, design: .monospaced))
+                                        .foregroundColor(Color.white.opacity(0.85))
+                                }
+                                
+                                Text(item.title.uppercased())
+                                    .font(.system(size: 9.5, weight: .heavy))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                
+                                Text(item.tapeType)
+                                    .font(.system(size: 6.5, weight: .bold, design: .monospaced))
+                                    .foregroundColor(Color.white.opacity(0.7))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .frame(width: 162, height: 38)
+                            .background(
+                                LinearGradient(
+                                    colors: item.labelGradient,
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            
+                            // Central Clear Acrylic Inspection Window
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Color(hex: "#090A0D"))
+                                    .frame(width: 136, height: 36)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                                    )
+                                
+                                // Tape Ribbon connecting spools at bottom of window
+                                VStack {
+                                    Spacer()
+                                    Rectangle()
+                                        .fill(Color(hex: "#381A0F"))
+                                        .frame(width: 128, height: 3)
+                                }
+                                .frame(width: 136, height: 36)
+                                
+                                HStack(spacing: 12) {
+                                    // Left Spool (Fuller Tape Roll)
+                                    CassetteSpoolView(
+                                        tapeDiameter: 26,
+                                        rotationAngle: spoolAngle
+                                    )
+                                    
+                                    // Central Counter & Scale Index
+                                    VStack(spacing: 2) {
+                                        Text("100   50   0")
+                                            .font(.system(size: 5.5, weight: .black, design: .monospaced))
+                                            .foregroundColor(Color.white.opacity(0.45))
+                                        
+                                        HStack(spacing: 3) {
+                                            Rectangle().fill(Color.white.opacity(0.3)).frame(width: 1, height: 6)
+                                            Rectangle().fill(Color.white.opacity(0.5)).frame(width: 1, height: 8)
+                                            Rectangle().fill(Color.white.opacity(0.3)).frame(width: 1, height: 6)
+                                        }
+                                    }
+                                    .frame(width: 38)
+                                    
+                                    // Right Spool (Thinner Tape Roll)
+                                    CassetteSpoolView(
+                                        tapeDiameter: 20,
+                                        rotationAngle: spoolAngle
+                                    )
+                                }
+                            }
+                            
+                            // Bottom Tape-Head Trapezoid Wedge
+                            ZStack {
+                                CassetteBottomWedgeShape()
+                                    .fill(Color(hex: "#101115"))
+                                    .frame(width: 144, height: 18)
+                                    .overlay(
+                                        CassetteBottomWedgeShape()
+                                            .stroke(Color.white.opacity(0.08), lineWidth: 0.8)
+                                    )
+                                
+                                HStack(spacing: 14) {
+                                    // Left Capstan Hole
+                                    Circle()
+                                        .fill(Color(hex: "#060709"))
+                                        .frame(width: 4.5, height: 4.5)
+                                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                    
+                                    // Center Tape Head Opening Slot
+                                    ZStack {
+                                        Rectangle()
+                                            .fill(Color(hex: "#060709"))
+                                            .frame(width: 32, height: 6)
+                                            .cornerRadius(1)
+                                        
+                                        // Magnetic tape strip
+                                        Rectangle()
+                                            .fill(Color(hex: "#3D2014"))
+                                            .frame(width: 32, height: 2.5)
+                                        
+                                        // Brass Pressure Pad Spring
+                                        RoundedRectangle(cornerRadius: 0.5)
+                                            .fill(Color(hex: "#D97706"))
+                                            .frame(width: 4.5, height: 3)
+                                    }
+                                    
+                                    // Right Capstan Hole
+                                    Circle()
+                                        .fill(Color(hex: "#060709"))
+                                        .frame(width: 4.5, height: 4.5)
+                                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                                }
+                            }
+                        }
+                        .padding(.top, 6)
+                    }
+                }
+                .frame(width: 178, height: 112)
+                .shadow(color: Color.black.opacity(0.4), radius: 8, y: 4)
+                
+                // Track Titles & Subtitles Below Cassette
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(item.title)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        if isPlaying {
+                            // Active Playing Equalizer indicator
+                            HStack(spacing: 1.5) {
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 2, height: 8)
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 2, height: 12)
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 2, height: 6)
+                            }
+                        }
+                    }
+                    
+                    Text(item.subtitle)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .lineLimit(1)
+                }
+                .frame(width: 178, alignment: .leading)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var screwView: some View {
+        ZStack {
+            Circle()
+                .fill(Color(hex: "#50535C"))
+                .frame(width: 4.5, height: 4.5)
+            Rectangle()
+                .fill(Color(hex: "#1A1B20"))
+                .frame(width: 2.8, height: 0.6)
+            Rectangle()
+                .fill(Color(hex: "#1A1B20"))
+                .frame(width: 0.6, height: 2.8)
+        }
+    }
+}
+
+/// Cassette Dual Spool with internal 6-tooth gear drive and magnetic oxide tape
+public struct CassetteSpoolView: View {
+    let tapeDiameter: CGFloat
+    let rotationAngle: Double
+    
+    public var body: some View {
+        ZStack {
+            // Magnetic oxide tape pack
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(hex: "#3D2014"), Color(hex: "#22110B")],
+                        center: .center,
+                        startRadius: 7,
+                        endRadius: max(8, tapeDiameter / 2)
+                    )
+                )
+                .frame(width: tapeDiameter, height: tapeDiameter)
+            
+            // White plastic hub ring
+            Circle()
+                .stroke(Color.white.opacity(0.85), lineWidth: 1.8)
+                .background(Circle().fill(Color(hex: "#101115")))
+                .frame(width: 17, height: 17)
+            
+            // 6 radial gear teeth / cogs
+            ZStack {
+                ForEach(0..<6) { i in
+                    RoundedRectangle(cornerRadius: 0.5)
+                        .fill(Color.white.opacity(0.85))
+                        .frame(width: 2, height: 5)
+                        .offset(y: -5)
+                        .rotationEffect(.degrees(Double(i) * 60))
+                }
+                
+                // Spindle drive hole
+                Circle()
+                    .fill(Color(hex: "#07080A"))
+                    .frame(width: 6.5, height: 6.5)
+            }
+            .rotationEffect(.degrees(rotationAngle))
+        }
+    }
+}
+
+/// Bottom Tape-Head Trapezoid Wedge Shape
+public struct CassetteBottomWedgeShape: Shape {
+    public func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let taper: CGFloat = rect.width * 0.08
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: rect.width, y: 0))
+        path.addLine(to: CGPoint(x: rect.width - taper, y: rect.height))
+        path.addLine(to: CGPoint(x: taper, y: rect.height))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// Top Vault Album Crate Card
+public struct VaultAlbumCrateCard: View {
+    let album: SpotifyHomeFeedView.VaultAlbumItem
+    let isPlaying: Bool
+    let onTogglePlay: () -> Void
+    
+    public var body: some View {
+        Button(action: onTogglePlay) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Jacket + Peeking Disc Container (124x100)
+                ZStack(alignment: .leading) {
+                    // Vinyl disc peeking out to the right
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(hex: "#202126"), Color(hex: "#090A0D")],
+                                center: .center,
+                                startRadius: 4,
+                                endRadius: 48
+                            )
+                        )
+                        .frame(width: 96, height: 96)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        )
+                        .overlay(
+                            Circle()
+                                .fill(album.accentColor.opacity(0.85))
+                                .frame(width: 26, height: 26)
+                                .overlay(Circle().fill(Color(hex: "#0E0F12")).frame(width: 6, height: 6))
+                        )
+                        .offset(x: 24)
+                        .shadow(color: Color.black.opacity(0.6), radius: 8, x: 4, y: 2)
+                    
+                    // Album Jacket Sleeve
+                    ZStack(alignment: .bottomLeading) {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: album.gradientColors,
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 98, height: 98)
+                        
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(isPlaying ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: 1)
+                            .frame(width: 98, height: 98)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(album.title)
+                                .font(.system(size: 11, weight: .black))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            
+                            Text(album.artist)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(Color.white.opacity(0.75))
+                                .lineLimit(1)
+                        }
+                        .padding(8)
+                    }
+                    .frame(width: 98, height: 98)
+                }
+                .frame(width: 124, height: 100)
+                
+                // Titles below
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(album.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Text("\(album.artist) • \(album.trackCount)")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .lineLimit(1)
+                }
+                .frame(width: 124, alignment: .leading)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
