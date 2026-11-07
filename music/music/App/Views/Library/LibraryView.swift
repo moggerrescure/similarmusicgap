@@ -426,10 +426,7 @@ public struct LibraryView: View {
                         libraryHeaderBar
                             .padding(.top, 10)
                         
-                        // 2. Apple HIG HUD Summary KPI Trio
-                        hudSummaryTrio
-                        
-                        // 3. Migration History Carousel (История того, что происходило)
+                        // 2. Migration History Carousel (История того, что происходило)
                         migrationSessionsSection
                         
                         // 4. Sticky Search & Route Filter Bar
@@ -497,56 +494,7 @@ public struct LibraryView: View {
         }
     }
     
-    // MARK: - 2. Apple HIG HUD Summary KPI Trio
-    private var hudSummaryTrio: some View {
-        HStack(spacing: 10) {
-            hudMetricCard(
-                title: "TRANSFERRED",
-                value: "844",
-                subtitle: "Across 3 services",
-                accentColor: PastelTheme.emeraldSuccess
-            )
-            
-            hudMetricCard(
-                title: "SUCCESS RATE",
-                value: "98.6%",
-                subtitle: "832 exact ISRC",
-                accentColor: PastelTheme.pastelOat
-            )
-            
-            hudMetricCard(
-                title: "MIGRATIONS",
-                value: "3",
-                subtitle: "100% completed",
-                accentColor: PastelTheme.amberWarning
-            )
-        }
-    }
-    
-    private func hudMetricCard(title: String, value: String, subtitle: String, accentColor: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .tracking(0.6)
-                .foregroundColor(PastelTheme.textTertiary)
-            
-            Text(value)
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundColor(accentColor)
-                .contentTransition(.numericText())
-            
-            Text(subtitle)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(PastelTheme.textSecondary)
-                .lineLimit(1)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-    
-    // MARK: - 3. Migration History Carousel (История того, что происходило)
+    // MARK: - 2. Migration History Carousel (История того, что происходило)
     private var migrationSessionsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {

@@ -232,10 +232,6 @@ public struct TransferConfigView: View {
         .padding(.horizontal, 12)
         .background(PastelTheme.card.opacity(0.6))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(PastelTheme.cardBorder, lineWidth: 1)
-        )
     }
     
     private func stepBadge(number: String, title: String, isHighlight: Bool = false) -> some View {
@@ -328,10 +324,6 @@ public struct TransferConfigView: View {
                         .padding(.vertical, 12)
                         .background(isSelected ? PastelTheme.card.opacity(0.95) : PastelTheme.card.opacity(0.45))
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(isSelected ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: isSelected ? 1.5 : 1)
-                        )
                     }
                     .buttonStyle(TouchFeedbackButtonStyle())
                 }
@@ -430,10 +422,6 @@ public struct TransferConfigView: View {
                         .padding(.vertical, 12)
                         .background(isSelected ? PastelTheme.card.opacity(0.95) : PastelTheme.card.opacity(0.45))
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(isSelected ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: isSelected ? 1.5 : 1)
-                        )
                     }
                     .buttonStyle(TouchFeedbackButtonStyle())
                 }
@@ -503,10 +491,6 @@ public struct TransferConfigView: View {
                         .padding(.vertical, 12)
                         .background(isSelected ? PastelTheme.card.opacity(0.95) : PastelTheme.card.opacity(0.45))
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(isSelected ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: isSelected ? 1.5 : 1)
-                        )
                     }
                     .buttonStyle(TouchFeedbackButtonStyle())
                 }
@@ -615,10 +599,6 @@ public struct TransferConfigView: View {
             .padding(16)
             .background(PastelTheme.card)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
-            )
         }
     }
     
@@ -777,10 +757,6 @@ public struct TransferConfigView: View {
                 .padding(14)
                 .background(PastelTheme.card)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                )
             }
             .buttonStyle(TouchFeedbackButtonStyle())
             
@@ -988,10 +964,6 @@ private struct HistoryItemRow: View {
         .padding(12)
         .background(PastelTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(PastelTheme.cardBorder, lineWidth: 1)
-        )
     }
 }
 
