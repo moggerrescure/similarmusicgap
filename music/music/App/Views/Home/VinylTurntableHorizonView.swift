@@ -247,7 +247,7 @@ private struct TurntablePlayerDeckView: View {
                             TonearmAssemblyView(
                                 angle: tonearmAngle
                             )
-                            .position(x: 104, y: 52)
+                            .position(x: 104, y: 48)
                         }
                     }
                 }
@@ -376,8 +376,8 @@ private struct TonearmAssemblyView: View {
     let angle: Double
     
     var body: some View {
-        ZStack {
-            // 1. Static Recessed Bearing Base (Milled into chassis under the pivot hub)
+        ZStack(alignment: .top) {
+            // 1. Static Recessed Bearing Well (anchored on turntable chassis at pivot center)
             Circle()
                 .fill(
                     LinearGradient(
@@ -386,15 +386,74 @@ private struct TonearmAssemblyView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 22, height: 22)
+                .frame(width: 20, height: 20)
                 .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
-                .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
-                .position(x: 24, y: 18)
+                .shadow(color: Color.black.opacity(0.5), radius: 2.5, y: 1.5)
+                .offset(y: 8) // center matches pivot at y: 18
             
-            // 2. Continuous Rotating Tonearm Assembly (Rotates around exact pivot at x: 24, y: 18)
-            // Monolithic structural integrity: shaft, counterweight, gimbal hub, wand, and cartridge are ONE piece!
-            ZStack {
-                // A. Continuous Aerospace Titanium Shaft (Unbroken rod from counterweight to headshell)
+            // 2. Continuous Rotating Monolithic Arm (Single unified vertical hierarchy)
+            // Pivot is at y: 18. Everything rotates as ONE solid entity!
+            VStack(spacing: 0) {
+                // A. Machined Metallic Counterweight (top)
+                RoundedRectangle(cornerRadius: 2.2)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#A3A7AF"), Color(hex: "#374151")],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 11, height: 8)
+                    .overlay(
+                        VStack(spacing: 1.5) {
+                            Rectangle().fill(Color.black.opacity(0.4)).frame(height: 0.75)
+                            Rectangle().fill(Color.black.opacity(0.4)).frame(height: 0.75)
+                        }
+                    )
+                    .shadow(color: Color.black.opacity(0.4), radius: 2, y: 1)
+                
+                // B. Upper Shaft Stub (connects counterweight to pivot hub)
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#D1D5DB"), Color(hex: "#6B7280")],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 3.2, height: 10)
+                
+                // C. Precision Gimbal Hub (Sits directly at the pivot point, y = 18)
+                ZStack {
+                    // Outer Ring
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF"), Color(hex: "#2D3036")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.75))
+                        .shadow(color: Color.black.opacity(0.4), radius: 2, y: 1)
+                    
+                    // Center Sapphire Pin
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#6B7280"), Color(hex: "#111113")],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 3
+                            )
+                        )
+                        .frame(width: 5, height: 5)
+                        .overlay(Circle().stroke(PastelTheme.pastelOat.opacity(0.8), lineWidth: 0.6))
+                }
+                .frame(height: 0) // Zero layout height so it overlays seamlessly at the pivot junction
+                
+                // D. Main Aerospace Titanium Wand (Extending down from pivot)
                 Capsule()
                     .fill(
                         LinearGradient(
@@ -408,72 +467,18 @@ private struct TonearmAssemblyView: View {
                             endPoint: .bottom
                         )
                     )
-                    .frame(width: 3.2, height: 68)
+                    .frame(width: 3.2, height: 48)
                     .shadow(color: Color.black.opacity(0.45), radius: 2, x: -1, y: 1)
-                    .position(x: 24, y: 39)
                 
-                // B. Heavy Calibrated Knurled Counterweight (Clamped at the top of the shaft, y: 7)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 2.2)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#A3A7AF"), Color(hex: "#374151")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 11, height: 8.5)
-                        .overlay(
-                            VStack(spacing: 1.5) {
-                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
-                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
-                            }
-                        )
-                        .shadow(color: Color.black.opacity(0.5), radius: 2, y: 1)
-                }
-                .position(x: 24, y: 7)
-                
-                // C. Precision Gimbal Bearing Hub (Centered directly on the shaft at the pivot x: 24, y: 18)
-                // Rotates WITH the arm for 100% mechanical alignment and zero visual fracture
-                ZStack {
-                    // Outer Machined Spherical Ring
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF"), Color(hex: "#2D3036")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 14, height: 14)
-                        .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.75))
-                        .shadow(color: Color.black.opacity(0.4), radius: 2, y: 1)
-                    
-                    // Central Bearing Jewel Cap
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#6B7280"), Color(hex: "#111113")],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 3
-                            )
-                        )
-                        .frame(width: 6, height: 6)
-                        .overlay(Circle().stroke(PastelTheme.pastelOat.opacity(0.8), lineWidth: 0.6))
-                }
-                .position(x: 24, y: 18)
-                
-                // D. Bayonet Connector Collar (Муфта крепления шелла на конце стержня)
+                // E. Bayonet Connector Collar
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Color(hex: "#1E2026"))
                     .frame(width: 5, height: 3)
                     .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
-                    .position(x: 24, y: 72)
                 
-                // E. Audiophile Headshell, Cartridge Body & Stylus
-                ZStack(alignment: .topTrailing) {
-                    // Cartridge Body (Athletic Emerald Jewel with Chamfered Trim)
+                // F. Audiophile Headshell with Emerald Jewel Body & Stylus (Directly attached to collar!)
+                ZStack(alignment: .top) {
+                    // Emerald Jewel Cartridge Body
                     RoundedRectangle(cornerRadius: 2.2)
                         .fill(
                             LinearGradient(
@@ -482,55 +487,39 @@ private struct TonearmAssemblyView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 8, height: 13)
+                        .frame(width: 8, height: 12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 2.2)
                                 .stroke(Color.white.opacity(0.35), lineWidth: 0.6)
                         )
-                        .shadow(color: Color(hex: "#10B981").opacity(0.55), radius: 4)
+                        .shadow(color: Color(hex: "#10B981").opacity(0.6), radius: 4)
                     
-                    // Metallic Cartridge Trim / Logo Line
+                    // Gold Trim Accent Line
                     Rectangle()
                         .fill(Color(hex: "#FFF8EC"))
                         .frame(width: 5, height: 1)
-                        .offset(x: -1.5, y: 3)
-                    
-                    // Integrated Ergonomic Finger Lift Hook (Фирменный крючок шелла для пальца)
-                    Path { path in
-                        path.move(to: CGPoint(x: 8, y: 2))
-                        path.addQuadCurve(to: CGPoint(x: 14, y: -4), control: CGPoint(x: 13, y: 1))
-                    }
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF")],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
-                    )
+                        .offset(y: 2.5)
                     
                     // Cantilever & Diamond Stylus Needle
                     VStack(spacing: 0) {
-                        // Polished Silver Cantilever
                         Rectangle()
                             .fill(Color(hex: "#E5E7EB"))
-                            .frame(width: 1.2, height: 4)
+                            .frame(width: 1.2, height: 3.5)
                         
-                        // Illuminated Diamond Needle Tip (Stylus Jewel)
                         Circle()
                             .fill(Color.white)
                             .frame(width: 2.2, height: 2.2)
                             .shadow(color: Color(hex: "#10B981"), radius: 3)
                     }
-                    .offset(x: -3.4, y: 11)
+                    .offset(y: 10)
                 }
-                .rotationEffect(.degrees(22))
-                .position(x: 21, y: 81)
+                .rotationEffect(.degrees(18), anchor: .top)
+                .offset(x: -2)
             }
-            .frame(width: 48, height: 96)
-            .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 24.0 / 48.0, y: 18.0 / 96.0))
+            .frame(width: 32)
+            .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 0.5, y: 18.0 / 83.0))
         }
-        .frame(width: 48, height: 96)
+        .frame(width: 36, height: 86)
     }
 }
 
