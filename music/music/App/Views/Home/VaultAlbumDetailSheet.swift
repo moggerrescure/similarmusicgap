@@ -82,10 +82,10 @@ public struct VaultAlbumDetailSheet: View {
     
     // MARK: - 1. Album Header View
     private var albumHeaderView: some View {
-        VStack(spacing: 16) {
-            // Sleeve + Rotating Vinyl Disc (180x124)
+        HStack(spacing: 16) {
+            // Sleeve + Rotating Vinyl Disc (Guaranteed clearance: disc ends at 132, text starts at 150)
             ZStack(alignment: .leading) {
-                // Vinyl Disc - Protruding by 46pt and rotating when album is playing
+                // Vinyl Disc - Protruding by 28pt inside 134pt box, NEVER overlapping text
                 SheetSpinningVinylDiscView(
                     isPlaying: isAlbumPlaying,
                     waxGradient: album.waxGradient,
@@ -93,14 +93,14 @@ public struct VaultAlbumDetailSheet: View {
                     labelTextColor: album.labelTextColor,
                     symbolOrInitial: album.symbolOrInitial,
                     glowColor: album.glowColor,
-                    diameter: 120
+                    diameter: 104
                 )
-                .offset(x: 48)
-                .shadow(color: Color.black.opacity(0.85), radius: 12, x: 8, y: 4)
+                .offset(x: 28)
+                .shadow(color: Color.black.opacity(0.85), radius: 10, x: 6, y: 3)
                 
-                // Front Album Jacket
+                // Front Album Jacket (Covers left part of disc)
                 ZStack(alignment: .bottomLeading) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: album.gradientColors,
@@ -108,11 +108,11 @@ public struct VaultAlbumDetailSheet: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 120, height: 120)
+                        .frame(width: 104, height: 104)
                     
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                        .frame(width: 120, height: 120)
+                        .frame(width: 104, height: 104)
                     
                     // Sleeve Mouth Shadow
                     HStack {
@@ -122,52 +122,57 @@ public struct VaultAlbumDetailSheet: View {
                             startPoint: .trailing,
                             endPoint: .leading
                         )
-                        .frame(width: 14, height: 120)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(width: 14, height: 104)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
-                    .frame(width: 120, height: 120)
+                    .frame(width: 104, height: 104)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text(album.title)
-                            .font(.system(size: 13, weight: .black))
+                            .font(.system(size: 11, weight: .black))
                             .foregroundColor(.white)
-                            .lineLimit(2)
-                        
-                        Text(album.artist)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(Color.white.opacity(0.8))
                             .lineLimit(1)
+                        
+                        Text(album.symbolOrInitial)
+                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .foregroundColor(PastelTheme.warmAmber)
                     }
-                    .padding(10)
+                    .padding(8)
                 }
-                .frame(width: 120, height: 120)
-                .shadow(color: Color.black.opacity(0.5), radius: 10, y: 5)
+                .frame(width: 104, height: 104)
+                .shadow(color: Color.black.opacity(0.5), radius: 8, y: 4)
             }
-            .frame(width: 176, height: 124)
+            .frame(width: 134, height: 106)
             
-            // Metadata
-            VStack(spacing: 4) {
+            // Metadata: Title, Artist, Genre, Duration (Clear of Disc!)
+            VStack(alignment: .leading, spacing: 4) {
                 Text(album.title)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
+                    .lineLimit(1)
                 
                 Text(album.artist)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(PastelTheme.warmAmber)
+                    .lineLimit(1)
                 
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Text(album.releaseYear)
                     Text("•")
                     Text(album.genre)
-                    Text("•")
-                    Text("\(album.tracks.count) tracks")
-                    Text("•")
-                    Text(album.totalDuration)
                 }
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(Color(hex: "#9CA3AF"))
+                .lineLimit(1)
+                
+                Text("\(album.tracks.count) tracks • \(album.totalDuration)")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.horizontal, 20)
     }
     
     // MARK: - 2. Action Buttons (Play All & Shuffle)
