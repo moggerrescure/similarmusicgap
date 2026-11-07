@@ -388,27 +388,7 @@ private struct ChronosCrestGlint: View {
     
     var body: some View {
         ZStack(alignment: .leading) {
-            // Radiant edge line
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            Color(hex: "#FFF8EC").opacity(0.6),
-                            Color.white,
-                            Color(hex: "#FDE68A").opacity(0.8),
-                            Color(hex: "#FFF8EC").opacity(0.6),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 2.5, height: size.height)
-                .offset(x: fillWidth - 1.2)
-                .blur(radius: 0.5)
-            
-            // Flying stardust ember 1
+            // Flying stardust ember 1 (organic particle without vertical cutoff line)
             Circle()
                 .fill(Color.white.opacity(0.95))
                 .frame(width: 2.5, height: 2.5)
@@ -553,24 +533,7 @@ private struct MercuryCrestCaustic: View {
     let size: CGSize
     
     var body: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.clear,
-                        PastelTheme.emeraldSuccess.opacity(0.5),
-                        Color.white,
-                        PastelTheme.emeraldSuccess.opacity(0.5),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 2.2, height: size.height)
-            .offset(x: fillWidth - 1.0)
-            .blur(radius: 0.6)
-            .shadow(color: PastelTheme.emeraldSuccess, radius: 6)
+        EmptyView()
     }
 }
 
@@ -685,25 +648,6 @@ private struct QuantumCrestDroplet: View {
     
     var body: some View {
         ZStack(alignment: .leading) {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            PastelTheme.amberWarning.opacity(0.85),
-                            Color.white,
-                            PastelTheme.amberWarning.opacity(0.85),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 2.5, height: size.height)
-                .offset(x: fillWidth - 1.0)
-                .blur(radius: 0.7)
-                .shadow(color: PastelTheme.amberWarning, radius: 8)
-            
             Circle()
                 .fill(Color(hex: "#FDE68A"))
                 .frame(width: 4.5, height: 4.5)
@@ -813,23 +757,7 @@ private struct AcousticPrismCrest: View {
     let size: CGSize
     
     var body: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.clear,
-                        Color(hex: "#34D399"),
-                        Color.white,
-                        Color(hex: "#34D399"),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: 2.0, height: size.height)
-            .offset(x: fillWidth - 1.0)
-            .shadow(color: Color(hex: "#34D399"), radius: 5)
+        EmptyView()
     }
 }
 
