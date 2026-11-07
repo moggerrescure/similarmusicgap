@@ -205,16 +205,19 @@ private struct TurntablePlayerDeckView: View {
                         .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 1))
                         .position(x: 62, y: 64)
                     
-                    // Rotating Vinyl Platter on Turntable (Instant disc swap without animations)
-                    TurntableSpinningPlatterDisc(
-                        waxGradient: activeVinyl.waxGradient,
-                        labelGradient: activeVinyl.labelGradient,
-                        symbolOrInitial: activeVinyl.symbolOrInitial,
-                        labelTextColor: activeVinyl.labelTextColor
-                    )
-                    .rotationEffect(.degrees(vinylRotationAngle))
-                    .animation(isPlaying ? .linear(duration: 0.05) : nil, value: player.currentTime)
-                    .transaction { $0.animation = nil }
+                    // Rotating Vinyl Platter on Turntable (60/120 FPS continuous physical rotation)
+                    TimelineView(.animation(paused: !isPlaying)) { timeline in
+                        let time = timeline.date.timeIntervalSinceReferenceDate
+                        let rotation = (time.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+                        
+                        TurntableSpinningPlatterDisc(
+                            waxGradient: activeVinyl.waxGradient,
+                            labelGradient: activeVinyl.labelGradient,
+                            symbolOrInitial: activeVinyl.symbolOrInitial,
+                            labelTextColor: activeVinyl.labelTextColor
+                        )
+                        .rotationEffect(.degrees(rotation))
+                    }
                     .frame(width: 92, height: 92)
                     .position(x: 62, y: 64)
                     
@@ -241,7 +244,7 @@ private struct TurntablePlayerDeckView: View {
     }
 }
 
-// MARK: - Platter Disc on Deck with Grooves & Specular Sheen
+// MARK: - Platter Disc on Deck with 16 Strobe Marks & Visible Swirling Wax
 
 private struct TurntableSpinningPlatterDisc: View {
     let waxGradient: [Color]
@@ -251,51 +254,41 @@ private struct TurntableSpinningPlatterDisc: View {
     
     var body: some View {
         ZStack {
-            // Colored Wax Vinyl Base
+            // 1. Colored Wax Vinyl Base with Marbled Angular Swirl (Unmistakable visible spin!)
             Circle()
                 .fill(
-                    RadialGradient(
-                        colors: waxGradient,
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 46
+                    AngularGradient(
+                        colors: [
+                            waxGradient.first ?? Color(hex: "#2E1A22"),
+                            waxGradient.last ?? Color(hex: "#0E070A"),
+                            waxGradient.first?.opacity(0.8) ?? Color(hex: "#2E1A22"),
+                            Color.white.opacity(0.12),
+                            waxGradient.last ?? Color(hex: "#0E070A"),
+                            waxGradient.first ?? Color(hex: "#2E1A22")
+                        ],
+                        center: .center
                     )
                 )
-                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.8))
+                .overlay(Circle().stroke(Color.white.opacity(0.20), lineWidth: 1.0))
                 .shadow(color: waxGradient.first?.opacity(0.4) ?? Color.black.opacity(0.5), radius: 8)
             
-            // Physical Concentric Micro-Grooves
-            Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.75)
-                .frame(width: 82, height: 82)
-            Circle()
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.75)
-                .frame(width: 72, height: 72)
-            Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.75)
-                .frame(width: 62, height: 62)
-            Circle()
-                .stroke(Color.white.opacity(0.07), lineWidth: 0.75)
-                .frame(width: 50, height: 50)
-            Circle()
-                .stroke(Color.white.opacity(0.09), lineWidth: 0.75)
-                .frame(width: 40, height: 40)
+            // 2. Physical Outer Rim Strobe Marks (16 strobe notches that race around the platter edge!)
+            ForEach(0..<16, id: \.self) { i in
+                Rectangle()
+                    .fill(Color.white.opacity(0.38))
+                    .frame(width: 2.0, height: 4.5)
+                    .offset(y: -43)
+                    .rotationEffect(.degrees(Double(i) * (360.0 / 16.0)))
+            }
             
-            // Realistic Specular Light Reflection (Stationary gloss shimmer)
-            AngularGradient(
-                colors: [
-                    Color.clear,
-                    Color.white.opacity(0.18),
-                    Color.clear,
-                    Color.white.opacity(0.18),
-                    Color.clear
-                ],
-                center: .center
-            )
-            .clipShape(Circle())
-            .allowsHitTesting(false)
+            // 3. Physical Concentric Micro-Grooves
+            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 80, height: 80)
+            Circle().stroke(Color.white.opacity(0.06), lineWidth: 0.75).frame(width: 70, height: 70)
+            Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 60, height: 60)
+            Circle().stroke(Color.white.opacity(0.07), lineWidth: 0.75).frame(width: 50, height: 50)
+            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 40, height: 40)
             
-            // Center Label (Яблоко пластинки)
+            // 4. Center Label with Asymmetric Spin Marker & High-Contrast Art
             ZStack {
                 Circle()
                     .fill(
@@ -306,8 +299,14 @@ private struct TurntableSpinningPlatterDisc: View {
                         )
                     )
                     .frame(width: 32, height: 32)
-                    .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
+                    .overlay(Circle().stroke(Color.black.opacity(0.7), lineWidth: 1.5))
                     .shadow(color: Color.black.opacity(0.4), radius: 4)
+                
+                // High-contrast diagonal split stripe on label for immediate visual spin verification
+                Rectangle()
+                    .fill(Color.white.opacity(0.30))
+                    .frame(width: 30, height: 1.5)
+                    .rotationEffect(.degrees(45))
                 
                 if symbolOrInitial.count == 1 {
                     Text(symbolOrInitial)
@@ -323,7 +322,7 @@ private struct TurntableSpinningPlatterDisc: View {
                 Circle()
                     .fill(Color(hex: "#111113"))
                     .frame(width: 5, height: 5)
-                    .overlay(Circle().stroke(Color.white.opacity(0.4), lineWidth: 0.5))
+                    .overlay(Circle().stroke(Color.white.opacity(0.5), lineWidth: 0.5))
             }
         }
     }
@@ -404,17 +403,22 @@ private struct StandaloneVinylRecordCard: View {
                 // Large Colored Vinyl Disc (82 x 82)
                 TimelineView(.animation(paused: !isPlaying)) { timeline in
                     let time = timeline.date.timeIntervalSinceReferenceDate
-                    let rotation = (time.truncatingRemainder(dividingBy: 4.2) / 4.2) * 360.0
+                    let rotation = (time.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
                     
                     ZStack {
-                        // Colored Wax Base
+                        // Colored Wax Base with Marbled Angular Swirl (Unmistakable visible spin)
                         Circle()
                             .fill(
-                                RadialGradient(
-                                    colors: item.waxGradient,
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 41
+                                AngularGradient(
+                                    colors: [
+                                        item.waxGradient.first ?? Color(hex: "#2E1A22"),
+                                        item.waxGradient.last ?? Color(hex: "#0E070A"),
+                                        item.waxGradient.first?.opacity(0.8) ?? Color(hex: "#2E1A22"),
+                                        Color.white.opacity(0.12),
+                                        item.waxGradient.last ?? Color(hex: "#0E070A"),
+                                        item.waxGradient.first ?? Color(hex: "#2E1A22")
+                                    ],
+                                    center: .center
                                 )
                             )
                             .frame(width: 82, height: 82)
@@ -425,6 +429,15 @@ private struct StandaloneVinylRecordCard: View {
                                 )
                             )
                             .shadow(color: item.glowColor.opacity(isActive ? 0.55 : 0.25), radius: isActive ? 12 : 6)
+                        
+                        // Physical Outer Rim Strobe Marks (12 notches that visibly rotate with the disc)
+                        ForEach(0..<12, id: \.self) { i in
+                            Rectangle()
+                                .fill(Color.white.opacity(0.35))
+                                .frame(width: 1.8, height: 3.8)
+                                .offset(y: -38)
+                                .rotationEffect(.degrees(Double(i) * (360.0 / 12.0)))
+                        }
                         
                         // Micro Grooves
                         Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 74, height: 74)
@@ -445,7 +458,7 @@ private struct StandaloneVinylRecordCard: View {
                         )
                         .clipShape(Circle())
                         
-                        // Center Label
+                        // Center Label with Asymmetric Spin Marker
                         ZStack {
                             Circle()
                                 .fill(
@@ -458,6 +471,12 @@ private struct StandaloneVinylRecordCard: View {
                                 .frame(width: 28, height: 28)
                                 .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
                             
+                            // High-contrast diagonal split stripe on label for immediate visual spin verification
+                            Rectangle()
+                                .fill(Color.white.opacity(0.30))
+                                .frame(width: 26, height: 1.5)
+                                .rotationEffect(.degrees(45))
+                            
                             if item.symbolOrInitial.count == 1 {
                                 Text(item.symbolOrInitial)
                                     .font(.system(size: 11, weight: .black, design: .rounded))
@@ -469,7 +488,7 @@ private struct StandaloneVinylRecordCard: View {
                             }
                         }
                     }
-                    .rotationEffect(.degrees(isPlaying ? rotation : 0))
+                    .rotationEffect(.degrees(rotation))
                 }
                 .frame(width: 82, height: 82)
                 
