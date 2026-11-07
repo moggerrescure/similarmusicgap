@@ -415,8 +415,8 @@ public struct LibraryView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                // Dynamic Ambient Gradient Wash
-                AmbientWashBackgroundView()
+                // Dynamic Ambient Gradient Wash (Library Tone)
+                AmbientWashBackgroundView(tab: .library)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {

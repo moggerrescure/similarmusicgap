@@ -2,13 +2,13 @@ import SwiftUI
 import Combine
 
 /// Ambient Session Theme Manager
-/// Randomly selects a rich, moody Spotify-grade atmospheric color wash on each app launch/session.
+/// Randomly selects distinct, rich, moody Spotify-grade atmospheric color washes for each tab on every app launch/session.
 @MainActor
 public final class AmbientSessionTheme: ObservableObject {
     public static let shared = AmbientSessionTheme()
     
     /// Curated palette of deep, moody atmospheric tones (Spotify/Apple HIG Dark Mode)
-    public struct AtmosphericTone: Identifiable {
+    public struct AtmosphericTone: Identifiable, Equatable {
         public let id: String
         public let name: String
         public let primaryHex: String
@@ -86,37 +86,67 @@ public final class AmbientSessionTheme: ObservableObject {
         )
     ]
     
+    // Dedicated distinct colors for each tab per session
+    @Published public private(set) var homeTone: AtmosphericTone
+    @Published public private(set) var searchTone: AtmosphericTone
+    @Published public private(set) var libraryTone: AtmosphericTone
+    @Published public private(set) var createTone: AtmosphericTone
     @Published public private(set) var activeTone: AtmosphericTone
     
     private init() {
-        // Randomly pick one tone on every app launch/session!
-        let chosen = AmbientSessionTheme.curatedTones.randomElement() ?? AmbientSessionTheme.curatedTones[0]
-        self.activeTone = chosen
+        // Guarantee 4 distinct colors across tabs on every app launch!
+        let pool = AmbientSessionTheme.curatedTones.shuffled()
+        self.homeTone = pool[0]
+        self.searchTone = pool[1]
+        self.libraryTone = pool[2]
+        self.createTone = pool[3]
+        self.activeTone = pool[0]
     }
     
-    /// Optional manual shuffle for testing or user preference
-    public func cycleTone() {
-        if let next = AmbientSessionTheme.curatedTones.filter({ $0.id != activeTone.id }).randomElement() {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                self.activeTone = next
-            }
+    /// Tone getter by tab
+    public func tone(for tab: AppTab) -> AtmosphericTone {
+        switch tab {
+        case .home: return homeTone
+        case .search: return searchTone
+        case .library: return libraryTone
+        case .create: return createTone
+        }
+    }
+    
+    /// Optional manual shuffle
+    public func shuffleAllTones() {
+        let pool = AmbientSessionTheme.curatedTones.shuffled()
+        withAnimation(.easeInOut(duration: 0.6)) {
+            self.homeTone = pool[0]
+            self.searchTone = pool[1]
+            self.libraryTone = pool[2]
+            self.createTone = pool[3]
+            self.activeTone = pool[0]
         }
     }
 }
 
 /// Atmospheric Gradient Wash Background View
-/// Replaces particle fields with a soft, organic Spotify-grade color wash from top to bottom into pitch black.
+/// Renders an organic Spotify-grade color wash from top to bottom into pitch black, specialized per tab.
 public struct AmbientWashBackgroundView: View {
     @ObservedObject private var theme = AmbientSessionTheme.shared
     
+    public var tab: AppTab? = nil
     public var customTone: AmbientSessionTheme.AtmosphericTone? = nil
     
-    public init(customTone: AmbientSessionTheme.AtmosphericTone? = nil) {
+    public init(tab: AppTab? = nil, customTone: AmbientSessionTheme.AtmosphericTone? = nil) {
+        self.tab = tab
         self.customTone = customTone
     }
     
     private var currentTone: AmbientSessionTheme.AtmosphericTone {
-        customTone ?? theme.activeTone
+        if let custom = customTone {
+            return custom
+        }
+        if let tab = tab {
+            return theme.tone(for: tab)
+        }
+        return theme.activeTone
     }
     
     public var body: some View {
@@ -171,4 +201,3 @@ public struct AmbientWashBackgroundView: View {
         }
     }
 }
-

@@ -82,8 +82,8 @@ public struct TransferConfigView: View {
     
     public var body: some View {
         ZStack {
-            // Dynamic Ambient Gradient Wash
-            AmbientWashBackgroundView()
+            // Dynamic Ambient Gradient Wash (Create Tone)
+            AmbientWashBackgroundView(tab: .create)
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {

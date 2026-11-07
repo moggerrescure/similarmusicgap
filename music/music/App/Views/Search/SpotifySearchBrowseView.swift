@@ -65,8 +65,8 @@ public struct SpotifySearchBrowseView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                // Dynamic Ambient Gradient Wash
-                AmbientWashBackgroundView()
+                // Dynamic Ambient Gradient Wash (Search Tone)
+                AmbientWashBackgroundView(tab: .search)
                 
                 VStack(spacing: 0) {
                     // Header Title

@@ -186,7 +186,7 @@ public struct SpotifyHomeFeedView: View {
         NavigationStack {
             ZStack {
                 // Dynamic Ambient Gradient Wash (changes on each session)
-                AmbientWashBackgroundView()
+                AmbientWashBackgroundView(tab: .home)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
