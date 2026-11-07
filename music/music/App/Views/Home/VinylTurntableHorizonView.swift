@@ -224,14 +224,14 @@ private struct TurntablePlayerDeckView: View {
                         // 1. Physical 33⅓ RPM Platter Spin (3.0s per revolution)
                         let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
                         
-                        // 2. Physical Tonearm Motion (12.0s graceful analog cycle: 6s inward to inner groove, 6s outward to outer rim)
+                        // 2. Physical Tonearm Motion (8.0s analog cycle: 4s inward to inner groove, 4s outward to outer rim)
                         // Smooth harmonic sinusoidal motion: zero jerk, zero teleportation, authentic vinyl tracking
-                        let tonearmCycle = 12.0
+                        let tonearmCycle = 8.0
                         let phase = (playTime.truncatingRemainder(dividingBy: tonearmCycle) / tonearmCycle) * Double.pi * 2.0
                         let cycleProgress = (1.0 - cos(phase)) * 0.5
-                        let tonearmAngle = 10.0 + (cycleProgress * 14.0) // 10.0° (outer groove) to 24.0° (inner groove)
+                        let tonearmAngle = 8.0 + (cycleProgress * 20.0) // 8.0° (outer groove) to 28.0° (inner groove)
                         
-                        ZStack(alignment: .topTrailing) {
+                        ZStack {
                             // Rotating Vinyl Platter on Turntable
                             TurntableSpinningPlatterDisc(
                                 waxGradient: activeVinyl.waxGradient,
@@ -243,12 +243,11 @@ private struct TurntablePlayerDeckView: View {
                             .frame(width: 92, height: 92)
                             .position(x: 62, y: 64)
                             
-                            // Tonearm with Stylus Needle (smoothly glides across disc grooves)
+                            // Audiophile Tonearm with Stylus Needle (smoothly glides across disc grooves)
                             TonearmAssemblyView(
                                 angle: tonearmAngle
                             )
-                            .frame(width: 44, height: 80)
-                            .offset(x: -6, y: 8)
+                            .position(x: 104, y: 54)
                         }
                     }
                 }
@@ -351,64 +350,184 @@ private struct TurntableSpinningPlatterDisc: View {
     }
 }
 
-// MARK: - Precision Tonearm Assembly (Continuous Smooth Position)
+// MARK: - Audiophile High-Precision Tonearm Assembly
 
 private struct TonearmAssemblyView: View {
     let angle: Double
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            // Metallic Tonearm Arm with Head
-            VStack(spacing: 0) {
-                // Tone Arm Rod
+        ZStack {
+            // 1. Static Gimbal Base & Cueing Assembly (Anchored to Chassis)
+            ZStack {
+                // Outer CNC-machined mounting ring
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "#2B2D35"), Color(hex: "#15161A")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 22, height: 22)
+                    .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 0.8))
+                    .shadow(color: Color.black.opacity(0.6), radius: 3, y: 2)
+                
+                // Chrome Gimbal Bearing Ring
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF"), Color(hex: "#2D3036")],
+                            center: .center,
+                            startRadius: 1,
+                            endRadius: 8
+                        )
+                    )
+                    .frame(width: 15, height: 15)
+                    .overlay(Circle().stroke(Color.black.opacity(0.4), lineWidth: 0.5))
+                
+                // Cueing Lifter Rest Arm (Микролифт демпфера)
                 Capsule()
                     .fill(
                         LinearGradient(
-                            colors: [Color(hex: "#EFE3D3"), Color(hex: "#A3A7AF"), Color(hex: "#5C6068")],
+                            colors: [Color(hex: "#3E414A"), Color(hex: "#1A1B20")],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
-                    .frame(width: 3, height: 56)
-                    .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
+                    .frame(width: 9, height: 2.5)
+                    .offset(x: -7, y: 9)
                 
-                // Cartridge Headshell & Stylus Needle
-                ZStack {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color(hex: "#10B981"))
-                        .frame(width: 7, height: 12)
-                        .shadow(color: Color(hex: "#10B981").opacity(0.6), radius: 4)
-                    
-                    // Needle Tip (Stylus)
-                    Rectangle()
-                        .fill(Color.white)
-                        .frame(width: 1.5, height: 3)
-                        .offset(y: 5)
-                }
-                .rotationEffect(.degrees(22))
-            }
-            .offset(x: -8, y: 10)
-            .rotationEffect(.degrees(angle), anchor: .topTrailing)
-            
-            // Tonearm Pivot Base
-            ZStack {
+                // Center Sapphire Jewel Bearing
                 Circle()
+                    .fill(Color(hex: "#0E0F12"))
+                    .frame(width: 5, height: 5)
+                    .overlay(Circle().stroke(PastelTheme.pastelOat.opacity(0.6), lineWidth: 0.6))
+            }
+            .position(x: 24, y: 14)
+            
+            // 2. Rotating Tonearm Assembly (Wand, Headshell, Cartridge, Needle, Counterweight)
+            // Rotates around the exact center of the pivot bearing at (x: 24, y: 14)
+            ZStack {
+                // A. Machined Metallic Counterweight (Behind pivot, y < 14)
+                ZStack {
+                    // Counterweight Stub Shaft
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#D1D5DB"), Color(hex: "#4B5563")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 3.5, height: 11)
+                        .offset(y: 8)
+                    
+                    // Heavy Cylindrical Balance Weight with Calibrated Knurling
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FFF8EC"), Color(hex: "#A3A7AF"), Color(hex: "#374151")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 11, height: 8)
+                        .overlay(
+                            VStack(spacing: 1.5) {
+                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
+                                Rectangle().fill(Color.black.opacity(0.45)).frame(height: 0.75)
+                            }
+                        )
+                        .shadow(color: Color.black.opacity(0.5), radius: 2, y: 1)
+                        .offset(y: 6)
+                }
+                .position(x: 24, y: 6)
+                
+                // B. Aerospace Titanium Tonearm Wand (Tube extending from pivot to cartridge)
+                Capsule()
                     .fill(
-                        RadialGradient(
-                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#8E939D"), Color(hex: "#2D3036")],
-                            center: .center,
-                            startRadius: 1,
-                            endRadius: 9
+                        LinearGradient(
+                            colors: [
+                                Color(hex: "#FFF8EC"),
+                                Color(hex: "#E5E7EB"),
+                                Color(hex: "#9CA3AF"),
+                                Color(hex: "#4B5563")
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
                         )
                     )
-                    .frame(width: 16, height: 16)
-                    .shadow(color: Color.black.opacity(0.6), radius: 4, y: 2)
+                    .frame(width: 3.2, height: 56)
+                    .shadow(color: Color.black.opacity(0.5), radius: 2.5, x: -1, y: 1)
+                    .position(x: 24, y: 44)
                 
-                Circle()
-                    .fill(Color(hex: "#111113"))
-                    .frame(width: 6, height: 6)
+                // C. Bayonet Connector Collar (Муфта крепления шелла)
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color(hex: "#1E2026"))
+                    .frame(width: 5, height: 3)
+                    .overlay(Rectangle().stroke(Color.white.opacity(0.25), lineWidth: 0.5))
+                    .position(x: 24, y: 72)
+                
+                // D. Audiophile Headshell, Cartridge Body & Stylus
+                ZStack(alignment: .topTrailing) {
+                    // Cartridge Body (Athletic Emerald Jewel with Chamfered Trim)
+                    RoundedRectangle(cornerRadius: 2.2)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#10B981"), Color(hex: "#059669"), Color(hex: "#064E3B")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 8, height: 13)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2.2)
+                                .stroke(Color.white.opacity(0.35), lineWidth: 0.6)
+                        )
+                        .shadow(color: Color(hex: "#10B981").opacity(0.55), radius: 4)
+                    
+                    // Metallic Cartridge Trim / Logo Line
+                    Rectangle()
+                        .fill(Color(hex: "#FFF8EC"))
+                        .frame(width: 5, height: 1)
+                        .offset(x: -1.5, y: 3)
+                    
+                    // Integrated Ergonomic Finger Lift Hook (Фирменный крючок шелла для пальца)
+                    Path { path in
+                        path.move(to: CGPoint(x: 8, y: 2))
+                        path.addQuadCurve(to: CGPoint(x: 14, y: -4), control: CGPoint(x: 13, y: 1))
+                    }
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color(hex: "#FFF8EC"), Color(hex: "#9CA3AF")],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+                    )
+                    
+                    // Cantilever & Diamond Stylus Needle
+                    VStack(spacing: 0) {
+                        // Polished Silver Cantilever
+                        Rectangle()
+                            .fill(Color(hex: "#E5E7EB"))
+                            .frame(width: 1.2, height: 4)
+                        
+                        // Illuminated Diamond Needle Tip (Stylus Jewel)
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 2.2, height: 2.2)
+                            .shadow(color: Color(hex: "#10B981"), radius: 3)
+                    }
+                    .offset(x: -3.4, y: 11)
+                }
+                .rotationEffect(.degrees(22))
+                .position(x: 21, y: 81)
             }
+            .frame(width: 48, height: 94)
+            .rotationEffect(.degrees(angle), anchor: UnitPoint(x: 24.0 / 48.0, y: 14.0 / 94.0))
         }
+        .frame(width: 48, height: 94)
     }
 }
 
