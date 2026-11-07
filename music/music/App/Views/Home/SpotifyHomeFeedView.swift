@@ -56,11 +56,16 @@ public struct SpotifyHomeFeedView: View {
         public let id: Int
         public let title: String
         public let artist: String
+        public let symbolOrInitial: String
         public let releaseYear: String
         public let genre: String
         public let trackCount: String
         public let totalDuration: String
         public let gradientColors: [Color]
+        public let waxGradient: [Color]
+        public let labelGradient: [Color]
+        public let labelTextColor: Color
+        public let glowColor: Color
         public let accentColor: Color
         public let tracks: [UniversalTrack]
     }
@@ -179,11 +184,16 @@ public struct SpotifyHomeFeedView: View {
             id: 301,
             title: "UTOPIA",
             artist: "Travis Scott",
+            symbolOrInitial: "TS",
             releaseYear: "2023",
             genre: "Hip-Hop / Trap",
             trackCount: "19 tracks",
             totalDuration: "1 hr 13 min",
             gradientColors: [Color(hex: "#2F3136"), Color(hex: "#141518")],
+            waxGradient: [Color(hex: "#4B5563"), Color(hex: "#1F2937"), Color(hex: "#111827")],
+            labelGradient: [Color(hex: "#EFE3D3"), Color(hex: "#D1D5DB")],
+            labelTextColor: Color(hex: "#0E0F12"),
+            glowColor: Color(hex: "#EFE3D3"),
             accentColor: Color(hex: "#EFE3D3"),
             tracks: utopiaTracks
         ),
@@ -191,11 +201,16 @@ public struct SpotifyHomeFeedView: View {
             id: 302,
             title: "SOS",
             artist: "SZA",
+            symbolOrInitial: "SZA",
             releaseYear: "2022",
             genre: "R&B / Soul",
             trackCount: "23 tracks",
             totalDuration: "1 hr 8 min",
             gradientColors: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+            waxGradient: [Color(hex: "#2563EB"), Color(hex: "#1D4ED8"), Color(hex: "#0F172A")],
+            labelGradient: [Color(hex: "#60A5FA"), Color(hex: "#2563EB")],
+            labelTextColor: Color.white,
+            glowColor: Color(hex: "#60A5FA"),
             accentColor: Color(hex: "#60A5FA"),
             tracks: sosTracks
         ),
@@ -203,11 +218,16 @@ public struct SpotifyHomeFeedView: View {
             id: 303,
             title: "GUTS",
             artist: "Olivia Rodrigo",
+            symbolOrInitial: "OR",
             releaseYear: "2023",
             genre: "Alt-Pop / Rock",
             trackCount: "12 tracks",
             totalDuration: "39 min",
             gradientColors: [Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+            waxGradient: [Color(hex: "#9333EA"), Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+            labelGradient: [Color(hex: "#C084FC"), Color(hex: "#7E22CE")],
+            labelTextColor: Color.white,
+            glowColor: Color(hex: "#C084FC"),
             accentColor: Color(hex: "#A78BFA"),
             tracks: gutsTracks
         ),
@@ -215,11 +235,16 @@ public struct SpotifyHomeFeedView: View {
             id: 304,
             title: "SCARING THE HOES",
             artist: "JPEGMAFIA, Danny Brown",
+            symbolOrInitial: "SH",
             releaseYear: "2023",
             genre: "Experimental Hip-Hop",
             trackCount: "14 tracks",
             totalDuration: "36 min",
             gradientColors: [Color(hex: "#991B1B"), Color(hex: "#1E293B")],
+            waxGradient: [Color(hex: "#DC2626"), Color(hex: "#991B1B"), Color(hex: "#2B0B0B")],
+            labelGradient: [Color(hex: "#F87171"), Color(hex: "#B91C1C")],
+            labelTextColor: Color.white,
+            glowColor: Color(hex: "#EF4444"),
             accentColor: Color(hex: "#FDE68A"),
             tracks: scaringTracks
         )
@@ -387,7 +412,9 @@ public struct SpotifyHomeFeedView: View {
                     .padding(.bottom, 120) // Full clearance for Floating Mini Player
                 }
             }
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
             .sheet(isPresented: $showingProfileSheet) {
                 UserProfileSheet()
             }
@@ -619,20 +646,20 @@ public struct SpotifyHomeFeedView: View {
                 HapticManager.lightImpact()
                 toggleHeroPlayback()
             } label: {
-                HStack(spacing: 16) {
-                    // Left: Sleeve Case with initially protruding vinyl disc
+                HStack(spacing: 14) {
+                    // Left: Sleeve Case with initially protruding vinyl disc (guaranteed zero overlap with text)
                     ZStack(alignment: .leading) {
-                        // 1. Vinyl Record - INITIALLY PROTRUDING BY 52pt (High-Visibility Collector Wax)
+                        // 1. Vinyl Record - INITIALLY PROTRUDING BY 32pt (Never overlaps letters)
                         ProtrudingVinylDiscView(
                             isPlaying: isHeroPlaying,
-                            diameter: 124
+                            diameter: 104
                         )
-                        .offset(x: 52)
-                        .shadow(color: Color.black.opacity(0.85), radius: 14, x: 10, y: 5)
+                        .offset(x: 32)
+                        .shadow(color: Color.black.opacity(0.85), radius: 10, x: 6, y: 3)
                         
                         // 2. Sleeve Jacket (Covers left part of disc)
                         ZStack(alignment: .bottomLeading) {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color(hex: "#25272F"), Color(hex: "#131418")],
@@ -640,12 +667,12 @@ public struct SpotifyHomeFeedView: View {
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .frame(width: 116, height: 116)
+                                .frame(width: 104, height: 104)
                             
                             // Subtle texture and border
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                                .frame(width: 116, height: 116)
+                                .frame(width: 104, height: 104)
                             
                             // Sleeve Mouth Drop Shadow (adds realistic physical depth on the protruding disc)
                             HStack {
@@ -655,15 +682,15 @@ public struct SpotifyHomeFeedView: View {
                                     startPoint: .trailing,
                                     endPoint: .leading
                                 )
-                                .frame(width: 16, height: 116)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .frame(width: 14, height: 104)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             }
-                            .frame(width: 116, height: 116)
+                            .frame(width: 104, height: 104)
                             
                             // Cover Content
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text("NEW MUSIC\nFRIDAY")
-                                    .font(.system(size: 13, weight: .black))
+                                    .font(.system(size: 11.5, weight: .black))
                                     .foregroundColor(.white)
                                     .lineSpacing(1)
                                 
@@ -674,18 +701,18 @@ public struct SpotifyHomeFeedView: View {
                                         .fill(PastelTheme.emeraldSuccess)
                                         .frame(width: 4, height: 4)
                                     Text("FLAC 24-BIT")
-                                        .font(.system(size: 8, weight: .black))
+                                        .font(.system(size: 7.5, weight: .black))
                                         .foregroundColor(Color(hex: "#9CA3AF"))
                                 }
                             }
-                            .padding(10)
-                            .frame(width: 116, height: 116, alignment: .topLeading)
+                            .padding(8)
+                            .frame(width: 104, height: 104, alignment: .topLeading)
                         }
                     }
-                    .frame(width: 178, height: 124)
+                    .frame(width: 138, height: 106)
                     
-                    // Right: Information & Capsule Action
-                    VStack(alignment: .leading, spacing: 6) {
+                    // Right: Information & Capsule Action (Completely clear of disc)
+                    VStack(alignment: .leading, spacing: 5) {
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(PastelTheme.warmAmber)
@@ -696,17 +723,17 @@ public struct SpotifyHomeFeedView: View {
                         }
                         
                         Text("New Music Friday")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(1)
                         
                         Text("Dominic Fike, LISA, Anderson .Paak, John Summit")
-                            .font(.system(size: 12, weight: .regular))
+                            .font(.system(size: 11.5, weight: .regular))
                             .foregroundColor(Color(hex: "#9CA3AF"))
                             .lineLimit(2)
                             .lineSpacing(2)
                         
-                        Spacer(minLength: 4)
+                        Spacer(minLength: 2)
                         
                         // Oat Capsule CTA
                         HStack(spacing: 6) {
@@ -722,7 +749,8 @@ public struct SpotifyHomeFeedView: View {
                         .clipShape(Capsule())
                         .shadow(color: PastelTheme.pastelOat.opacity(0.2), radius: 6, y: 2)
                     }
-                    .frame(maxHeight: 114)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxHeight: 106)
                 }
                 .padding(14)
                 .background(PastelTheme.card)
@@ -1320,69 +1348,96 @@ public struct VaultAlbumCrateCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 // Jacket + Peeking Disc Container (126x100)
                 ZStack(alignment: .leading) {
-                    // Rotating Vinyl disc peeking out to the right by 26pt!
+                    // Collector's Edition Rotating Marbled Vinyl Disc (peeking out by 28pt)
                     TimelineView(.animation(paused: !isPlaying)) { timeline in
                         let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
-                        let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+                        let rotation = (playTime.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
                         
                         ZStack {
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [Color(hex: "#1F2026"), Color(hex: "#090A0D")],
-                                        center: .center,
-                                        startRadius: 4,
-                                        endRadius: 48
-                                    )
-                                )
-                                .frame(width: 96, height: 96)
-                            
-                            // Sound Grooves
-                            ForEach(0..<3) { i in
-                                Circle()
-                                    .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
-                                    .frame(width: CGFloat(96 - (14 + i * 16)), height: CGFloat(96 - (14 + i * 16)))
-                            }
-                            
-                            // Specular angular sheen
+                            // 1. Marbled Colored Wax Base
                             Circle()
                                 .fill(
                                     AngularGradient(
                                         colors: [
-                                            Color.white.opacity(0.12),
-                                            Color.clear,
-                                            Color.white.opacity(0.12),
-                                            Color.clear,
-                                            Color.white.opacity(0.12)
+                                            album.waxGradient.first ?? Color(hex: "#2E1A22"),
+                                            album.waxGradient.last ?? Color(hex: "#0E070A"),
+                                            album.waxGradient.first?.opacity(0.7) ?? Color(hex: "#2E1A22"),
+                                            album.waxGradient.first?.opacity(0.95) ?? Color(hex: "#450A0A"),
+                                            Color.white.opacity(0.18),
+                                            album.waxGradient.last?.opacity(0.85) ?? Color(hex: "#0E070A"),
+                                            album.waxGradient.first ?? Color(hex: "#2E1A22")
                                         ],
                                         center: .center
                                     )
                                 )
-                                .frame(width: 96, height: 96)
-                                .blendMode(.plusLighter)
+                                .frame(width: 94, height: 94)
+                                .overlay(
+                                    Circle().stroke(Color.white.opacity(0.20), lineWidth: 1.0)
+                                )
+                                .shadow(color: album.glowColor.opacity(isPlaying ? 0.55 : 0.25), radius: isPlaying ? 10 : 5)
                             
-                            Circle()
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                                .frame(width: 96, height: 96)
+                            // 2. Physical Concentric Micro-Grooves
+                            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 84, height: 84)
+                            Circle().stroke(Color.white.opacity(0.06), lineWidth: 0.75).frame(width: 74, height: 74)
+                            Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 64, height: 64)
+                            Circle().stroke(Color.white.opacity(0.07), lineWidth: 0.75).frame(width: 54, height: 54)
                             
-                            // Center Label with album accent color
+                            // 3. Anisotropic Specular Light Sheen ("Виниловый крест света")
+                            AngularGradient(
+                                colors: [
+                                    Color.clear,
+                                    Color.white.opacity(0.18),
+                                    Color.clear,
+                                    Color.white.opacity(0.18),
+                                    Color.clear
+                                ],
+                                center: .center
+                            )
+                            .clipShape(Circle())
+                            
+                            // 4. Deluxe Center Paper Label with Rotating Two-Tone Art & Micro-Typography
                             ZStack {
                                 Circle()
-                                    .fill(album.accentColor.opacity(0.85))
-                                    .frame(width: 26, height: 26)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: album.labelGradient,
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 30, height: 30)
+                                    .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.2))
                                 
+                                // Two-tone semi-circle arc for high-contrast visible rotation tracking
                                 Circle()
-                                    .stroke(Color(hex: "#0E0F12"), lineWidth: 1.5)
-                                    .frame(width: 26, height: 26)
+                                    .trim(from: 0.0, to: 0.5)
+                                    .fill(Color.black.opacity(0.25))
+                                    .frame(width: 30, height: 30)
                                 
+                                // Micro-Typography
+                                VStack(spacing: 6) {
+                                    Text("SIDE A")
+                                        .font(.system(size: 4.0, weight: .black, design: .monospaced))
+                                        .foregroundColor(album.labelTextColor.opacity(0.85))
+                                    Text("33 ⅓")
+                                        .font(.system(size: 3.5, weight: .bold, design: .monospaced))
+                                        .foregroundColor(album.labelTextColor.opacity(0.75))
+                                }
+                                
+                                // Center Artist Initial / SF Symbol
+                                Text(album.symbolOrInitial)
+                                    .font(.system(size: 9, weight: .black, design: .rounded))
+                                    .foregroundColor(album.labelTextColor)
+                                
+                                // Spindle Hole
                                 Circle()
-                                    .fill(Color(hex: "#0E0F12"))
-                                    .frame(width: 6, height: 6)
+                                    .fill(Color(hex: "#090A0D"))
+                                    .frame(width: 5.5, height: 5.5)
                             }
                         }
                         .rotationEffect(.degrees(rotation))
                     }
-                    .offset(x: 26)
+                    .offset(x: 28)
                     .shadow(color: Color.black.opacity(0.65), radius: 8, x: 5, y: 3)
                     
                     // Album Jacket Sleeve

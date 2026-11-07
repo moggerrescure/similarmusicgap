@@ -64,9 +64,9 @@ public struct VaultAlbumDetailSheet: View {
                     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showToast)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationBarTitle()
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button {
                         HapticManager.lightImpact()
                         dismiss()
@@ -88,7 +88,11 @@ public struct VaultAlbumDetailSheet: View {
                 // Vinyl Disc - Protruding by 46pt and rotating when album is playing
                 SheetSpinningVinylDiscView(
                     isPlaying: isAlbumPlaying,
-                    accentColor: album.accentColor,
+                    waxGradient: album.waxGradient,
+                    labelGradient: album.labelGradient,
+                    labelTextColor: album.labelTextColor,
+                    symbolOrInitial: album.symbolOrInitial,
+                    glowColor: album.glowColor,
                     diameter: 120
                 )
                 .offset(x: 48)
@@ -409,7 +413,11 @@ public struct VaultAlbumDetailSheet: View {
 // MARK: - Sheet Spinning Vinyl Disc View
 private struct SheetSpinningVinylDiscView: View {
     let isPlaying: Bool
-    let accentColor: Color
+    let waxGradient: [Color]
+    let labelGradient: [Color]
+    let labelTextColor: Color
+    let symbolOrInitial: String
+    let glowColor: Color
     let diameter: CGFloat
     
     @StateObject private var motionTracker = SheetRotationTracker()
@@ -417,56 +425,96 @@ private struct SheetSpinningVinylDiscView: View {
     var body: some View {
         TimelineView(.animation(paused: !isPlaying)) { timeline in
             let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
-            let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+            let rotation = (playTime.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
             
             ZStack {
-                // Carbon Vinyl Wax
-                Circle()
-                    .fill(Color(hex: "#090A0D"))
-                    .frame(width: diameter, height: diameter)
-                
-                // Sound Grooves
-                ForEach(0..<4) { i in
-                    let inset = CGFloat(8 + (i * 9))
-                    Circle()
-                        .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
-                        .frame(width: max(0, diameter - (inset * 2)), height: max(0, diameter - (inset * 2)))
-                }
-                
-                // Specular Luster
+                // 1. Marbled Colored Wax Base
                 Circle()
                     .fill(
                         AngularGradient(
                             colors: [
-                                Color.white.opacity(0.12),
-                                Color.clear,
-                                Color.white.opacity(0.12),
-                                Color.clear,
-                                Color.white.opacity(0.12)
+                                waxGradient.first ?? Color(hex: "#2E1A22"),
+                                waxGradient.last ?? Color(hex: "#0E070A"),
+                                waxGradient.first?.opacity(0.7) ?? Color(hex: "#2E1A22"),
+                                waxGradient.first?.opacity(0.95) ?? Color(hex: "#450A0A"),
+                                Color.white.opacity(0.18),
+                                waxGradient.last?.opacity(0.85) ?? Color(hex: "#0E070A"),
+                                waxGradient.first ?? Color(hex: "#2E1A22")
                             ],
                             center: .center
                         )
                     )
                     .frame(width: diameter, height: diameter)
-                    .blendMode(.plusLighter)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.20), lineWidth: 1.0)
+                    )
+                    .shadow(color: glowColor.opacity(isPlaying ? 0.6 : 0.3), radius: isPlaying ? 12 : 6)
+                
+                // 2. Physical Concentric Micro-Grooves
+                ForEach(0..<5) { i in
+                    let inset = CGFloat(10 + (i * 9))
+                    Circle()
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.75)
+                        .frame(width: max(0, diameter - (inset * 2)), height: max(0, diameter - (inset * 2)))
+                }
+                
+                // 3. Anisotropic Specular Light Sheen ("Виниловый крест света")
+                AngularGradient(
+                    colors: [
+                        Color.clear,
+                        Color.white.opacity(0.18),
+                        Color.clear,
+                        Color.white.opacity(0.18),
+                        Color.clear
+                    ],
+                    center: .center
+                )
+                .frame(width: diameter, height: diameter)
+                .clipShape(Circle())
                 
                 // Outer Rim
                 Circle()
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                    .stroke(Color.white.opacity(0.22), lineWidth: 1.2)
                     .frame(width: diameter, height: diameter)
                 
-                // Center Label
+                // 4. Deluxe Center Paper Label with Rotating Two-Tone Art & Micro-Typography
+                let labelSize = diameter * 0.34
                 ZStack {
                     Circle()
-                        .fill(accentColor.opacity(0.85))
-                        .frame(width: 32, height: 32)
+                        .fill(
+                            LinearGradient(
+                                colors: labelGradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: labelSize, height: labelSize)
+                        .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.2))
                     
+                    // Two-tone semi-circle arc for high-contrast visible rotation tracking
                     Circle()
-                        .stroke(Color(hex: "#0E0F12"), lineWidth: 2)
-                        .frame(width: 32, height: 32)
+                        .trim(from: 0.0, to: 0.5)
+                        .fill(Color.black.opacity(0.25))
+                        .frame(width: labelSize, height: labelSize)
                     
+                    // Micro-Typography
+                    VStack(spacing: 8) {
+                        Text("SIDE A")
+                            .font(.system(size: 5.0, weight: .black, design: .monospaced))
+                            .foregroundColor(labelTextColor.opacity(0.85))
+                        Text("33 ⅓")
+                            .font(.system(size: 4.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(labelTextColor.opacity(0.75))
+                    }
+                    
+                    // Center Artist Initial / SF Symbol
+                    Text(symbolOrInitial)
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundColor(labelTextColor)
+                    
+                    // Spindle Hole
                     Circle()
-                        .fill(Color(hex: "#0E0F12"))
+                        .fill(Color(hex: "#090A0D"))
                         .frame(width: 7, height: 7)
                 }
             }

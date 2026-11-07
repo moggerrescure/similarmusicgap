@@ -113,7 +113,9 @@ public struct SpotifySearchBrowseView: View {
                     }
                 }
             }
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
         }
     }
     

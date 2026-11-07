@@ -439,7 +439,9 @@ public struct LibraryView: View {
                     .padding(.bottom, 120) // Full clearance for Floating Mini Player
                 }
             }
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
             .sheet(item: $selectedSessionForReport) { session in
                 let report = TransferExecutionReport(
                     sourceProvider: session.sourceService,
@@ -793,7 +795,12 @@ public struct LibraryView: View {
                 Label("Play Now", systemImage: "play.circle")
             }
             Button {
+                #if os(iOS)
                 UIPasteboard.general.string = "\(record.title) - \(record.artist) (ISRC: \(record.isrc))"
+                #elseif os(macOS)
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString("\(record.title) - \(record.artist) (ISRC: \(record.isrc))", forType: .string)
+                #endif
                 HapticManager.successNotification()
             } label: {
                 Label("Copy Song & ISRC", systemImage: "doc.on.doc")
