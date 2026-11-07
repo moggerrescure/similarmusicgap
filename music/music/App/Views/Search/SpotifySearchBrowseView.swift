@@ -65,23 +65,25 @@ public struct SpotifySearchBrowseView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                // Pure Pitch Black Base (#121212)
-                Color(hex: "#121212")
+                // OLED Cashmere Charcoal Base (#0E0F12)
+                PastelTheme.canvas
                     .ignoresSafeArea()
+                
+                CosmicParticleBackgroundView(particleCount: 30)
                 
                 VStack(spacing: 0) {
                     // Header Title
                     HStack {
                         Text("Search")
-                            .font(.system(size: 26, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textPrimary)
                         Spacer()
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 14)
                     .padding(.bottom, 12)
                     
-                    // Sticky Search Bar
+                    // Sticky Search Bar (Audiophile Frosted Graphite Pill)
                     stickySearchBar
                         .padding(.horizontal, 16)
                         .padding(.bottom, 14)
@@ -90,15 +92,23 @@ public struct SpotifySearchBrowseView: View {
                         VStack(alignment: .leading, spacing: 0) {
                             // Top Quick-Genre Pills / Vibe Cards
                             quickGenrePillsRow
-                                .padding(.bottom, 22)
+                                .padding(.bottom, 20)
                             
-                            // "Browse All" Header
-                            Text("Browse All")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.bottom, 12)
+                            // "Browse Genres & Vibes" Header
+                            HStack {
+                                Text("Browse Genres & Vibes")
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .foregroundColor(PastelTheme.textPrimary)
+                                
+                                Spacer()
+                                
+                                Text("\(filteredCategories.count) stations")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundColor(PastelTheme.textTertiary)
+                            }
+                            .padding(.bottom, 12)
                             
-                            // Main 2-Column Genre & Mood Grid
+                            // Main 2-Column Vinyl Crate Grid
                             browseAllGrid
                                 .padding(.bottom, 140) // Player clearance
                         }
@@ -110,33 +120,42 @@ public struct SpotifySearchBrowseView: View {
         }
     }
     
-    // MARK: - Sticky Search Bar (100% width, 48px, #FFFFFF, rounded-lg)
+    // MARK: - Sticky Search Bar (Audiophile Frosted Graphite Pill)
     private var stickySearchBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(Color(hex: "#121212"))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(PastelTheme.pastelOat)
                 .padding(.leading, 14)
             
-            TextField("What do you want to listen to?", text: $searchText)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(Color(hex: "#121212"))
+            TextField("Search artists, vinyls, genres...", text: $searchText)
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundColor(PastelTheme.textPrimary)
+                .tint(PastelTheme.pastelOat)
                 .autocorrectionDisabled()
             
             if !searchText.isEmpty {
                 Button {
+                    HapticManager.lightImpact()
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "#555555"))
+                        .font(.system(size: 15))
+                        .foregroundColor(PastelTheme.textTertiary)
                         .padding(.trailing, 12)
                 }
+            } else {
+                Spacer()
+                    .frame(width: 8)
             }
         }
         .frame(height: 48)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
     }
     
     // MARK: - Top Quick-Genre Pills / Vibe Cards
@@ -149,33 +168,23 @@ public struct SpotifySearchBrowseView: View {
                         HapticManager.lightImpact()
                         searchText = item.0
                     } label: {
-                        ZStack(alignment: .bottomLeading) {
-                            Color(hex: "#1F1F1F")
+                        HStack(spacing: 8) {
+                            Text(item.0)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(PastelTheme.pastelOat)
+                                .lineLimit(1)
                             
-                            LinearGradient(
-                                colors: [Color(hex: item.1).opacity(0.8), Color(hex: "#1F1F1F").opacity(0.9)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            
-                            HStack {
-                                Text(item.0)
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: item.2)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
+                            Image(systemName: item.2)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(PastelTheme.textTertiary)
                         }
-                        .frame(width: 140, height: 44)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(PastelTheme.card)
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(Color.white.opacity(0.14), lineWidth: 0.8)
+                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -194,7 +203,7 @@ public struct SpotifySearchBrowseView: View {
         }
     }
     
-    // MARK: - Main 2-Column Genre & Mood Grid ("Browse All")
+    // MARK: - Main 2-Column Audiophile Vinyl Crate Grid
     private var browseAllGrid: some View {
         let columns = [
             GridItem(.flexible(), spacing: 12),
@@ -203,89 +212,114 @@ public struct SpotifySearchBrowseView: View {
         
         return LazyVGrid(columns: columns, spacing: 12) {
             ForEach(filteredCategories) { card in
-                Button {
-                    HapticManager.lightImpact()
-                    playGenreSelection(card)
-                } label: {
-                    ZStack(alignment: .topLeading) {
-                        // Card Base with vibrant gradient
-                        LinearGradient(
-                            colors: [
-                                Color(hex: card.hexColor),
-                                Color(hex: card.hexColor).opacity(0.85)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        
-                        // Circular Artwork Thumbnail (No black squares, 100% luminous circular vinyl rings!)
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                ZStack {
-                                    // Outer translucent circular disc with subtle glass sheen
-                                    Circle()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    Color.white.opacity(0.25),
-                                                    Color.white.opacity(0.08)
-                                                ],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .frame(width: 66, height: 66)
-                                    
-                                    // Concentric Vinyl / Soundwave Rings
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                                        .frame(width: 52, height: 52)
-                                    
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
-                                        .frame(width: 38, height: 38)
-                                    
-                                    // Center Well Ring
-                                    Circle()
-                                        .fill(Color.white.opacity(0.14))
-                                        .frame(width: 24, height: 24)
-                                    
-                                    // Crisp Icon Symbol
-                                    Image(systemName: card.iconSymbol)
-                                        .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .shadow(color: Color.black.opacity(0.25), radius: 3)
-                                }
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(0.32), lineWidth: 1)
-                                )
-                                .shadow(color: Color.black.opacity(0.2), radius: 6, y: 3)
-                                .offset(x: 8, y: 4)
-                            }
-                        }
-                        
-                        // Title Typography: Positioned top-left, 16px bold 700 #FFFFFF, line-height 1.2
-                        Text(card.title)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding([.top, .leading], 14)
-                    }
-                    .frame(height: 104)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
+                vinylSleeveCard(card)
             }
         }
+    }
+    
+    // Concept 1: Collector's Vinyl Pocket Sleeve Card
+    private func vinylSleeveCard(_ card: SpotifyGenreCard) -> some View {
+        Button {
+            HapticManager.lightImpact()
+            playGenreSelection(card)
+        } label: {
+            VStack(spacing: 10) {
+                // Miniature Vinyl Record with Grooves and Colored Center Label
+                ZStack {
+                    // Outer Black Vinyl Wax Platter
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(hex: "#0E0F12"),
+                                    Color(hex: "#1A1C22"),
+                                    Color(hex: "#090A0D")
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 68, height: 68)
+                        .shadow(color: Color.black.opacity(0.55), radius: 6, y: 3)
+                    
+                    // Micro Concentric Grooves
+                    Circle()
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.75)
+                        .frame(width: 60, height: 60)
+                    
+                    Circle()
+                        .stroke(Color.white.opacity(0.05), lineWidth: 0.75)
+                        .frame(width: 52, height: 52)
+                    
+                    Circle()
+                        .stroke(Color.white.opacity(0.06), lineWidth: 0.75)
+                        .frame(width: 44, height: 44)
+                    
+                    Circle()
+                        .stroke(Color.white.opacity(0.05), lineWidth: 0.75)
+                        .frame(width: 36, height: 36)
+                    
+                    // Anisotropic Specular Light Sheen ("виниловый крест света")
+                    AngularGradient(
+                        colors: [
+                            Color.clear,
+                            Color.white.opacity(0.12),
+                            Color.clear,
+                            Color.white.opacity(0.12),
+                            Color.clear
+                        ],
+                        center: .center
+                    )
+                    .frame(width: 68, height: 68)
+                    .clipShape(Circle())
+                    
+                    // Colored Center Label Hub
+                    ZStack {
+                        Circle()
+                            .fill(Color(hex: card.hexColor))
+                            .frame(width: 28, height: 28)
+                            .shadow(color: Color(hex: card.hexColor).opacity(0.4), radius: 4)
+                        
+                        // Center Spindle Hole
+                        Circle()
+                            .fill(Color(hex: "#0E0F12"))
+                            .frame(width: 5, height: 5)
+                            .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                        
+                        // Crisp Category Icon
+                        Image(systemName: card.iconSymbol)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.top, 12)
+                
+                // Typography & Query Tag Subtitle
+                VStack(spacing: 2) {
+                    Text(card.title)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(PastelTheme.textPrimary)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.center)
+                    
+                    Text("#\(card.queryTag)")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(PastelTheme.textSecondary)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 12)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 138)
+            .background(PastelTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
     
     private func playGenreSelection(_ card: SpotifyGenreCard) {
