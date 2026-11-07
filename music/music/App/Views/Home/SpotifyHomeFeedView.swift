@@ -195,8 +195,8 @@ public struct SpotifyHomeFeedView: View {
                         topHeaderBar
                             .padding(.top, 10)
                         
-                        // 2. СЕТКА ИЗ НЕДАВНИХ СВЕРХУ (2-Column Recent Shortcuts Grid)
-                        recentShortcutsSection
+                        // 2. ЦВЕТНОЙ КОЛЛЕКЦИОННЫЙ ВИНИЛ & АНИМИРОВАННЫЙ ПРОИГРЫВАТЕЛЬ
+                        VinylTurntableHorizonView()
                         
                         // 3. ПОИСКОВАЯ СТРОКА ПОСЕРЕДИНЕ (Sticky Search Bar)
                         prominentSearchBar
