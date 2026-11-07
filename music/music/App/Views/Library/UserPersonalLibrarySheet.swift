@@ -644,74 +644,58 @@ private struct PersonalLibraryTrackRow: View {
                 
                 Spacer()
                 
-                if isCurrent, let onRewindTap = onRewindTap {
-                    Button(action: onRewindTap) {
-                        Image(systemName: "gobackward.15")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(PastelTheme.textSecondary)
-                            .frame(width: 26, height: 26)
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
-                }
-                
-                if let loop = loopMode {
-                    Button(action: onLoopTap) {
-                        Image(systemName: loop.iconName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(loop != .off ? PastelTheme.pastelOat : PastelTheme.textTertiary)
-                            .frame(width: 26, height: 26)
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
-                }
-                
-                Button(action: onFavoriteTap) {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(isFavorite ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                        .scaleEffect(isFavorite ? 1.15 : 1.0)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isFavorite)
-                        .frame(width: 34, height: 34)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(BorderlessButtonStyle())
-                
-                Menu {
-                    if let onAddToPlaylistTap = onAddToPlaylistTap {
-                        Button {
-                            onAddToPlaylistTap()
-                        } label: {
-                            Label("Add to Playlist...", systemImage: "text.badge.plus")
+                // Trailing Action Area (All icons strictly aligned on the same horizontal level across every song)
+                HStack(spacing: 8) {
+                    // 1. Provider Brand Badges (Vertically centered at height 32)
+                    HStack(spacing: 4) {
+                        if track.spotifyId != nil {
+                            PlatformBrandBadgeView(type: .spotify, size: 14)
+                        }
+                        if track.appleMusicId != nil {
+                            PlatformBrandBadgeView(type: .appleMusic, size: 14)
+                        }
+                        if track.yandexId != nil {
+                            PlatformBrandBadgeView(type: .yandexMusic, size: 14)
                         }
                     }
-                    Button {
-                        onFavoriteTap()
-                    } label: {
-                        Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
+                    .frame(height: 32, alignment: .trailing)
+                    
+                    // 2. Trailing Action: Reorder drag handle OR Ellipsis Menu (Fixed 32x32 frame, vertically centered)
+                    if isReordering {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .frame(width: 32, height: 32, alignment: .center)
+                    } else {
+                        Menu {
+                            if let onAddToPlaylistTap = onAddToPlaylistTap {
+                                Button {
+                                    onAddToPlaylistTap()
+                                } label: {
+                                    Label("Add to Playlist...", systemImage: "text.badge.plus")
+                                }
+                            }
+                            Button {
+                                onFavoriteTap()
+                            } label: {
+                                Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
+                            }
+                            Button {
+                                onPlayTap()
+                            } label: {
+                                Label("Play Now", systemImage: "play.circle")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .frame(width: 32, height: 32, alignment: .center)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
                     }
-                    Button {
-                        onPlayTap()
-                    } label: {
-                        Label("Play Now", systemImage: "play.circle")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(PastelTheme.textTertiary)
-                        .frame(width: 26, height: 32)
                 }
-                .buttonStyle(BorderlessButtonStyle())
-                
-                HStack(spacing: 4) {
-                    if track.spotifyId != nil {
-                        PlatformBrandBadgeView(type: .spotify, size: 14)
-                    }
-                    if track.appleMusicId != nil {
-                        PlatformBrandBadgeView(type: .appleMusic, size: 14)
-                    }
-                    if track.yandexId != nil {
-                        PlatformBrandBadgeView(type: .yandexMusic, size: 14)
-                    }
-                }
+                .frame(height: 32, alignment: .center)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 9)

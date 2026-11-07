@@ -207,13 +207,43 @@ private struct PlaylistTrackRow: View {
             
             Spacer()
             
-            Button(action: onFavoriteTap) {
-                Image(systemName: isFavorite ? "heart.fill" : "heart")
-                    .font(.system(size: 15))
-                    .foregroundColor(isFavorite ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                    .frame(width: 32, height: 32)
+            // Trailing Action Area (Strictly aligned on the same horizontal level across every song)
+            HStack(spacing: 8) {
+                // Provider Brand Badges (Vertically centered at height 32)
+                HStack(spacing: 4) {
+                    if track.spotifyId != nil {
+                        PlatformBrandBadgeView(type: .spotify, size: 14)
+                    }
+                    if track.appleMusicId != nil {
+                        PlatformBrandBadgeView(type: .appleMusic, size: 14)
+                    }
+                    if track.yandexId != nil {
+                        PlatformBrandBadgeView(type: .yandexMusic, size: 14)
+                    }
+                }
+                .frame(height: 32, alignment: .trailing)
+                
+                Menu {
+                    Button {
+                        onFavoriteTap()
+                    } label: {
+                        Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
+                    }
+                    Button {
+                        onPlayTap()
+                    } label: {
+                        Label("Play Now", systemImage: "play.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .frame(width: 32, height: 32, alignment: .center)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(BorderlessButtonStyle())
             }
-            .buttonStyle(BorderlessButtonStyle())
+            .frame(height: 32, alignment: .center)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
