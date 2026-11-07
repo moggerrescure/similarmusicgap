@@ -544,10 +544,6 @@ public struct LibraryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(PastelTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PastelTheme.cardBorder, lineWidth: 1)
-        )
     }
     
     // MARK: - 3. Migration History Carousel (История того, что происходило)
@@ -654,10 +650,6 @@ public struct LibraryView: View {
             .frame(width: 250)
             .background(PastelTheme.card)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
-            )
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -738,7 +730,7 @@ public struct LibraryView: View {
                     .foregroundColor(PastelTheme.textTertiary)
             }
             
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: 0) {
                 ForEach(filteredRecords) { record in
                     transferredTrackRow(record: record)
                 }
@@ -759,101 +751,93 @@ public struct LibraryView: View {
                 player.play(track: uTrack)
             }
         } label: {
-            HStack(spacing: 12) {
-                // Mini Circular Disc Artwork
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#1E2026"), Color(hex: "#111317")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    // Mini Circular Disc Artwork
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "#1E2026"), Color(hex: "#111317")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Circle()
-                                .stroke(isCurr ? PastelTheme.emeraldSuccess : PastelTheme.cardBorder, lineWidth: 1)
-                        )
-                    
-                    if isPlaying {
-                        WaveformBarsView()
-                    } else if isCurr {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(PastelTheme.pastelOat)
-                    } else {
-                        Image(systemName: "opticaldisc")
-                            .font(.system(size: 18))
-                            .foregroundColor(PastelTheme.pastelOat.opacity(0.8))
+                            .frame(width: 44, height: 44)
+                        
+                        if isPlaying {
+                            WaveformBarsView()
+                        } else if isCurr {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(PastelTheme.pastelOat)
+                        } else {
+                            Image(systemName: "opticaldisc")
+                                .font(.system(size: 18))
+                                .foregroundColor(PastelTheme.pastelOat.opacity(0.8))
+                        }
                     }
-                }
-                
-                // Title, Artist & Album
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(record.title)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(isCurr ? PastelTheme.pastelOat : PastelTheme.textPrimary)
-                        .lineLimit(1)
                     
-                    HStack(spacing: 4) {
-                        Text(record.artist)
-                            .foregroundColor(PastelTheme.textSecondary)
-                        Text("•")
-                            .foregroundColor(PastelTheme.textTertiary)
-                        Text(record.album)
-                            .foregroundColor(PastelTheme.textTertiary)
+                    // Title, Artist & Album
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(record.title)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(isCurr ? PastelTheme.pastelOat : PastelTheme.textPrimary)
                             .lineLimit(1)
-                    }
-                    .font(.system(size: 12))
-                    
-                    // Route Badge & Match Tag
-                    HStack(spacing: 6) {
-                        // Source -> Dest badge
-                        HStack(spacing: 3) {
+                        
+                        HStack(spacing: 4) {
+                            Text(record.artist)
+                                .foregroundColor(PastelTheme.textSecondary)
+                            Text("•")
+                                .foregroundColor(PastelTheme.textTertiary)
+                            Text(record.album)
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .lineLimit(1)
+                        }
+                        .font(.system(size: 12))
+                        
+                        // Clean Route Badge (No green labels, no separate outlines)
+                        HStack(spacing: 4) {
                             PlatformBrandBadgeView(type: record.sourceService, size: 11)
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 7, weight: .bold))
                                 .foregroundColor(PastelTheme.textTertiary)
                             PlatformBrandBadgeView(type: record.destinationService, size: 11)
+                            Text("\(record.sourceService.displayName) → \(record.destinationService.displayName)")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundColor(PastelTheme.textSecondary)
                         }
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(PastelTheme.cardSubtle)
                         .clipShape(Capsule())
-                        
-                        // Match confidence tag
-                        Text(record.matchType)
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
-                            .foregroundColor(PastelTheme.emeraldSuccess)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(PastelTheme.emeraldSuccess.opacity(0.12))
-                            .clipShape(Capsule())
+                        .padding(.top, 2)
                     }
-                    .padding(.top, 2)
-                }
-                
-                Spacer()
-                
-                // Status Checkmark & Menu
-                VStack(alignment: .trailing, spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(PastelTheme.emeraldSuccess)
                     
-                    Text(record.transferDateStr)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(PastelTheme.textTertiary)
+                    Spacer()
+                    
+                    // Status Checkmark & Date
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundColor(PastelTheme.emeraldSuccess)
+                        
+                        Text(record.transferDateStr)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(PastelTheme.textTertiary)
+                    }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 9)
+                .background(isCurr ? PastelTheme.pastelOat.opacity(0.08) : Color.clear)
+                .contentShape(Rectangle())
+                
+                // Fine hairline divider
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 0.5)
+                    .padding(.leading, 64)
             }
-            .padding(12)
-            .background(isCurr ? PastelTheme.pastelOat.opacity(0.08) : PastelTheme.card)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isCurr ? PastelTheme.marbleBorder : PastelTheme.cardBorder, lineWidth: 1)
-            )
         }
         .buttonStyle(PlainButtonStyle())
         .contextMenu {
