@@ -13,8 +13,8 @@ public struct MainTabView: View {
                 .ignoresSafeArea()
             
             TabView(selection: $navCoordinator.selectedTab) {
-                // Tab 1: Home (Personalized Feed)
-                SpotifyHomeFeedView()
+                // Tab 1: SoundShift Acoustic Command Deck (Apple HIG HUD)
+                SoundShiftHomeFeedView()
                     .tabItem {
                         Image(systemName: navCoordinator.selectedTab == 0 ? "house.fill" : "house")
                         Text("Home")
