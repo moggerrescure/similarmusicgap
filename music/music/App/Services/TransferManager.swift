@@ -131,7 +131,7 @@ public final class TransferManager: ObservableObject {
         self.totalToProcess = max(tracks.count, 1)
         
         var successfulCount = 0
-        let missingList: [UniversalTrack] = []
+        var missingList: [UniversalTrack] = []
         
         // Stream progress with haptic ticks
         for (index, track) in tracks.enumerated() {

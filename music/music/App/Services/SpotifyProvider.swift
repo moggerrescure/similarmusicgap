@@ -192,36 +192,143 @@ public final class SpotifyProvider: MusicProviderProtocol, ObservableObject {
         return sampleMockTracks
     }
     
+    public static let cachedSampleMockTracks: [UniversalTrack] = [
+        UniversalTrack(
+            isrc: "USUM71703861",
+            title: "Starboy",
+            artists: ["The Weeknd", "Daft Punk"],
+            album: "Starboy",
+            durationMs: 230453,
+            releaseYear: 2016,
+            yandexId: "29871638",
+            spotifyId: "7a26vX02Y4vYj9P6RrqU04",
+            appleMusicId: "1156443290"
+        ),
+        UniversalTrack(
+            isrc: "GBUM71505080",
+            title: "The Less I Know the Better",
+            artists: ["Tame Impala"],
+            album: "Currents",
+            durationMs: 216320,
+            releaseYear: 2015,
+            yandexId: "27811920",
+            spotifyId: "6K4t31amVTKVgPeRoxXErq",
+            appleMusicId: "985067994"
+        ),
+        UniversalTrack(
+            isrc: "USAT21900122",
+            title: "Blinding Lights",
+            artists: ["The Weeknd"],
+            album: "After Hours",
+            durationMs: 200040,
+            releaseYear: 2019,
+            yandexId: "63219011",
+            spotifyId: "0VjIjW4GlUZAMYd2vXMi3b",
+            appleMusicId: "1499378607"
+        ),
+        UniversalTrack(
+            isrc: "RUAA12000042",
+            title: "Где нас нет",
+            artists: ["Oxxxymiron"],
+            album: "ГОРГОРОД",
+            durationMs: 265000,
+            releaseYear: 2015,
+            yandexId: "24981120",
+            spotifyId: "4RTYu892p",
+            appleMusicId: "105891104"
+        ),
+        UniversalTrack(
+            isrc: "FRUM71300088",
+            title: "Instant Crush",
+            artists: ["Daft Punk", "Julian Casablancas"],
+            album: "Random Access Memories",
+            durationMs: 337560,
+            releaseYear: 2013,
+            yandexId: "14589231",
+            spotifyId: "2bpgKp31sOVoTeStOXzi8C",
+            appleMusicId: "617154241"
+        ),
+        UniversalTrack(
+            isrc: "USWB11200021",
+            title: "Midnight City",
+            artists: ["M83"],
+            album: "Hurry Up, We're Dreaming",
+            durationMs: 243000,
+            releaseYear: 2011,
+            yandexId: "1892019",
+            spotifyId: "1eyzqe2QqGZUmfcPZtrIyt",
+            appleMusicId: "466487841"
+        ),
+        UniversalTrack(
+            isrc: "RUAA12000318",
+            title: "Барбисайз",
+            artists: ["Дора", "Мэйби Бэйби"],
+            album: "МЕНТАЛЬНЫЙ",
+            durationMs: 168000,
+            releaseYear: 2022,
+            yandexId: "9871120",
+            spotifyId: "3x9k12a",
+            appleMusicId: "15982103"
+        ),
+        UniversalTrack(
+            isrc: "DEZ651900143",
+            title: "Судно (Борис Рыжий)",
+            artists: ["Молчат Дома"],
+            album: "Этажи",
+            durationMs: 141000,
+            releaseYear: 2018,
+            yandexId: "4591102",
+            spotifyId: "6W4k12s",
+            appleMusicId: "14498112"
+        ),
+        UniversalTrack(
+            isrc: "USSM12304910",
+            title: "UTOPIA",
+            artists: ["Travis Scott"],
+            album: "UTOPIA",
+            durationMs: 215000,
+            releaseYear: 2023,
+            yandexId: "8912304",
+            spotifyId: "5b8v123",
+            appleMusicId: "16998124"
+        ),
+        UniversalTrack(
+            isrc: "USRC12204128",
+            title: "Kill Bill",
+            artists: ["SZA"],
+            album: "SOS",
+            durationMs: 153000,
+            releaseYear: 2022,
+            yandexId: "7781290",
+            spotifyId: "1Qrg8KqiI2V",
+            appleMusicId: "16578210"
+        ),
+        UniversalTrack(
+            isrc: "USUG12303810",
+            title: "vampire",
+            artists: ["Olivia Rodrigo"],
+            album: "GUTS",
+            durationMs: 219000,
+            releaseYear: 2023,
+            yandexId: "8891203",
+            spotifyId: "3k79jB4",
+            appleMusicId: "16942109"
+        ),
+        UniversalTrack(
+            isrc: "RUAA10000008",
+            title: "Искала",
+            artists: ["Zemfira"],
+            album: "Прости меня моя любовь",
+            durationMs: 213000,
+            releaseYear: 2000,
+            yandexId: "109823",
+            spotifyId: "7821bc",
+            appleMusicId: "3498102"
+        )
+    ]
+    
     public var sampleMockTracks: [UniversalTrack] {
-        [
-            UniversalTrack(
-                isrc: "USUM71703861",
-                title: "Starboy",
-                artists: ["The Weeknd", "Daft Punk"],
-                album: "Starboy",
-                durationMs: 230453,
-                releaseYear: 2016,
-                spotifyId: "7a26vX02Y4vYj9P6RrqU04"
-            ),
-            UniversalTrack(
-                isrc: "GBUM71505080",
-                title: "The Less I Know the Better",
-                artists: ["Tame Impala"],
-                album: "Currents",
-                durationMs: 216320,
-                releaseYear: 2015,
-                spotifyId: "6K4t31amVTKVgPeRoxXErq"
-            ),
-            UniversalTrack(
-                isrc: "USAT21900122",
-                title: "Blinding Lights",
-                artists: ["The Weeknd"],
-                album: "After Hours",
-                durationMs: 200040,
-                releaseYear: 2019,
-                spotifyId: "0VjIjW4GlUZAMYd2vXMi3b"
-            )
-        ]
+        Self.cachedSampleMockTracks
     }
     
     private var sampleMockPlaylists: [UniversalPlaylist] {

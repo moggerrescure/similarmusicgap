@@ -121,9 +121,6 @@ public struct TransferConfigView: View {
                     
                     // 7. Advanced Fine-Tuning Accordion
                     advancedSettingsAccordion
-                    
-                    // 8. History of Recent Transfers and Exports
-                    historySection
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
@@ -687,15 +684,17 @@ public struct TransferConfigView: View {
             toggleTrackSelection(id: track.id)
         } label: {
             HStack(spacing: 12) {
-                // Interactive Checkbox
+                // Interactive Checkbox (Загорается чистым белым цветом при выборе)
                 ZStack {
                     if isSelected {
                         Circle()
-                            .fill(PastelTheme.pastelOat)
+                            .fill(Color.white)
                             .frame(width: 22, height: 22)
+                            .shadow(color: Color.white.opacity(0.45), radius: 6, x: 0, y: 0)
+                        
                         Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .heavy))
-                            .foregroundColor(PastelTheme.textOnOat)
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundColor(Color.black)
                     } else {
                         Circle()
                             .stroke(PastelTheme.cardBorder, lineWidth: 1.5)
@@ -742,6 +741,7 @@ public struct TransferConfigView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(isSelected ? PastelTheme.cardBorderFocused : Color.clear, lineWidth: 1)
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -1045,36 +1045,6 @@ public struct TransferConfigView: View {
         }
     }
     
-    // MARK: - 8. History of Transfers and Exports
-    @ViewBuilder
-    private var historySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("НЕДАВНИЕ ПЕРЕНОСЫ И ВЫКАЧИВАНИЯ")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .tracking(0.6)
-                .foregroundColor(PastelTheme.textTertiary)
-                .padding(.horizontal, 4)
-            
-            VStack(spacing: 8) {
-                HistoryItemRow(
-                    from: .spotify,
-                    to: .appleMusic,
-                    trackCount: 840,
-                    matchRate: "100%",
-                    timeAgo: "Вчера"
-                )
-                HistoryItemRow(
-                    from: .yandexMusic,
-                    to: .spotify,
-                    trackCount: 142,
-                    matchRate: "98.6%",
-                    timeAgo: "3 дня назад"
-                )
-            }
-        }
-        .padding(.top, 4)
-    }
-    
     // MARK: - Logic Helpers
     
     private var sourceTracks: [UniversalTrack] {
@@ -1180,57 +1150,6 @@ public struct TransferConfigView: View {
             self.exportURL = fileURL
             self.showingExportSheet = true
         }
-    }
-}
-
-// MARK: - History Item Row Component
-private struct HistoryItemRow: View {
-    let from: MusicProviderType
-    let to: MusicProviderType
-    let trackCount: Int
-    let matchRate: String
-    let timeAgo: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 6) {
-                PlatformBrandBadgeView(type: from, size: 20)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(PastelTheme.textTertiary)
-                PlatformBrandBadgeView(type: to, size: 20)
-            }
-            .frame(width: 56)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(from.displayName) → \(to.displayName)")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(PastelTheme.textPrimary)
-                
-                Text("\(trackCount) треков • \(timeAgo)")
-                    .font(.system(size: 12))
-                    .foregroundColor(PastelTheme.textSecondary)
-            }
-            
-            Spacer()
-            
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 11))
-                    .foregroundColor(PastelTheme.emeraldSuccess)
-                Text(matchRate)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(PastelTheme.emeraldSuccess)
-                    .monospacedDigit()
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(PastelTheme.cardSubtle)
-            .clipShape(Capsule())
-        }
-        .padding(12)
-        .background(PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
