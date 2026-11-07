@@ -266,7 +266,7 @@ private struct TurntablePlayerDeckView: View {
     }
 }
 
-// MARK: - Platter Disc on Deck with 16 Strobe Marks & Visible Swirling Wax
+// MARK: - Collector's Edition Colored Vinyl Platter Disc (Clean, Notch-Free, Swirling Wax & Deluxe Label Art)
 
 private struct TurntableSpinningPlatterDisc: View {
     let waxGradient: [Color]
@@ -276,16 +276,17 @@ private struct TurntableSpinningPlatterDisc: View {
     
     var body: some View {
         ZStack {
-            // 1. Colored Wax Vinyl Base with Marbled Angular Swirl (Unmistakable visible spin!)
+            // 1. Collector's Marbled Wax Base (Asymmetrical swirls of deep pigment and glossy refraction)
             Circle()
                 .fill(
                     AngularGradient(
                         colors: [
                             waxGradient.first ?? Color(hex: "#2E1A22"),
                             waxGradient.last ?? Color(hex: "#0E070A"),
-                            waxGradient.first?.opacity(0.8) ?? Color(hex: "#2E1A22"),
-                            Color.white.opacity(0.12),
-                            waxGradient.last ?? Color(hex: "#0E070A"),
+                            waxGradient.first?.opacity(0.7) ?? Color(hex: "#2E1A22"),
+                            waxGradient.first?.opacity(0.95) ?? Color(hex: "#450A0A"),
+                            Color.white.opacity(0.18), // Distinct light refraction marble vein
+                            waxGradient.last?.opacity(0.85) ?? Color(hex: "#0E070A"),
                             waxGradient.first ?? Color(hex: "#2E1A22")
                         ],
                         center: .center
@@ -294,24 +295,29 @@ private struct TurntableSpinningPlatterDisc: View {
                 .overlay(Circle().stroke(Color.white.opacity(0.20), lineWidth: 1.0))
                 .shadow(color: waxGradient.first?.opacity(0.4) ?? Color.black.opacity(0.5), radius: 8)
             
-            // 2. Physical Outer Rim Strobe Marks (16 strobe notches that race around the platter edge!)
-            ForEach(0..<16, id: \.self) { i in
-                Rectangle()
-                    .fill(Color.white.opacity(0.38))
-                    .frame(width: 2.0, height: 4.5)
-                    .offset(y: -43)
-                    .rotationEffect(.degrees(Double(i) * (360.0 / 16.0)))
-            }
+            // 2. Physical Concentric Micro-Grooves (Analog sound tracks)
+            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 82, height: 82)
+            Circle().stroke(Color.white.opacity(0.06), lineWidth: 0.75).frame(width: 72, height: 72)
+            Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 62, height: 62)
+            Circle().stroke(Color.white.opacity(0.07), lineWidth: 0.75).frame(width: 52, height: 52)
+            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 42, height: 42)
             
-            // 3. Physical Concentric Micro-Grooves
-            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 80, height: 80)
-            Circle().stroke(Color.white.opacity(0.06), lineWidth: 0.75).frame(width: 70, height: 70)
-            Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 60, height: 60)
-            Circle().stroke(Color.white.opacity(0.07), lineWidth: 0.75).frame(width: 50, height: 50)
-            Circle().stroke(Color.white.opacity(0.09), lineWidth: 0.75).frame(width: 40, height: 40)
+            // 3. Realistic Anisotropic Specular Light Sheen ("Виниловый крест света")
+            AngularGradient(
+                colors: [
+                    Color.clear,
+                    Color.white.opacity(0.18),
+                    Color.clear,
+                    Color.white.opacity(0.18),
+                    Color.clear
+                ],
+                center: .center
+            )
+            .clipShape(Circle())
             
-            // 4. Center Label with Asymmetric Spin Marker & High-Contrast Art
+            // 4. Deluxe Center Paper Label with Authentic Vinyl Typography & Rotating Art
             ZStack {
+                // Outer Label Ring
                 Circle()
                     .fill(
                         LinearGradient(
@@ -321,22 +327,36 @@ private struct TurntableSpinningPlatterDisc: View {
                         )
                     )
                     .frame(width: 32, height: 32)
-                    .overlay(Circle().stroke(Color.black.opacity(0.7), lineWidth: 1.5))
+                    .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
                     .shadow(color: Color.black.opacity(0.4), radius: 4)
                 
-                // High-contrast diagonal split stripe on label for immediate visual spin verification
-                Rectangle()
-                    .fill(Color.white.opacity(0.30))
-                    .frame(width: 30, height: 1.5)
-                    .rotationEffect(.degrees(45))
+                // Two-tone semi-circle arc (creates high-contrast rotation tracking)
+                Circle()
+                    .trim(from: 0.0, to: 0.5)
+                    .fill(Color.black.opacity(0.25))
+                    .frame(width: 32, height: 32)
                 
+                // Authentic Vinyl Label Micro-Typography ("SIDE A" & "33 RPM")
+                VStack(spacing: 8) {
+                    Text("SIDE A")
+                        .font(.system(size: 4.5, weight: .black, design: .monospaced))
+                        .foregroundColor(labelTextColor.opacity(0.85))
+                        .tracking(0.5)
+                    
+                    Text("33 ⅓")
+                        .font(.system(size: 4.0, weight: .bold, design: .monospaced))
+                        .foregroundColor(labelTextColor.opacity(0.75))
+                        .tracking(0.5)
+                }
+                
+                // Center Artist Initial / SF Symbol
                 if symbolOrInitial.count == 1 {
                     Text(symbolOrInitial)
                         .font(.system(size: 11, weight: .black, design: .rounded))
                         .foregroundColor(labelTextColor)
                 } else {
                     Image(systemName: symbolOrInitial)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(labelTextColor)
                 }
                 
@@ -538,9 +558,10 @@ private struct StandaloneVinylRecordCard: View {
                                     colors: [
                                         item.waxGradient.first ?? Color(hex: "#2E1A22"),
                                         item.waxGradient.last ?? Color(hex: "#0E070A"),
-                                        item.waxGradient.first?.opacity(0.8) ?? Color(hex: "#2E1A22"),
-                                        Color.white.opacity(0.12),
-                                        item.waxGradient.last ?? Color(hex: "#0E070A"),
+                                        item.waxGradient.first?.opacity(0.7) ?? Color(hex: "#2E1A22"),
+                                        item.waxGradient.first?.opacity(0.95) ?? Color(hex: "#450A0A"),
+                                        Color.white.opacity(0.18),
+                                        item.waxGradient.last?.opacity(0.85) ?? Color(hex: "#0E070A"),
                                         item.waxGradient.first ?? Color(hex: "#2E1A22")
                                     ],
                                     center: .center
@@ -555,35 +576,26 @@ private struct StandaloneVinylRecordCard: View {
                             )
                             .shadow(color: item.glowColor.opacity(isActive ? 0.55 : 0.25), radius: isActive ? 12 : 6)
                         
-                        // Physical Outer Rim Strobe Marks (12 notches that visibly rotate with the disc)
-                        ForEach(0..<12, id: \.self) { i in
-                            Rectangle()
-                                .fill(Color.white.opacity(0.35))
-                                .frame(width: 1.8, height: 3.8)
-                                .offset(y: -38)
-                                .rotationEffect(.degrees(Double(i) * (360.0 / 12.0)))
-                        }
-                        
                         // Micro Grooves
                         Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 74, height: 74)
                         Circle().stroke(Color.white.opacity(0.06), lineWidth: 0.75).frame(width: 64, height: 64)
                         Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75).frame(width: 54, height: 54)
                         Circle().stroke(Color.white.opacity(0.07), lineWidth: 0.75).frame(width: 44, height: 44)
                         
-                        // Specular Light Sheen
+                        // Specular Light Sheen ("Виниловый крест света")
                         AngularGradient(
                             colors: [
                                 Color.clear,
-                                Color.white.opacity(0.16),
+                                Color.white.opacity(0.18),
                                 Color.clear,
-                                Color.white.opacity(0.16),
+                                Color.white.opacity(0.18),
                                 Color.clear
                             ],
                             center: .center
                         )
                         .clipShape(Circle())
                         
-                        // Center Label with Asymmetric Spin Marker
+                        // Center Label with Authentic Typography & Rotating Two-Tone Art
                         ZStack {
                             Circle()
                                 .fill(
@@ -596,19 +608,29 @@ private struct StandaloneVinylRecordCard: View {
                                 .frame(width: 28, height: 28)
                                 .overlay(Circle().stroke(Color.black.opacity(0.6), lineWidth: 1.5))
                             
-                            // High-contrast diagonal split stripe on label for immediate visual spin verification
-                            Rectangle()
-                                .fill(Color.white.opacity(0.30))
-                                .frame(width: 26, height: 1.5)
-                                .rotationEffect(.degrees(45))
+                            // Two-tone semi-circle arc (creates high-contrast rotation tracking)
+                            Circle()
+                                .trim(from: 0.0, to: 0.5)
+                                .fill(Color.black.opacity(0.25))
+                                .frame(width: 28, height: 28)
+                            
+                            VStack(spacing: 6) {
+                                Text("SIDE A")
+                                    .font(.system(size: 3.8, weight: .black, design: .monospaced))
+                                    .foregroundColor(item.labelTextColor.opacity(0.85))
+                                
+                                Text("33 ⅓")
+                                    .font(.system(size: 3.5, weight: .bold, design: .monospaced))
+                                    .foregroundColor(item.labelTextColor.opacity(0.75))
+                            }
                             
                             if item.symbolOrInitial.count == 1 {
                                 Text(item.symbolOrInitial)
-                                    .font(.system(size: 11, weight: .black, design: .rounded))
+                                    .font(.system(size: 10, weight: .black, design: .rounded))
                                     .foregroundColor(item.labelTextColor)
                             } else {
                                 Image(systemName: item.symbolOrInitial)
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundColor(item.labelTextColor)
                             }
                         }
