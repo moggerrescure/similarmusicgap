@@ -52,6 +52,9 @@ public struct MainTabView: View {
             // Spotify-Grade Floating Mini-Player (docked above bottom nav bar)
             FloatingMiniPlayerView()
         }
+        .sheet(isPresented: $navCoordinator.showingPersonalLibrarySheet) {
+            UserPersonalLibrarySheet()
+        }
         .onAppear {
             customizeSpotifyTabBarAppearance()
         }

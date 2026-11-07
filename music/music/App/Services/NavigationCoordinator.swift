@@ -31,8 +31,14 @@ public final class NavigationCoordinator: ObservableObject {
     public static let shared = NavigationCoordinator()
     
     @Published public var selectedTab: Int = AppTab.home.rawValue
+    @Published public var showingPersonalLibrarySheet: Bool = false
     
     private init() {}
+    
+    public func openPersonalLibrary() {
+        HapticManager.lightImpact()
+        showingPersonalLibrarySheet = true
+    }
     
     public func navigateTo(tab: AppTab) {
         HapticManager.lightImpact()

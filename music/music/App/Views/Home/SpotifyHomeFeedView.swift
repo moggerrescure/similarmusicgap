@@ -281,10 +281,10 @@ public struct SpotifyHomeFeedView: View {
         } label: {
             Text(title)
                 .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                .foregroundColor(isSelected ? .black : .white)
+                .foregroundColor(isSelected ? PastelTheme.textOnOat : .white)
                 .padding(.horizontal, 16)
                 .frame(height: 32)
-                .background(isSelected ? Color(hex: "#1ED760") : Color(hex: "#242424"))
+                .background(isSelected ? PastelTheme.pastelOat : Color(hex: "#242424"))
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()
@@ -313,7 +313,11 @@ public struct SpotifyHomeFeedView: View {
     private func shortcutCard(item: RecentShortcut) -> some View {
         Button {
             HapticManager.lightImpact()
-            playMockShortcut(item)
+            if item.isLikedSongs {
+                navCoordinator.openPersonalLibrary()
+            } else {
+                playMockShortcut(item)
+            }
         } label: {
             HStack(spacing: 8) {
                 // Thumbnail: Liked Songs Gradient, Artist Circle, or Square Flush Cover

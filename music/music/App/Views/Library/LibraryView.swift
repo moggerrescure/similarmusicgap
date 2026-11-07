@@ -1,125 +1,412 @@
 import SwiftUI
 
-/// Top-level library filter categories
-public enum LibrarySegment: String, CaseIterable, Identifiable {
-    case tracks = "Tracks"
-    case playlists = "Playlists"
-    case favorites = "Favorites"
-    case duplicates = "Duplicates"
+/// Top-level filter routes for transferred songs
+public enum TransferRouteFilter: String, CaseIterable, Identifiable {
+    case all = "All Migrations"
+    case yandexToApple = "Yandex → Apple"
+    case spotifyToApple = "Spotify → Apple"
+    case yandexToSpotify = "Yandex → Spotify"
+    case exactISRC = "100% ISRC"
     
     public var id: String { rawValue }
 }
 
-/// Screen: Unified Cross-Service Library, Custom Playlists & Drag-and-Drop Reordering
+/// Transferred Track Item Model with Migration Provenance
+public struct TransferredTrackRecord: Identifiable {
+    public let id: UUID
+    public let title: String
+    public let artist: String
+    public let album: String
+    public let sourceService: MusicProviderType
+    public let destinationService: MusicProviderType
+    public let matchType: String
+    public let isrc: String
+    public let durationMs: Int
+    public let isSuccess: Bool
+    public let transferDateStr: String
+    
+    public init(
+        id: UUID = UUID(),
+        title: String,
+        artist: String,
+        album: String,
+        sourceService: MusicProviderType,
+        destinationService: MusicProviderType,
+        matchType: String = "100% ISRC Match",
+        isrc: String,
+        durationMs: Int = 210000,
+        isSuccess: Bool = true,
+        transferDateStr: String = "Today"
+    ) {
+        self.id = id
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.sourceService = sourceService
+        self.destinationService = destinationService
+        self.matchType = matchType
+        self.isrc = isrc
+        self.durationMs = durationMs
+        self.isSuccess = isSuccess
+        self.transferDateStr = transferDateStr
+    }
+    
+    public var asUniversalTrack: UniversalTrack {
+        UniversalTrack(
+            isrc: isrc,
+            title: title,
+            artists: [artist],
+            album: album,
+            durationMs: durationMs,
+            yandexId: sourceService == .yandexMusic ? "ydx_\(id)" : nil,
+            spotifyId: sourceService == .spotify ? "sp_\(id)" : (destinationService == .spotify ? "sp_\(id)" : nil),
+            appleMusicId: destinationService == .appleMusic ? "apl_\(id)" : nil
+        )
+    }
+}
+
+/// Migration Session Log Card Model (История того, что происходило и насколько успешно)
+public struct MigrationSessionSummary: Identifiable {
+    public let id: UUID
+    public let sourceService: MusicProviderType
+    public let destinationService: MusicProviderType
+    public let timestampStr: String
+    public let scopeName: String
+    public let successfullyTransferred: Int
+    public let totalTracks: Int
+    public let matchRate: Double
+    public let durationSeconds: Double
+    public let status: String
+    
+    public init(
+        id: UUID = UUID(),
+        sourceService: MusicProviderType,
+        destinationService: MusicProviderType,
+        timestampStr: String,
+        scopeName: String,
+        successfullyTransferred: Int,
+        totalTracks: Int,
+        matchRate: Double,
+        durationSeconds: Double,
+        status: String = "Completed"
+    ) {
+        self.id = id
+        self.sourceService = sourceService
+        self.destinationService = destinationService
+        self.timestampStr = timestampStr
+        self.scopeName = scopeName
+        self.successfullyTransferred = successfullyTransferred
+        self.totalTracks = totalTracks
+        self.matchRate = matchRate
+        self.durationSeconds = durationSeconds
+        self.status = status
+    }
+}
+
+/// Screen: Library Tab transformed into Migration History & Transferred Songs Vault
+/// Displays all songs transferred (e.g. Yandex -> Apple, Spotify -> Apple) with migration provenance,
+/// success rates, and an interactive log of past migrations.
 public struct LibraryView: View {
-    @ObservedObject private var coordinator = ServicesCoordinator.shared
     @ObservedObject private var player = AudioPlayerManager.shared
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
+    @ObservedObject private var transferManager = TransferManager.shared
+    @ObservedObject private var navCoordinator = NavigationCoordinator.shared
     
     @State private var searchText: String = ""
-    @State private var selectedSegment: LibrarySegment = .tracks
-    @State private var selectedProviderFilter: MusicProviderType? = nil
+    @State private var selectedFilter: TransferRouteFilter = .all
+    @State private var selectedSessionForReport: MigrationSessionSummary? = nil
     
-    // Sheets
-    @State private var showingDuplicatesSheet: Bool = false
-    @State private var showingCreatePlaylistSheet: Bool = false
-    @State private var selectedPlaylistForDetail: UniversalPlaylist? = nil
-    @State private var trackForAddToPlaylist: UniversalTrack? = nil
+    // MARK: - Past Migration Sessions (История того, что происходило)
+    private let migrationSessions: [MigrationSessionSummary] = [
+        MigrationSessionSummary(
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            timestampStr: "Today, 14:20",
+            scopeName: "Favorite Tracks & 3 Playlists",
+            successfullyTransferred: 482,
+            totalTracks: 486,
+            matchRate: 99.2,
+            durationSeconds: 3.4
+        ),
+        MigrationSessionSummary(
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            timestampStr: "Nov 5, 2026",
+            scopeName: "Liked Songs Vault",
+            successfullyTransferred: 312,
+            totalTracks: 318,
+            matchRate: 98.1,
+            durationSeconds: 2.8
+        ),
+        MigrationSessionSummary(
+            sourceService: .yandexMusic,
+            destinationService: .spotify,
+            timestampStr: "Oct 28, 2026",
+            scopeName: "Russian Indie & Rock Vault",
+            successfullyTransferred: 50,
+            totalTracks: 50,
+            matchRate: 100.0,
+            durationSeconds: 1.2
+        )
+    ]
     
-    // Reorder state (triggered by 1.5s long-press)
-    @State private var isReordering: Bool = false
-    @State private var liftedTrackId: UUID? = nil
-    
-    // Local list cache for interactive drag & drop
-    @State private var customOrderedTracks: [UniversalTrack] = []
-    
-    // Sample mock tracks if coordinator is empty
-    private var baseTracks: [UniversalTrack] {
-        if coordinator.allTracks.isEmpty {
-            return [
-                UniversalTrack(isrc: "USUM71703861", title: "Starboy", artists: ["The Weeknd", "Daft Punk"], album: "Starboy", durationMs: 230453, yandexId: "29871638", spotifyId: "7a26vX02Y4vYj9P6RrqU04"),
-                UniversalTrack(isrc: "GBUM71505080", title: "The Less I Know the Better", artists: ["Tame Impala"], album: "Currents", durationMs: 216320, spotifyId: "6K4t31amVTKVgPeRoxXErq"),
-                UniversalTrack(isrc: "USAT21900122", title: "Blinding Lights", artists: ["The Weeknd"], album: "After Hours", durationMs: 200040, appleMusicId: "1499378607"),
-                UniversalTrack(isrc: "RUAA12000042", title: "Где нас нет", artists: ["Oxxxymiron"], album: "ГОРГОРОД", durationMs: 265000, yandexId: "24981120"),
-                UniversalTrack(isrc: "FRUM71300088", title: "Instant Crush", artists: ["Daft Punk", "Julian Casablancas"], album: "Random Access Memories", durationMs: 337560, yandexId: "14589231", spotifyId: "2bpgKp31sOVoTeStOXzi8C"),
-                UniversalTrack(isrc: "USWB11200021", title: "Midnight City", artists: ["M83"], album: "Hurry Up, We're Dreaming", durationMs: 243000, spotifyId: "1eyzqe2QqGZUmfcPZtrIyt", appleMusicId: "466487841")
-            ]
-        }
-        return coordinator.allTracks
-    }
-    
-    private var allTracks: [UniversalTrack] {
-        if customOrderedTracks.count == baseTracks.count {
-            return customOrderedTracks
-        }
-        return baseTracks
-    }
-    
-    private var duplicates: [DuplicateGroup] {
-        DuplicatesEngine.shared.findDuplicates(in: allTracks)
-    }
-    
-    private var favoriteCount: Int {
-        allTracks.filter { player.isFavorite(track: $0) }.count
-    }
-    
-    private var playlists: [UniversalPlaylist] {
-        if coordinator.allPlaylists.isEmpty {
-            return [
-                UniversalPlaylist(
-                    providerPlaylistId: "pl_demo_1",
-                    providerType: .spotify,
-                    title: "Deep Focus Ambient",
-                    description: "Atmospheric soundscapes for deep flow states",
-                    trackCount: 3,
-                    tracks: Array(baseTracks.prefix(3))
-                ),
-                UniversalPlaylist(
-                    providerPlaylistId: "pl_demo_2",
-                    providerType: .appleMusic,
-                    title: "Late Night Drive",
-                    description: "Electronic synthwave & dark pop anthems",
-                    trackCount: 4,
-                    tracks: Array(baseTracks.suffix(4))
-                )
-            ]
-        }
-        return coordinator.allPlaylists
-    }
-    
-    private var filteredTracks: [UniversalTrack] {
-        var list = allTracks
+    // MARK: - Pool of Transferred Tracks (Все перемещённые песни)
+    private let transferredRecords: [TransferredTrackRecord] = [
+        // 1. Yandex -> Apple Music
+        TransferredTrackRecord(
+            title: "Где нас нет",
+            artist: "Oxxxymiron",
+            album: "ГОРГОРОД",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA12000042",
+            durationMs: 265000,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "заставь меня плакать",
+            artist: "CUPSIZE",
+            album: "Королева двора",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "High Confidence Match",
+            isrc: "RUA112300091",
+            durationMs: 185000,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "Город под подошвой",
+            artist: "Oxxxymiron",
+            album: "Город под подошвой",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA11500012",
+            durationMs: 247000,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "Instant Crush",
+            artist: "Daft Punk, Julian Casablancas",
+            album: "Random Access Memories",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "FRUM71300088",
+            durationMs: 337560,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "Судно (Борис Рыжий)",
+            artist: "Молчат Дома",
+            album: "Этажи",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "DEZ651900143",
+            durationMs: 141000,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "Барбисайз",
+            artist: "Дора, Мэйби Бэйби",
+            album: "МЕНТАЛЬНЫЙ",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA12000318",
+            durationMs: 168000,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "Поезда",
+            artist: "Молчат Дома",
+            album: "С крыш наших домов",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "DEZ651700082",
+            durationMs: 236000,
+            transferDateStr: "Today"
+        ),
+        TransferredTrackRecord(
+            title: "5 минут назад",
+            artist: "Pharaoh, Boulevard Depo",
+            album: "Плакшери",
+            sourceService: .yandexMusic,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA11600045",
+            durationMs: 202000,
+            transferDateStr: "Today"
+        ),
         
-        switch selectedSegment {
-        case .tracks:
+        // 2. Spotify -> Apple Music
+        TransferredTrackRecord(
+            title: "Starboy",
+            artist: "The Weeknd, Daft Punk",
+            album: "Starboy",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "USUM71703861",
+            durationMs: 230453,
+            transferDateStr: "Nov 5"
+        ),
+        TransferredTrackRecord(
+            title: "The Less I Know the Better",
+            artist: "Tame Impala",
+            album: "Currents",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "GBUM71505080",
+            durationMs: 216320,
+            transferDateStr: "Nov 5"
+        ),
+        TransferredTrackRecord(
+            title: "Blinding Lights",
+            artist: "The Weeknd",
+            album: "After Hours",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "USAT21900122",
+            durationMs: 200040,
+            transferDateStr: "Nov 5"
+        ),
+        TransferredTrackRecord(
+            title: "Midnight City",
+            artist: "M83",
+            album: "Hurry Up, We're Dreaming",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "USWB11200021",
+            durationMs: 243000,
+            transferDateStr: "Nov 5"
+        ),
+        TransferredTrackRecord(
+            title: "UTOPIA",
+            artist: "Travis Scott",
+            album: "UTOPIA",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "USSM12304910",
+            durationMs: 215000,
+            transferDateStr: "Nov 5"
+        ),
+        TransferredTrackRecord(
+            title: "Kill Bill",
+            artist: "SZA",
+            album: "SOS",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "USRC12204128",
+            durationMs: 153000,
+            transferDateStr: "Nov 5"
+        ),
+        TransferredTrackRecord(
+            title: "vampire",
+            artist: "Olivia Rodrigo",
+            album: "GUTS",
+            sourceService: .spotify,
+            destinationService: .appleMusic,
+            matchType: "100% ISRC Match",
+            isrc: "USUG12303810",
+            durationMs: 219000,
+            transferDateStr: "Nov 5"
+        ),
+        
+        // 3. Yandex -> Spotify
+        TransferredTrackRecord(
+            title: "Искала",
+            artist: "Zemfira",
+            album: "Прости меня моя любовь",
+            sourceService: .yandexMusic,
+            destinationService: .spotify,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA10000008",
+            durationMs: 213000,
+            transferDateStr: "Oct 28"
+        ),
+        TransferredTrackRecord(
+            title: "Полковнику никто не пишет",
+            artist: "Би-2",
+            album: "Би-2",
+            sourceService: .yandexMusic,
+            destinationService: .spotify,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA10100045",
+            durationMs: 292000,
+            transferDateStr: "Oct 28"
+        ),
+        TransferredTrackRecord(
+            title: "дели на два",
+            artist: "CUPSIZE",
+            album: "дели на два",
+            sourceService: .yandexMusic,
+            destinationService: .spotify,
+            matchType: "100% ISRC Match",
+            isrc: "RUA112300104",
+            durationMs: 172000,
+            transferDateStr: "Oct 28"
+        ),
+        TransferredTrackRecord(
+            title: "синий кит",
+            artist: "влад пиво",
+            album: "влад пиво singles",
+            sourceService: .yandexMusic,
+            destinationService: .spotify,
+            matchType: "Acoustic Match",
+            isrc: "RUA112400032",
+            durationMs: 198000,
+            transferDateStr: "Oct 28"
+        ),
+        TransferredTrackRecord(
+            title: "Люди",
+            artist: "Дайте танк (!)",
+            album: "Человеко-часы",
+            sourceService: .yandexMusic,
+            destinationService: .spotify,
+            matchType: "100% ISRC Match",
+            isrc: "RUAA12000781",
+            durationMs: 189000,
+            transferDateStr: "Oct 28"
+        )
+    ]
+    
+    // Filtered transferred tracks
+    private var filteredRecords: [TransferredTrackRecord] {
+        var list = transferredRecords
+        
+        switch selectedFilter {
+        case .all:
             break
-        case .playlists:
-            break
-        case .favorites:
-            list = list.filter { player.isFavorite(track: $0) }
-        case .duplicates:
-            let dupKeys = Set(duplicates.map { $0.canonicalTitle })
-            list = list.filter { dupKeys.contains($0.title) }
+        case .yandexToApple:
+            list = list.filter { $0.sourceService == .yandexMusic && $0.destinationService == .appleMusic }
+        case .spotifyToApple:
+            list = list.filter { $0.sourceService == .spotify && $0.destinationService == .appleMusic }
+        case .yandexToSpotify:
+            list = list.filter { $0.sourceService == .yandexMusic && $0.destinationService == .spotify }
+        case .exactISRC:
+            list = list.filter { $0.matchType.contains("ISRC") }
         }
         
-        if let provider = selectedProviderFilter {
-            switch provider {
-            case .spotify:
-                list = list.filter { $0.spotifyId != nil }
-            case .appleMusic:
-                list = list.filter { $0.appleMusicId != nil }
-            case .yandexMusic:
-                list = list.filter { $0.yandexId != nil }
-            }
-        }
-        
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !query.isEmpty {
             list = list.filter {
                 $0.title.lowercased().contains(query) ||
-                $0.primaryArtist.lowercased().contains(query) ||
-                ($0.album?.lowercased().contains(query) ?? false)
+                $0.artist.lowercased().contains(query) ||
+                $0.album.lowercased().contains(query) ||
+                $0.sourceService.displayName.lowercased().contains(query) ||
+                $0.destinationService.displayName.lowercased().contains(query)
             }
         }
+        
         return list
     }
     
@@ -128,92 +415,262 @@ public struct LibraryView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                // MARK: - Ambient Cosmic Stardust Background
-                CosmicParticleBackgroundView(particleCount: 50)
+                PastelTheme.canvas
+                    .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // MARK: - Dedicated Search Bar
-                    searchBar
-                    
-                    // MARK: - Category Segments (Tracks, Playlists, Favorites, Duplicates)
-                    segmentBar
-                    
-                    // Provider Chips (Spotify, Apple Music, Yandex)
-                    if selectedSegment != .playlists {
-                        providerFilterStrip
+                CosmicParticleBackgroundView(particleCount: 40)
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        // 1. Header Bar with Direct Bridge to User Personal Library
+                        libraryHeaderBar
+                            .padding(.top, 10)
+                        
+                        // 2. Apple HIG HUD Summary KPI Trio
+                        hudSummaryTrio
+                        
+                        // 3. Migration History Carousel (История того, что происходило)
+                        migrationSessionsSection
+                        
+                        // 4. Sticky Search & Route Filter Bar
+                        transferredSearchBar
+                        
+                        routeFilterStrip
+                        
+                        // 5. Transferred Tracks List (Все песни, перемещённые между сервисами)
+                        transferredTracksSection
                     }
-                    
-                    // Reorder Mode Active Banner
-                    if isReordering {
-                        reorderBanner
-                    }
-                    
-                    // MARK: - Main Content Switcher
-                    if selectedSegment == .playlists {
-                        playlistsContentView
-                    } else {
-                        tracksContentView
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 120) // Full clearance for Floating Mini Player
                 }
             }
-            .navigationTitle("Library")
-            .inlineNavigationBarTitle()
-            .toolbar {
-                if selectedSegment == .playlists {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            HapticManager.lightImpact()
-                            showingCreatePlaylistSheet = true
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundColor(PastelTheme.pastelOat)
-                        }
-                    }
-                } else {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            HapticManager.lightImpact()
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                                isReordering.toggle()
-                            }
-                        } label: {
-                            Image(systemName: isReordering ? "checkmark.circle.fill" : "arrow.up.arrow.down.circle")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(isReordering ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary)
-                        }
-                    }
+            .navigationBarHidden(true)
+            .sheet(item: $selectedSessionForReport) { session in
+                let report = TransferExecutionReport(
+                    sourceProvider: session.sourceService,
+                    destinationProvider: session.destinationService,
+                    totalTracks: session.totalTracks,
+                    successfullyTransferred: session.successfullyTransferred,
+                    durationSeconds: session.durationSeconds
+                )
+                TransferReportView(report: report)
+            }
+        }
+    }
+    
+    // MARK: - 1. Header Bar with Direct 1-Tap Bridge to Personal Library
+    private var libraryHeaderBar: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Library")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(PastelTheme.textPrimary)
+                
+                Text("Transferred songs & migration history")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(PastelTheme.textSecondary)
+            }
+            
+            Spacer()
+            
+            // 1-Tap Bridge to "Liked Songs & Playlists"
+            Button {
+                HapticManager.lightImpact()
+                navCoordinator.openPersonalLibrary()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(PastelTheme.emeraldSuccess)
+                    
+                    Text("Liked Songs")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(PastelTheme.textOnOat)
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(PastelTheme.pastelOat)
+                .clipShape(Capsule())
+                .shadow(color: Color.black.opacity(0.3), radius: 4, y: 2)
             }
-            .sheet(isPresented: $showingDuplicatesSheet) {
-                DuplicatesInspectorView(duplicates: duplicates)
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    // MARK: - 2. Apple HIG HUD Summary KPI Trio
+    private var hudSummaryTrio: some View {
+        HStack(spacing: 10) {
+            hudMetricCard(
+                title: "TRANSFERRED",
+                value: "844",
+                subtitle: "Across 3 services",
+                accentColor: PastelTheme.emeraldSuccess
+            )
+            
+            hudMetricCard(
+                title: "SUCCESS RATE",
+                value: "98.6%",
+                subtitle: "832 exact ISRC",
+                accentColor: PastelTheme.pastelOat
+            )
+            
+            hudMetricCard(
+                title: "MIGRATIONS",
+                value: "3",
+                subtitle: "100% completed",
+                accentColor: PastelTheme.amberWarning
+            )
+        }
+    }
+    
+    private func hudMetricCard(title: String, value: String, subtitle: String, accentColor: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.6)
+                .foregroundColor(PastelTheme.textTertiary)
+            
+            Text(value)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .foregroundColor(accentColor)
+                .contentTransition(.numericText())
+            
+            Text(subtitle)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(PastelTheme.textSecondary)
+                .lineLimit(1)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
+    }
+    
+    // MARK: - 3. Migration History Carousel (История того, что происходило)
+    private var migrationSessionsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Migration History")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.textPrimary)
+                
+                Spacer()
+                
+                Text("Tap for report")
+                    .font(.system(size: 12))
+                    .foregroundColor(PastelTheme.textTertiary)
             }
-            .sheet(isPresented: $showingCreatePlaylistSheet) {
-                CreatePlaylistSheet()
-            }
-            .sheet(item: $selectedPlaylistForDetail) { playlist in
-                PlaylistDetailSheet(playlist: playlist)
-            }
-            .sheet(item: $trackForAddToPlaylist) { track in
-                AddToPlaylistSheet(track: track, playlists: playlists)
-            }
-            .onAppear {
-                if customOrderedTracks.isEmpty {
-                    customOrderedTracks = baseTracks
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(migrationSessions) { session in
+                        migrationSessionCard(session: session)
+                    }
                 }
             }
         }
     }
     
-    // MARK: - Search Bar
-    private var searchBar: some View {
+    private func migrationSessionCard(session: MigrationSessionSummary) -> some View {
+        Button {
+            HapticManager.lightImpact()
+            selectedSessionForReport = session
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                // Top: Platforms & Status
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        PlatformBrandBadgeView(type: session.sourceService, size: 16)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(PastelTheme.textTertiary)
+                        PlatformBrandBadgeView(type: session.destinationService, size: 16)
+                    }
+                    
+                    Spacer()
+                    
+                    // Completed status pill
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(PastelTheme.emeraldSuccess)
+                            .frame(width: 6, height: 6)
+                        Text(session.status)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.emeraldSuccess)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(PastelTheme.emeraldSuccess.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                
+                // Scope & Date
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(session.sourceService.displayName) → \(session.destinationService.displayName)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(PastelTheme.textPrimary)
+                        .lineLimit(1)
+                    
+                    Text("\(session.scopeName) • \(session.timestampStr)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(PastelTheme.textSecondary)
+                        .lineLimit(1)
+                }
+                
+                // Progress Bar & Success Metric
+                VStack(spacing: 5) {
+                    HStack {
+                        Text("\(session.successfullyTransferred) / \(session.totalTracks) songs")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(PastelTheme.pastelOat)
+                        
+                        Spacer()
+                        
+                        Text(String(format: "%.1f%%", session.matchRate))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.emeraldSuccess)
+                    }
+                    
+                    // Thin progress track
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.white.opacity(0.1))
+                                .frame(height: 4)
+                            
+                            Capsule()
+                                .fill(PastelTheme.emeraldSuccess)
+                                .frame(width: geo.size.width * CGFloat(session.matchRate / 100.0), height: 4)
+                        }
+                    }
+                    .frame(height: 4)
+                }
+            }
+            .padding(14)
+            .frame(width: 250)
+            .background(PastelTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - 4. Sticky Search & Route Filter Bar
+    private var transferredSearchBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(PastelTheme.textTertiary)
             
-            TextField("Search songs, artists, albums", text: $searchText)
-                .font(.system(size: 15))
+            TextField("Search transferred songs, artists, routes...", text: $searchText)
+                .font(.system(size: 14))
                 .foregroundColor(PastelTheme.textPrimary)
                 .autocorrectionDisabled()
             
@@ -235,582 +692,186 @@ public struct LibraryView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(PastelTheme.cardBorder, lineWidth: 1)
         )
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
     }
     
-    // MARK: - Segment Bar
-    private var segmentBar: some View {
+    private var routeFilterStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(LibrarySegment.allCases) { seg in
-                    let isSel = selectedSegment == seg
-                    let countText: String = {
-                        switch seg {
-                        case .tracks: return "(\(allTracks.count))"
-                        case .playlists: return "(\(playlists.count))"
-                        case .favorites: return "(\(favoriteCount))"
-                        case .duplicates: return "(\(duplicates.count))"
-                        }
-                    }()
-                    
+                ForEach(TransferRouteFilter.allCases) { route in
+                    let isSel = selectedFilter == route
                     Button {
                         HapticManager.lightImpact()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            selectedSegment = seg
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            selectedFilter = route
                         }
                     } label: {
-                        HStack(spacing: 5) {
-                            if seg == .favorites {
-                                Image(systemName: "heart.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(isSel ? PastelTheme.textOnOat : PastelTheme.emeraldSuccess)
-                            }
-                            Text("\(seg.rawValue) \(countText)")
-                                .font(.system(size: 13, weight: isSel ? .bold : .medium, design: .rounded))
-                        }
-                        .foregroundColor(isSel ? PastelTheme.textOnOat : PastelTheme.textSecondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(isSel ? PastelTheme.pastelOat : PastelTheme.card)
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(isSel ? Color.clear : PastelTheme.marbleBorder, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-    }
-    
-    // MARK: - Provider Filter Strip
-    private var providerFilterStrip: some View {
-        HStack(spacing: 8) {
-            ForEach(MusicProviderType.allCases) { provider in
-                let isSel = selectedProviderFilter == provider
-                Button {
-                    HapticManager.lightImpact()
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        if selectedProviderFilter == provider {
-                            selectedProviderFilter = nil
-                        } else {
-                            selectedProviderFilter = provider
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        PlatformBrandBadgeView(type: provider, size: 14)
-                        Text(provider.displayName)
-                            .font(.system(size: 11, weight: isSel ? .bold : .medium, design: .rounded))
-                            .foregroundColor(isSel ? PastelTheme.textPrimary : PastelTheme.textSecondary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(isSel ? Color(hex: provider.brandColorHex).opacity(0.18) : PastelTheme.cardSubtle)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(isSel ? Color(hex: provider.brandColorHex).opacity(0.5) : PastelTheme.marbleBorder, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
-    }
-    
-    // MARK: - Reorder Active Banner
-    private var reorderBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "hand.tap.fill")
-                .foregroundColor(PastelTheme.amberWarning)
-            Text("Reorder Mode Active • Hold & drag handles")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundColor(PastelTheme.textPrimary)
-            Spacer()
-            Button("Done") {
-                HapticManager.successNotification()
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    isReordering = false
-                    liftedTrackId = nil
-                }
-            }
-            .font(.system(size: 12, weight: .bold))
-            .foregroundColor(PastelTheme.pastelOat)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(PastelTheme.cardSubtle)
-            .clipShape(Capsule())
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(PastelTheme.card)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(PastelTheme.amberWarning.opacity(0.4), lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
-        .transition(.move(edge: .top).combined(with: .opacity))
-    }
-    
-    // MARK: - Playlists Content
-    private var playlistsContentView: some View {
-        ScrollView {
-            VStack(spacing: 14) {
-                // Prominent Create Playlist Card
-                Button {
-                    HapticManager.lightImpact()
-                    showingCreatePlaylistSheet = true
-                } label: {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5]))
-                                .foregroundColor(PastelTheme.pastelOat.opacity(0.6))
-                                .frame(width: 52, height: 52)
-                            
-                            Image(systemName: "plus")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(PastelTheme.pastelOat)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Create New Playlist")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(PastelTheme.textPrimary)
-                            
-                            Text("Curate cross-service vault with custom cover")
-                                .font(.system(size: 12))
-                                .foregroundColor(PastelTheme.textSecondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(PastelTheme.textTertiary)
-                    }
-                    .padding(14)
-                    .background(PastelTheme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(PlainButtonStyle())
-                
-                // Existing Playlists
-                ForEach(playlists) { pl in
-                    Button {
-                        HapticManager.lightImpact()
-                        selectedPlaylistForDetail = pl
-                    } label: {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [PastelTheme.pastelOat.opacity(0.85), Color(hex: "#1E293B")],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 54, height: 54)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
-                                    )
-                                
-                                Image(systemName: "music.note.list")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(PastelTheme.textOnOat)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(pl.title)
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                    .foregroundColor(PastelTheme.textPrimary)
-                                    .lineLimit(1)
-                                
-                                Text("\(pl.tracks.count) tracks • \(pl.description ?? "Universal Vault")")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(PastelTheme.textSecondary)
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                            
-                            // Play All mini button
-                            if !pl.tracks.isEmpty {
-                                Button {
-                                    HapticManager.successNotification()
-                                    player.play(track: pl.tracks[0], in: pl.tracks)
-                                } label: {
-                                    Image(systemName: "play.fill")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(PastelTheme.textOnOat)
-                                        .frame(width: 32, height: 32)
-                                        .background(PastelTheme.pastelOat)
-                                        .clipShape(Circle())
-                                }
-                                .buttonStyle(BorderlessButtonStyle())
-                            }
-                        }
-                        .padding(12)
-                        .background(PastelTheme.card)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                        )
+                        Text(route.rawValue)
+                            .font(.system(size: 12, weight: isSel ? .bold : .medium, design: .rounded))
+                            .foregroundColor(isSel ? PastelTheme.textOnOat : PastelTheme.textSecondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(isSel ? PastelTheme.pastelOat : PastelTheme.card)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(isSel ? Color.clear : PastelTheme.marbleBorder, lineWidth: 1)
+                            )
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .padding(.bottom, player.currentTrack != nil ? 70 : 10)
         }
     }
     
-    // MARK: - Tracks Content (with 1.5s long-press drag-to-reorder)
-    @ViewBuilder
-    private var tracksContentView: some View {
-        if filteredTracks.isEmpty {
-            emptyTracksView
-        } else {
-            trackListView
-        }
-    }
-    
-    @ViewBuilder
-    private var emptyTracksView: some View {
-        Spacer()
-        VStack(spacing: 12) {
-            Image(systemName: "music.note.list")
-                .font(.system(size: 38))
-                .foregroundColor(PastelTheme.textTertiary)
-            Text("No tracks found")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(PastelTheme.textSecondary)
-        }
-        Spacer()
-    }
-    
-    @ViewBuilder
-    private var trackListView: some View {
-        List {
-            ForEach(filteredTracks) { track in
-                trackRowView(for: track)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    .listRowSeparator(.hidden)
-            }
-            .onMove(perform: moveTracks)
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        #if os(iOS)
-        .environment(\.editMode, isReordering ? .constant(.active) : .constant(.inactive))
-        #endif
-        .padding(.bottom, player.currentTrack != nil ? 70 : 10)
-    }
-    
-    @ViewBuilder
-    private func trackRowView(for track: UniversalTrack) -> some View {
-        let isCurr = player.currentTrack == track
-        let isPlaying = isCurr && player.isPlaying
-        let isFav = player.isFavorite(track: track)
-        let isLifted = liftedTrackId == track.id
-        
-        TrackRow(
-            track: track,
-            isCurrent: isCurr,
-            isPlaying: isPlaying,
-            isFavorite: isFav,
-            isReordering: isReordering,
-            isLifted: isLifted,
-            loopMode: isCurr ? player.loopMode : nil,
-            onPlayTap: {
-                if isCurr {
-                    player.togglePlayPause()
-                } else {
-                    player.play(track: track, in: filteredTracks)
-                }
-            },
-            onFavoriteTap: {
-                HapticManager.lightImpact()
-                player.toggleFavorite(track: track)
-            },
-            onLoopTap: {
-                if isCurr {
-                    player.toggleLoopMode()
-                }
-            },
-            onRewindTap: {
-                player.skipBackward(by: 15)
-            },
-            onAddToPlaylistTap: {
-                trackForAddToPlaylist = track
-            }
-        )
-        .scaleEffect(isLifted ? 1.03 : 1.0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isLifted)
-        .onLongPressGesture(minimumDuration: 1.5) {
-            HapticManager.heavyImpact()
-            liftedTrackId = track.id
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                isReordering = true
-            }
-        }
-    }
-    
-    private func moveTracks(from source: IndexSet, to destination: Int) {
-        guard !customOrderedTracks.isEmpty else { return }
-        guard let maxIdx = source.max(), maxIdx < customOrderedTracks.count else { return }
-        guard destination >= 0 && destination <= customOrderedTracks.count else { return }
-        customOrderedTracks.move(fromOffsets: source, toOffset: destination)
-        if !coordinator.allTracks.isEmpty && coordinator.allTracks.count == customOrderedTracks.count {
-            coordinator.reorderTracks(fromOffsets: source, toOffset: destination)
-        }
-        HapticManager.lightImpact()
-    }
-}
-
-// MARK: - Track Row Component with Independent Click Targets
-private struct TrackRow: View {
-    let track: UniversalTrack
-    let isCurrent: Bool
-    let isPlaying: Bool
-    let isFavorite: Bool
-    var isReordering: Bool = false
-    var isLifted: Bool = false
-    let loopMode: LoopMode?
-    let onPlayTap: () -> Void
-    let onFavoriteTap: () -> Void
-    let onLoopTap: () -> Void
-    var onRewindTap: (() -> Void)? = nil
-    var onAddToPlaylistTap: (() -> Void)? = nil
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                // MARK: - Independent Artwork / Playback Button
-                Button(action: onPlayTap) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(isCurrent ? PastelTheme.pastelOat.opacity(0.18) : PastelTheme.cardSubtle)
-                            .frame(width: 44, height: 44)
-                        
-                        if isPlaying {
-                            WaveformBarsView()
-                        } else if isCurrent {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 14))
-                                .foregroundColor(PastelTheme.pastelOat)
-                        } else {
-                            Image(systemName: "music.note")
-                                .font(.system(size: 15))
-                                .foregroundColor(PastelTheme.textTertiary)
-                        }
-                    }
-                }
-                .buttonStyle(BorderlessButtonStyle())
-                
-                // MARK: - Song Title & Artist (Tap to Play)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(track.title)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(isCurrent ? PastelTheme.pastelOat : PastelTheme.textPrimary)
-                        .lineLimit(1)
-                    
-                    HStack(spacing: 4) {
-                        Text(track.primaryArtist)
-                            .foregroundColor(PastelTheme.textSecondary)
-                        if let album = track.album {
-                            Text("•")
-                                .foregroundColor(PastelTheme.textTertiary)
-                            Text(album)
-                                .foregroundColor(PastelTheme.textTertiary)
-                                .lineLimit(1)
-                        }
-                    }
-                    .font(.system(size: 12))
-                }
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onPlayTap)
+    // MARK: - 5. Transferred Tracks List (Все песни, перемещённые между сервисами)
+    private var transferredTracksSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("All Transferred Tracks (\(filteredRecords.count))")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.textPrimary)
                 
                 Spacer()
                 
-                // Rewind 15s Button (if active)
-                if isCurrent, let onRewindTap = onRewindTap {
-                    Button(action: onRewindTap) {
-                        Image(systemName: "gobackward.15")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(PastelTheme.textSecondary)
-                            .frame(width: 26, height: 26)
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
-                }
-                
-                // Loop Mode Indicator (if currently active)
-                if let loop = loopMode {
-                    Button(action: onLoopTap) {
-                        Image(systemName: loop.iconName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(loop != .off ? PastelTheme.pastelOat : PastelTheme.textTertiary)
-                            .frame(width: 26, height: 26)
-                    }
-                    .buttonStyle(BorderlessButtonStyle())
-                }
-                
-                // MARK: - Independent Favorite Heart (Clickable on ANY Track)
-                Button(action: onFavoriteTap) {
-                    Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(isFavorite ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
-                        .scaleEffect(isFavorite ? 1.15 : 1.0)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: isFavorite)
-                        .frame(width: 34, height: 34)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(BorderlessButtonStyle())
-                
-                // MARK: - Options 3-Dots Menu
-                Menu {
-                    if let onAddToPlaylistTap = onAddToPlaylistTap {
-                        Button {
-                            onAddToPlaylistTap()
-                        } label: {
-                            Label("Add to Playlist...", systemImage: "text.badge.plus")
-                        }
-                    }
-                    Button {
-                        onFavoriteTap()
-                    } label: {
-                        Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
-                    }
-                    Button {
-                        onPlayTap()
-                    } label: {
-                        Label("Play Now", systemImage: "play.circle")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(PastelTheme.textTertiary)
-                        .frame(width: 26, height: 32)
-                }
-                .buttonStyle(BorderlessButtonStyle())
-                
-                // Official Platform Badges
-                HStack(spacing: 4) {
-                    if track.spotifyId != nil {
-                        PlatformBrandBadgeView(type: .spotify, size: 14)
-                    }
-                    if track.appleMusicId != nil {
-                        PlatformBrandBadgeView(type: .appleMusic, size: 14)
-                    }
-                    if track.yandexId != nil {
-                        PlatformBrandBadgeView(type: .yandexMusic, size: 14)
-                    }
-                }
+                Text("Tap to play")
+                    .font(.system(size: 12))
+                    .foregroundColor(PastelTheme.textTertiary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                isLifted
-                    ? PastelTheme.cardSubtle
-                    : (isCurrent ? PastelTheme.pastelOat.opacity(0.08) : Color.clear)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: isCurrent || isLifted ? 12 : 0, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isLifted ? PastelTheme.amberWarning : (isCurrent ? PastelTheme.marbleBorder : Color.clear), lineWidth: 1)
-            )
-            .shadow(color: isLifted ? PastelTheme.amberWarning.opacity(0.3) : Color.clear, radius: 10, y: 4)
             
-            // Seamless noble divider between songs with 68pt leading inset under artwork
-            if !isLifted {
-                Rectangle()
-                    .fill(Color(hex: "#F5F5F7").opacity(0.06))
-                    .frame(height: 0.5)
-                    .padding(.leading, 68)
+            LazyVStack(spacing: 8) {
+                ForEach(filteredRecords) { record in
+                    transferredTrackRow(record: record)
+                }
             }
         }
     }
-}
-
-// MARK: - Add Track to Playlist Sheet
-private struct AddToPlaylistSheet: View {
-    let track: UniversalTrack
-    let playlists: [UniversalPlaylist]
-    @ObservedObject private var coordinator = ServicesCoordinator.shared
-    @Environment(\.dismiss) private var dismiss
     
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                PastelTheme.canvas
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 16) {
-                    Text("Add \"\(track.title)\" to:")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(PastelTheme.textPrimary)
-                        .padding(.top, 16)
+    private func transferredTrackRow(record: TransferredTrackRecord) -> some View {
+        let uTrack = record.asUniversalTrack
+        let isCurr = player.currentTrack?.title == record.title
+        let isPlaying = isCurr && player.isPlaying
+        
+        return Button {
+            HapticManager.lightImpact()
+            if isCurr {
+                player.togglePlayPause()
+            } else {
+                player.play(track: uTrack)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                // Mini Circular Disc Artwork
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#1E2026"), Color(hex: "#111317")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(isCurr ? PastelTheme.emeraldSuccess : PastelTheme.cardBorder, lineWidth: 1)
+                        )
                     
-                    if playlists.isEmpty {
-                        Text("No playlists created yet")
-                            .foregroundColor(PastelTheme.textTertiary)
+                    if isPlaying {
+                        WaveformBarsView()
+                    } else if isCurr {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 13))
+                            .foregroundColor(PastelTheme.pastelOat)
                     } else {
-                        List {
-                            ForEach(playlists) { pl in
-                                Button {
-                                    HapticManager.successNotification()
-                                    coordinator.addTrackToPlaylist(track: track, playlistId: pl.id)
-                                    dismiss()
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "music.note.list")
-                                            .foregroundColor(PastelTheme.pastelOat)
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(pl.title)
-                                                .font(.system(size: 15, weight: .semibold))
-                                                .foregroundColor(PastelTheme.textPrimary)
-                                            Text("\(pl.tracks.count) tracks")
-                                                .font(.system(size: 12))
-                                                .foregroundColor(PastelTheme.textSecondary)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "plus.circle")
-                                            .foregroundColor(PastelTheme.emeraldSuccess)
-                                    }
-                                }
-                                .listRowBackground(PastelTheme.card)
-                            }
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
+                        Image(systemName: "opticaldisc")
+                            .font(.system(size: 18))
+                            .foregroundColor(PastelTheme.pastelOat.opacity(0.8))
                     }
                 }
-            }
-            .navigationTitle("Add to Playlist")
-            .inlineNavigationBarTitle()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(PastelTheme.textSecondary)
+                
+                // Title, Artist & Album
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(record.title)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(isCurr ? PastelTheme.pastelOat : PastelTheme.textPrimary)
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Text(record.artist)
+                            .foregroundColor(PastelTheme.textSecondary)
+                        Text("•")
+                            .foregroundColor(PastelTheme.textTertiary)
+                        Text(record.album)
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .lineLimit(1)
+                    }
+                    .font(.system(size: 12))
+                    
+                    // Route Badge & Match Tag
+                    HStack(spacing: 6) {
+                        // Source -> Dest badge
+                        HStack(spacing: 3) {
+                            PlatformBrandBadgeView(type: record.sourceService, size: 11)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundColor(PastelTheme.textTertiary)
+                            PlatformBrandBadgeView(type: record.destinationService, size: 11)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(PastelTheme.cardSubtle)
+                        .clipShape(Capsule())
+                        
+                        // Match confidence tag
+                        Text(record.matchType)
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundColor(PastelTheme.emeraldSuccess)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(PastelTheme.emeraldSuccess.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    .padding(.top, 2)
                 }
+                
+                Spacer()
+                
+                // Status Checkmark & Menu
+                VStack(alignment: .trailing, spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(PastelTheme.emeraldSuccess)
+                    
+                    Text(record.transferDateStr)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(PastelTheme.textTertiary)
+                }
+            }
+            .padding(12)
+            .background(isCurr ? PastelTheme.pastelOat.opacity(0.08) : PastelTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isCurr ? PastelTheme.marbleBorder : PastelTheme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .contextMenu {
+            Button {
+                player.play(track: uTrack)
+            } label: {
+                Label("Play Now", systemImage: "play.circle")
+            }
+            Button {
+                UIPasteboard.general.string = "\(record.title) - \(record.artist) (ISRC: \(record.isrc))"
+                HapticManager.successNotification()
+            } label: {
+                Label("Copy Song & ISRC", systemImage: "doc.on.doc")
+            }
+            Button {
+                navCoordinator.openPersonalLibrary()
+            } label: {
+                Label("Open Liked Songs & Playlists", systemImage: "heart")
             }
         }
     }

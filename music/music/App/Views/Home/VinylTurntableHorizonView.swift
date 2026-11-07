@@ -139,6 +139,10 @@ public struct VinylTurntableHorizonView: View {
         activeVinylIndex = index
         
         let selected = vinyls[index]
+        if selected.title == "Liked Songs" {
+            NavigationCoordinator.shared.openPersonalLibrary()
+        }
+        
         let track = UniversalTrack(
             isrc: "VN-\(selected.id)",
             title: selected.title,

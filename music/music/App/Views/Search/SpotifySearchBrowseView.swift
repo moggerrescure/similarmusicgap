@@ -172,11 +172,25 @@ public struct SpotifySearchBrowseView: View {
                             .padding(.vertical, 10)
                         }
                         .frame(width: 140, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(0.14), lineWidth: 0.8)
+                        )
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
             }
+        }
+    }
+    
+    // Dynamic real-time search filter for categories
+    private var filteredCategories: [SpotifyGenreCard] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return genreCategories }
+        return genreCategories.filter {
+            $0.title.lowercased().contains(query) ||
+            $0.queryTag.lowercased().contains(query)
         }
     }
     
@@ -188,44 +202,68 @@ public struct SpotifySearchBrowseView: View {
         ]
         
         return LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(genreCategories) { card in
+            ForEach(filteredCategories) { card in
                 Button {
                     HapticManager.lightImpact()
                     playGenreSelection(card)
                 } label: {
                     ZStack(alignment: .topLeading) {
-                        // Card Base with exact Hex Color
-                        Color(hex: card.hexColor)
+                        // Card Base with vibrant gradient
+                        LinearGradient(
+                            colors: [
+                                Color(hex: card.hexColor),
+                                Color(hex: card.hexColor).opacity(0.85)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                         
-                        // Rotated Artwork Thumbnail bottom-right (68x68, rotated 22deg, drop shadow)
+                        // Circular Artwork Thumbnail (No black squares, 100% luminous circular vinyl rings!)
                         VStack {
                             Spacer()
                             HStack {
                                 Spacer()
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                        .fill(Color.black.opacity(0.35))
-                                        .frame(width: 68, height: 68)
+                                    // Outer translucent circular disc with subtle glass sheen
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.25),
+                                                    Color.white.opacity(0.08)
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 66, height: 66)
                                     
+                                    // Concentric Vinyl / Soundwave Rings
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                                        .frame(width: 52, height: 52)
+                                    
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.8)
+                                        .frame(width: 38, height: 38)
+                                    
+                                    // Center Well Ring
+                                    Circle()
+                                        .fill(Color.white.opacity(0.14))
+                                        .frame(width: 24, height: 24)
+                                    
+                                    // Crisp Icon Symbol
                                     Image(systemName: card.iconSymbol)
-                                        .font(.system(size: 28, weight: .bold))
-                                        .foregroundColor(.white.opacity(0.95))
-                                    
-                                    // Tiny Spotify-style circular watermark in top-left
-                                    VStack {
-                                        HStack {
-                                            Circle()
-                                                .fill(Color.white.opacity(0.35))
-                                                .frame(width: 10, height: 10)
-                                                .padding(5)
-                                            Spacer()
-                                        }
-                                        Spacer()
-                                    }
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .shadow(color: Color.black.opacity(0.25), radius: 3)
                                 }
-                                .shadow(color: Color.black.opacity(0.4), radius: 6, x: 0, y: 4)
-                                .rotationEffect(.degrees(22))
-                                .offset(x: 12, y: 6)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.32), lineWidth: 1)
+                                )
+                                .shadow(color: Color.black.opacity(0.2), radius: 6, y: 3)
+                                .offset(x: 8, y: 4)
                             }
                         }
                         
@@ -236,10 +274,14 @@ public struct SpotifySearchBrowseView: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding([.top, .leading], 12)
+                            .padding([.top, .leading], 14)
                     }
                     .frame(height: 104)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                    )
                 }
                 .buttonStyle(PlainButtonStyle())
             }
