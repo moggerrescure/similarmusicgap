@@ -130,9 +130,8 @@ public struct VinylTurntableHorizonView: View {
     
     private func selectAndPlayVinyl(at index: Int) {
         HapticManager.lightImpact()
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.75)) {
-            activeVinylIndex = index
-        }
+        // Instant disc change without animations
+        activeVinylIndex = index
         
         let selected = vinyls[index]
         let track = UniversalTrack(
@@ -147,7 +146,7 @@ public struct VinylTurntableHorizonView: View {
     }
 }
 
-// MARK: - 1. Animated Turntable Deck (Rotating Vinyl + Dynamic Tonearm)
+// MARK: - 1. Animated Turntable Deck (Rotating Vinyl + Realistic Tonearm)
 
 private struct TurntablePlayerDeckView: View {
     let activeVinyl: VinylTurntableHorizonView.ColoredVinylItem
@@ -155,55 +154,58 @@ private struct TurntablePlayerDeckView: View {
     let progress: Double
     let onTogglePlayPause: () -> Void
     
+    // Authentic vinyl tonearm progression:
+    // - When paused: parked outside the record on the rest post at -20°
+    // - When playing: strictly moves from the outer edge (10°) towards the center label (24°) with song progress
+    // - Zero broken back-and-forth oscillating
+    private var tonearmAngle: Double {
+        if !isPlaying {
+            return -20.0
+        } else {
+            let clamped = min(max(progress, 0.0), 1.0)
+            return 10.0 + (clamped * 14.0)
+        }
+    }
+    
     var body: some View {
         Button(action: onTogglePlayPause) {
             VStack(spacing: 8) {
                 // Turntable Platter Chassis (134 x 134)
-                TimelineView(.animation(paused: !isPlaying)) { timeline in
-                    let time = timeline.date.timeIntervalSinceReferenceDate
-                    let rotation = (time.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
-                    
-                    // Slow analog tracking sway (ездит по канавкам диска)
-                    let analogSway = isPlaying ? sin(time * 0.75) * 3.8 : 0.0
-                    
-                    // Physical vertical suspension bobbing (плавно ходит вверх-вниз по высоте)
-                    let verticalBob = isPlaying ? CGFloat(sin(time * 2.3) * 3.2) : 0.0
-                    
-                    // Base tracking angle across the song progress (from outer edge to inner groove)
-                    let baseAngle: Double = isPlaying ? (11.0 + progress * 13.0) : -20.0
-                    let effectiveAngle = baseAngle + analogSway
-                    
-                    ZStack(alignment: .topTrailing) {
-                        // Brushed Titanium Body
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "#1C1D23"), Color(hex: "#121317")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                ZStack(alignment: .topTrailing) {
+                    // Brushed Titanium Body
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#1C1D23"), Color(hex: "#121317")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.6), radius: 14, y: 6)
+                    
+                    // Center Recessed Platter Well
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(hex: "#2A2B33"), Color(hex: "#0E0F12")],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 50
                             )
-                            .shadow(color: Color.black.opacity(0.6), radius: 14, y: 6)
+                        )
+                        .frame(width: 98, height: 98)
+                        .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 1))
+                        .position(x: 62, y: 64)
+                    
+                    // Rotating Vinyl Platter on Turntable
+                    TimelineView(.animation(paused: !isPlaying)) { timeline in
+                        let time = timeline.date.timeIntervalSinceReferenceDate
+                        let rotation = (time.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
                         
-                        // Center Recessed Platter Well
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color(hex: "#2A2B33"), Color(hex: "#0E0F12")],
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 50
-                                )
-                            )
-                            .frame(width: 98, height: 98)
-                            .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 1))
-                            .position(x: 62, y: 64)
-                        
-                        // Rotating Vinyl Platter on Turntable
                         TurntableSpinningPlatterDisc(
                             waxGradient: activeVinyl.waxGradient,
                             labelGradient: activeVinyl.labelGradient,
@@ -211,18 +213,18 @@ private struct TurntablePlayerDeckView: View {
                             labelTextColor: activeVinyl.labelTextColor
                         )
                         .rotationEffect(.degrees(isPlaying ? rotation : 0))
-                        .frame(width: 92, height: 92)
-                        .position(x: 62, y: 64)
-                        
-                        // Tonearm with Stylus Needle (slowly tracks up/down and across grooves)
-                        TonearmAssemblyView(
-                            angle: effectiveAngle,
-                            verticalBob: verticalBob,
-                            isPlaying: isPlaying
-                        )
-                        .frame(width: 44, height: 80)
-                        .offset(x: -6, y: 8)
+                        .transaction { $0.animation = nil } // Instant disc change without morphing animations
                     }
+                    .frame(width: 92, height: 92)
+                    .position(x: 62, y: 64)
+                    
+                    // Tonearm with Stylus Needle (moves strictly from edge to center as song plays)
+                    TonearmAssemblyView(
+                        angle: tonearmAngle,
+                        isPlaying: isPlaying
+                    )
+                    .frame(width: 44, height: 80)
+                    .offset(x: -6, y: 8)
                 }
                 .frame(width: 134, height: 134)
                 
@@ -326,16 +328,15 @@ private struct TurntableSpinningPlatterDisc: View {
     }
 }
 
-// MARK: - Precision Tonearm Assembly (Moves Slowly Up and Down Across Disc)
+// MARK: - Precision Tonearm Assembly (True Authentic Vinyl Motion)
 
 private struct TonearmAssemblyView: View {
     let angle: Double
-    let verticalBob: CGFloat
     let isPlaying: Bool
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Metallic Tonearm Arm with Head (Slowly undulates up and down)
+            // Metallic Tonearm Arm with Head
             VStack(spacing: 0) {
                 // Tone Arm Rod
                 Capsule()
@@ -347,13 +348,9 @@ private struct TonearmAssemblyView: View {
                         )
                     )
                     .frame(width: 3, height: 56)
-                    .shadow(
-                        color: Color.black.opacity(0.45 + Double(abs(verticalBob)) * 0.05),
-                        radius: 3 + abs(verticalBob) * 0.4,
-                        y: 2
-                    )
+                    .shadow(color: Color.black.opacity(0.5), radius: 3, y: 2)
                 
-                // Cartridge Headshell & Stylus Needle (visibly floating up and down on grooves)
+                // Cartridge Headshell & Stylus Needle
                 ZStack {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color(hex: "#10B981"))
@@ -367,11 +364,11 @@ private struct TonearmAssemblyView: View {
                         .offset(y: 5)
                 }
                 .rotationEffect(.degrees(22))
-                .offset(y: isPlaying ? verticalBob : 0)
             }
-            .offset(x: -8, y: 10 + (isPlaying ? verticalBob * 0.6 : 0))
+            .offset(x: -8, y: 10)
             .rotationEffect(.degrees(angle), anchor: .topTrailing)
-            .animation(.spring(response: 0.55, dampingFraction: 0.72), value: isPlaying)
+            .animation(.spring(response: 0.6, dampingFraction: 0.78), value: isPlaying)
+            .animation(.linear(duration: 0.3), value: angle)
             
             // Tonearm Pivot Base
             ZStack {
