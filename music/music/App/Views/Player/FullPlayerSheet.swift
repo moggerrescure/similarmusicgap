@@ -14,15 +14,54 @@ public struct FullPlayerSheet: View {
     
     public var body: some View {
         ZStack {
-            PastelTheme.canvas
+            // Spotify Dark Background (#121212)
+            Color(hex: "#121212")
                 .ignoresSafeArea()
             
-            VStack(spacing: 24) {
-                // Top Dismiss Grabber
-                Capsule()
-                    .fill(PastelTheme.cardBorder)
-                    .frame(width: 36, height: 5)
-                    .padding(.top, 12)
+            VStack(spacing: 20) {
+                // MARK: - Top Header (Chevron Down to Dismiss + Context + 3-Dots)
+                HStack {
+                    Button {
+                        HapticManager.lightImpact()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
+                    
+                    Spacer()
+                    
+                    VStack(spacing: 2) {
+                        Text("PLAYING FROM PLAYLIST")
+                            .font(.system(size: 10, weight: .bold))
+                            .tracking(0.8)
+                            .foregroundColor(Color(hex: "#B3B3B3"))
+                        
+                        Text(track.album ?? "Universal Vault")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    Button {
+                        HapticManager.lightImpact()
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
                 
                 Spacer()
                 
@@ -239,6 +278,15 @@ public struct FullPlayerSheet: View {
                 .padding(.bottom, 20)
             }
         }
+        .gesture(
+            DragGesture(minimumDistance: 25, coordinateSpace: .local)
+                .onEnded { value in
+                    if value.translation.height > 80 && abs(value.translation.width) < value.translation.height {
+                        HapticManager.lightImpact()
+                        dismiss()
+                    }
+                }
+        )
     }
     
     private func formatTime(_ seconds: Double) -> String {

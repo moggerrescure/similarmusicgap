@@ -120,7 +120,7 @@ public struct FloatingMiniPlayerView: View {
             HapticManager.lightImpact()
             showingFullPlayer = true
         }
-        .fullScreenOrSheet(isPresented: $showingFullPlayer) {
+        .sheet(isPresented: $showingFullPlayer) {
             FullPlayerSheet(track: activeTrack)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))

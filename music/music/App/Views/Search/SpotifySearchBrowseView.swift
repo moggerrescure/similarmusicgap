@@ -258,3 +258,4 @@ public struct SpotifySearchBrowseView: View {
         player.play(track: track)
     }
 }
+
