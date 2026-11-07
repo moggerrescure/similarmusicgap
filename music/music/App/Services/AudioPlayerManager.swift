@@ -342,14 +342,14 @@ public final class AudioPlayerManager: ObservableObject {
         }
     }
     
-    // MARK: - 100ms High-Precision Crossfade & Gapless Automix Engine
+    // MARK: - 50ms High-Precision Crossfade & Gapless Automix Engine
     private func startTimer() {
         stopTimer()
-        displayLinkTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        displayLinkTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self, self.isPlaying else { return }
                 
-                self.currentTime += 0.1
+                self.currentTime += 0.05
                 if self.duration > 0 {
                     self.progress = min(1.0, self.currentTime / self.duration)
                 }

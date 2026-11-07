@@ -146,7 +146,7 @@ public struct VinylTurntableHorizonView: View {
     }
 }
 
-// MARK: - 1. Animated Turntable Deck (Rotating Vinyl + Realistic Slow Looping Tonearm)
+// MARK: - 1. Animated Turntable Deck (Rotating Vinyl + Calm Continuous Tonearm)
 
 private struct TurntablePlayerDeckView: View {
     let activeVinyl: VinylTurntableHorizonView.ColoredVinylItem
@@ -154,69 +154,77 @@ private struct TurntablePlayerDeckView: View {
     let progress: Double
     let onTogglePlayPause: () -> Void
     
+    @ObservedObject private var player = AudioPlayerManager.shared
+    
+    // Tonearm always rests naturally on the record (starting at 10.0° on the outer groove)
+    // As the song plays, it calmly glides closer to the center (22.0°) and further away (10.0°) over a 26-second cycle.
+    // When paused, it freezes right where it is on the vinyl - ZERO teleportation!
+    // When playback resumes, it continues seamlessly from that exact position.
+    private var tonearmAngle: Double {
+        let phase = (player.currentTime / 26.0) * Double.pi * 2.0
+        let cycleProgress = (1.0 - cos(phase)) * 0.5
+        return 10.0 + (cycleProgress * 12.0)
+    }
+    
+    // Cumulative continuous vinyl rotation (stops when paused, resumes without jumping)
+    private var vinylRotationAngle: Double {
+        (player.currentTime / 3.5) * 360.0
+    }
+    
     var body: some View {
         Button(action: onTogglePlayPause) {
             VStack(spacing: 8) {
                 // Turntable Platter Chassis (134 x 134)
-                TimelineView(.animation(paused: !isPlaying)) { timeline in
-                    let time = timeline.date.timeIntervalSinceReferenceDate
-                    let rotation = (time.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
-                    
-                    // Ultra-slow, graceful analog vinyl loop (26.0s full cycle: 13s in, 13s out):
-                    // Glides very slowly from outer groove (10°) to inner groove (22°) and back, looped infinitely while playing
-                    let cycleProgress = isPlaying ? (sin((time / 26.0) * Double.pi * 2.0) * 0.5 + 0.5) : 0.0
-                    let tonearmAngle = isPlaying ? (10.0 + cycleProgress * 12.0) : -20.0
-                    
-                    ZStack(alignment: .topTrailing) {
-                        // Brushed Titanium Body
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "#1C1D23"), Color(hex: "#121317")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                ZStack(alignment: .topTrailing) {
+                    // Brushed Titanium Body
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#1C1D23"), Color(hex: "#121317")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
-                            )
-                            .shadow(color: Color.black.opacity(0.6), radius: 14, y: 6)
-                        
-                        // Center Recessed Platter Well
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [Color(hex: "#2A2B33"), Color(hex: "#0E0F12")],
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 50
-                                )
-                            )
-                            .frame(width: 98, height: 98)
-                            .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 1))
-                            .position(x: 62, y: 64)
-                        
-                        // Rotating Vinyl Platter on Turntable (Instant disc swap without animations)
-                        TurntableSpinningPlatterDisc(
-                            waxGradient: activeVinyl.waxGradient,
-                            labelGradient: activeVinyl.labelGradient,
-                            symbolOrInitial: activeVinyl.symbolOrInitial,
-                            labelTextColor: activeVinyl.labelTextColor
                         )
-                        .rotationEffect(.degrees(isPlaying ? rotation : 0))
-                        .transaction { $0.animation = nil }
-                        .frame(width: 92, height: 92)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.6), radius: 14, y: 6)
+                    
+                    // Center Recessed Platter Well
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(hex: "#2A2B33"), Color(hex: "#0E0F12")],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 50
+                            )
+                        )
+                        .frame(width: 98, height: 98)
+                        .overlay(Circle().stroke(Color.white.opacity(0.06), lineWidth: 1))
                         .position(x: 62, y: 64)
-                        
-                        // Tonearm with Stylus Needle (moves very slowly in and out across disc, infinite loop)
-                        TonearmAssemblyView(
-                            angle: tonearmAngle,
-                            isPlaying: isPlaying
-                        )
-                        .frame(width: 44, height: 80)
-                        .offset(x: -6, y: 8)
-                    }
+                    
+                    // Rotating Vinyl Platter on Turntable (Instant disc swap without animations)
+                    TurntableSpinningPlatterDisc(
+                        waxGradient: activeVinyl.waxGradient,
+                        labelGradient: activeVinyl.labelGradient,
+                        symbolOrInitial: activeVinyl.symbolOrInitial,
+                        labelTextColor: activeVinyl.labelTextColor
+                    )
+                    .rotationEffect(.degrees(vinylRotationAngle))
+                    .animation(isPlaying ? .linear(duration: 0.05) : nil, value: player.currentTime)
+                    .transaction { $0.animation = nil }
+                    .frame(width: 92, height: 92)
+                    .position(x: 62, y: 64)
+                    
+                    // Tonearm with Stylus Needle (calmly glides closer/further on the disc, zero teleportation)
+                    TonearmAssemblyView(
+                        angle: tonearmAngle
+                    )
+                    .animation(isPlaying ? .linear(duration: 0.05) : nil, value: tonearmAngle)
+                    .frame(width: 44, height: 80)
+                    .offset(x: -6, y: 8)
                 }
                 .frame(width: 134, height: 134)
                 
@@ -321,11 +329,10 @@ private struct TurntableSpinningPlatterDisc: View {
     }
 }
 
-// MARK: - Precision Tonearm Assembly (True Authentic Vinyl Motion)
+// MARK: - Precision Tonearm Assembly (Continuous Smooth Position)
 
 private struct TonearmAssemblyView: View {
     let angle: Double
-    let isPlaying: Bool
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -360,7 +367,6 @@ private struct TonearmAssemblyView: View {
             }
             .offset(x: -8, y: 10)
             .rotationEffect(.degrees(angle), anchor: .topTrailing)
-            .animation(.spring(response: 0.65, dampingFraction: 0.8), value: isPlaying)
             
             // Tonearm Pivot Base
             ZStack {
