@@ -1,0 +1,498 @@
+import SwiftUI
+import Combine
+
+/// Luxury Album Detail Sheet (Apple HIG HUD Standard)
+/// Features:
+/// 1. Large 3D Album Sleeve with Protruding Vinyl Disc that rotates when any track from the album is playing
+/// 2. Complete tracklist with playback controls (1-tap play)
+/// 3. "Add to Queue" (ставить в очередь) button and context menu with tactile haptics & HUD toast
+/// 4. Play All and Shuffle controls
+public struct VaultAlbumDetailSheet: View {
+    public let album: SpotifyHomeFeedView.VaultAlbumItem
+    
+    @ObservedObject private var player = AudioPlayerManager.shared
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var toastMessage: String? = nil
+    @State private var showToast: Bool = false
+    
+    public init(album: SpotifyHomeFeedView.VaultAlbumItem) {
+        self.album = album
+    }
+    
+    private var isAlbumPlaying: Bool {
+        guard let current = player.currentTrack else { return false }
+        return player.isPlaying && (current.album == album.title || album.tracks.contains(where: { $0.id == current.id }))
+    }
+    
+    public var body: some View {
+        NavigationStack {
+            ZStack {
+                // OLED Cashmere Charcoal Base
+                PastelTheme.canvas.ignoresSafeArea()
+                
+                // Dynamic Ambient Gradient Wash Top
+                AmbientWashBackgroundView(tab: .home)
+                
+                VStack(spacing: 0) {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 20) {
+                            // 1. Album Header (Large Sleeve + Rotating Vinyl Disc)
+                            albumHeaderView
+                                .padding(.top, 14)
+                            
+                            // 2. Action Controls (Play All & Shuffle)
+                            actionButtonsView
+                                .padding(.horizontal, 20)
+                            
+                            // 3. Tracklist Section
+                            tracklistSection
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 40)
+                        }
+                    }
+                }
+                
+                // 4. Floating "Added to Queue" HUD Toast
+                if showToast, let msg = toastMessage {
+                    VStack {
+                        Spacer()
+                        queueToastView(message: msg)
+                            .padding(.bottom, 24)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showToast)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        HapticManager.lightImpact()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(hex: "#9CA3AF"))
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - 1. Album Header View
+    private var albumHeaderView: some View {
+        VStack(spacing: 16) {
+            // Sleeve + Rotating Vinyl Disc (180x124)
+            ZStack(alignment: .leading) {
+                // Vinyl Disc - Protruding by 46pt and rotating when album is playing
+                SheetSpinningVinylDiscView(
+                    isPlaying: isAlbumPlaying,
+                    accentColor: album.accentColor,
+                    diameter: 120
+                )
+                .offset(x: 48)
+                .shadow(color: Color.black.opacity(0.85), radius: 12, x: 8, y: 4)
+                
+                // Front Album Jacket
+                ZStack(alignment: .bottomLeading) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: album.gradientColors,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 120, height: 120)
+                    
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                        .frame(width: 120, height: 120)
+                    
+                    // Sleeve Mouth Shadow
+                    HStack {
+                        Spacer()
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.85), Color.clear],
+                            startPoint: .trailing,
+                            endPoint: .leading
+                        )
+                        .frame(width: 14, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .frame(width: 120, height: 120)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(album.title)
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                        
+                        Text(album.artist)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.8))
+                            .lineLimit(1)
+                    }
+                    .padding(10)
+                }
+                .frame(width: 120, height: 120)
+                .shadow(color: Color.black.opacity(0.5), radius: 10, y: 5)
+            }
+            .frame(width: 176, height: 124)
+            
+            // Metadata
+            VStack(spacing: 4) {
+                Text(album.title)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                
+                Text(album.artist)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(PastelTheme.warmAmber)
+                
+                HStack(spacing: 6) {
+                    Text(album.releaseYear)
+                    Text("•")
+                    Text(album.genre)
+                    Text("•")
+                    Text("\(album.tracks.count) tracks")
+                    Text("•")
+                    Text(album.totalDuration)
+                }
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+        }
+    }
+    
+    // MARK: - 2. Action Buttons (Play All & Shuffle)
+    private var actionButtonsView: some View {
+        HStack(spacing: 12) {
+            // Play All Primary Capsule
+            Button {
+                HapticManager.successNotification()
+                playAllTracks()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isAlbumPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text(isAlbumPlaying ? "Pause Album" : "Play All")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .foregroundColor(PastelTheme.textOnOat)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(PastelTheme.pastelOat)
+                .clipShape(Capsule())
+                .shadow(color: PastelTheme.pastelOat.opacity(0.22), radius: 8, y: 3)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Shuffle Button
+            Button {
+                HapticManager.lightImpact()
+                shufflePlayTracks()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("Shuffle")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 20)
+                .frame(height: 44)
+                .background(PastelTheme.card)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    // MARK: - 3. Tracklist Section
+    private var tracklistSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("TRACKS")
+                .font(.system(size: 11, weight: .heavy))
+                .tracking(0.8)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+                .padding(.leading, 4)
+                .padding(.bottom, 2)
+            
+            VStack(spacing: 6) {
+                ForEach(Array(album.tracks.enumerated()), id: \.element.id) { index, track in
+                    let isCurrent = player.currentTrack?.id == track.id
+                    let isPlayingThis = isCurrent && player.isPlaying
+                    
+                    trackRow(
+                        index: index + 1,
+                        track: track,
+                        isCurrent: isCurrent,
+                        isPlaying: isPlayingThis
+                    )
+                }
+            }
+        }
+    }
+    
+    private func trackRow(
+        index: Int,
+        track: UniversalTrack,
+        isCurrent: Bool,
+        isPlaying: Bool
+    ) -> some View {
+        HStack(spacing: 12) {
+            // Track Number / Equalizer
+            ZStack {
+                if isPlaying {
+                    WaveformBarsView()
+                        .frame(width: 18, height: 14)
+                } else {
+                    Text(String(format: "%02d", index))
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(isCurrent ? PastelTheme.emeraldSuccess : Color(hex: "#6B7280"))
+                }
+            }
+            .frame(width: 24)
+            
+            // Track Info (Tapping Plays the Track)
+            Button {
+                HapticManager.lightImpact()
+                if isCurrent {
+                    player.togglePlayPause()
+                } else {
+                    player.play(track: track, in: album.tracks)
+                }
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(track.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(isCurrent ? PastelTheme.warmAmber : .white)
+                        .lineLimit(1)
+                    
+                    Text(track.artists.joined(separator: ", "))
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Duration
+            Text(formatDuration(ms: track.durationMs))
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundColor(Color(hex: "#9CA3AF"))
+            
+            // "Add to Queue" Quick Button (Поставить в очередь)
+            Button {
+                player.addToQueue(track: track)
+                showQueueToastFeedback(trackTitle: track.title)
+            } label: {
+                Image(systemName: "text.badge.plus")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(PastelTheme.pastelOat)
+                    .padding(8)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(BorderlessButtonStyle())
+            
+            // Ellipsis Context Menu
+            Menu {
+                Button {
+                    player.play(track: track, in: album.tracks)
+                } label: {
+                    Label("Play Now", systemImage: "play.fill")
+                }
+                
+                Button {
+                    player.addToQueueNext(track: track)
+                    showQueueToastFeedback(trackTitle: track.title)
+                } label: {
+                    Label("Play Next", systemImage: "text.insert")
+                }
+                
+                Button {
+                    player.addToQueue(track: track)
+                    showQueueToastFeedback(trackTitle: track.title)
+                } label: {
+                    Label("Add to Queue", systemImage: "text.badge.plus")
+                }
+                
+                Button {
+                    player.toggleFavorite(track: track)
+                } label: {
+                    Label(
+                        player.isFavorite(track: track) ? "Remove from Favorites" : "Add to Favorites",
+                        systemImage: player.isFavorite(track: track) ? "heart.slash" : "heart"
+                    )
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color(hex: "#6B7280"))
+                    .frame(width: 24, height: 32)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isCurrent ? Color(hex: "#1B1C23") : PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isCurrent ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: 0.8)
+        )
+    }
+    
+    // MARK: - 4. Queue Toast View
+    private func queueToastView(message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(PastelTheme.emeraldSuccess)
+                .font(.system(size: 14, weight: .bold))
+            
+            Text(message)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color(hex: "#1B1C23"))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.6), radius: 10, y: 4)
+    }
+    
+    // MARK: - Actions
+    private func playAllTracks() {
+        guard !album.tracks.isEmpty else { return }
+        if isAlbumPlaying {
+            player.togglePlayPause()
+        } else {
+            player.play(track: album.tracks[0], in: album.tracks)
+        }
+    }
+    
+    private func shufflePlayTracks() {
+        guard !album.tracks.isEmpty else { return }
+        let shuffled = album.tracks.shuffled()
+        player.play(track: shuffled[0], in: shuffled)
+    }
+    
+    private func showQueueToastFeedback(trackTitle: String) {
+        toastMessage = "Added to Queue • \(trackTitle)"
+        showToast = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation {
+                showToast = false
+            }
+        }
+    }
+    
+    private func formatDuration(ms: Int) -> String {
+        let totalSec = ms / 1000
+        let min = totalSec / 60
+        let sec = totalSec % 60
+        return String(format: "%d:%02d", min, sec)
+    }
+}
+
+// MARK: - Sheet Spinning Vinyl Disc View
+private struct SheetSpinningVinylDiscView: View {
+    let isPlaying: Bool
+    let accentColor: Color
+    let diameter: CGFloat
+    
+    @StateObject private var motionTracker = SheetRotationTracker()
+    
+    var body: some View {
+        TimelineView(.animation(paused: !isPlaying)) { timeline in
+            let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
+            let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+            
+            ZStack {
+                // Carbon Vinyl Wax
+                Circle()
+                    .fill(Color(hex: "#090A0D"))
+                    .frame(width: diameter, height: diameter)
+                
+                // Sound Grooves
+                ForEach(0..<4) { i in
+                    let inset = CGFloat(8 + (i * 9))
+                    Circle()
+                        .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
+                        .frame(width: max(0, diameter - (inset * 2)), height: max(0, diameter - (inset * 2)))
+                }
+                
+                // Specular Luster
+                Circle()
+                    .fill(
+                        AngularGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color.clear,
+                                Color.white.opacity(0.12),
+                                Color.clear,
+                                Color.white.opacity(0.12)
+                            ],
+                            center: .center
+                        )
+                    )
+                    .frame(width: diameter, height: diameter)
+                    .blendMode(.plusLighter)
+                
+                // Outer Rim
+                Circle()
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                    .frame(width: diameter, height: diameter)
+                
+                // Center Label
+                ZStack {
+                    Circle()
+                        .fill(accentColor.opacity(0.85))
+                        .frame(width: 32, height: 32)
+                    
+                    Circle()
+                        .stroke(Color(hex: "#0E0F12"), lineWidth: 2)
+                        .frame(width: 32, height: 32)
+                    
+                    Circle()
+                        .fill(Color(hex: "#0E0F12"))
+                        .frame(width: 7, height: 7)
+                }
+            }
+            .rotationEffect(.degrees(rotation))
+        }
+    }
+}
+
+private final class SheetRotationTracker: ObservableObject {
+    @Published var tick: Bool = false
+    var accumulatedTime: Double = 0.0
+    var lastDate: Date? = nil
+    
+    func advance(currentDate: Date, isPlaying: Bool) -> Double {
+        guard isPlaying else {
+            lastDate = nil
+            return accumulatedTime
+        }
+        
+        if let last = lastDate {
+            let delta = currentDate.timeIntervalSince(last)
+            if delta > 0 && delta < 0.5 {
+                accumulatedTime += delta
+            }
+        }
+        lastDate = currentDate
+        return accumulatedTime
+    }
+}

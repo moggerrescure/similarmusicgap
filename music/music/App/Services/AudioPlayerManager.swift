@@ -277,6 +277,25 @@ public final class AudioPlayerManager: ObservableObject {
         play(track: prevTrack, in: playlistQueue)
     }
     
+    // MARK: - Queue Management
+    public var currentQueue: [UniversalTrack] {
+        playlistQueue
+    }
+    
+    public func addToQueue(track: UniversalTrack) {
+        playlistQueue.append(track)
+        HapticManager.lightImpact()
+    }
+    
+    public func addToQueueNext(track: UniversalTrack) {
+        if currentIndex + 1 < playlistQueue.count {
+            playlistQueue.insert(track, at: currentIndex + 1)
+        } else {
+            playlistQueue.append(track)
+        }
+        HapticManager.lightImpact()
+    }
+    
     public func seek(to time: Double) {
         currentTime = min(max(0, time), duration)
         progress = duration > 0 ? (currentTime / duration) : 0

@@ -14,6 +14,7 @@ public struct SpotifyHomeFeedView: View {
     
     @State private var selectedFilter: String = "All"
     @State private var showingProfileSheet: Bool = false
+    @State private var selectedVaultAlbum: VaultAlbumItem? = nil
     @State private var searchText: String = ""
     
     // MARK: - Models
@@ -51,13 +52,17 @@ public struct SpotifyHomeFeedView: View {
         public let trackIsrc: String
     }
     
-    public struct VaultAlbumItem: Identifiable {
+    public struct VaultAlbumItem: Identifiable, Equatable {
         public let id: Int
         public let title: String
         public let artist: String
+        public let releaseYear: String
+        public let genre: String
         public let trackCount: String
+        public let totalDuration: String
         public let gradientColors: [Color]
         public let accentColor: Color
+        public let tracks: [UniversalTrack]
     }
     
     // MARK: - Data (Zero Emojis, High-Contrast Palette)
@@ -120,38 +125,103 @@ public struct SpotifyHomeFeedView: View {
         )
     ]
     
+    // MARK: - Album Master Tracklists
+    private static let utopiaTracks: [UniversalTrack] = [
+        UniversalTrack(title: "HYAENA", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 222000, spotifyId: "utopia_1"),
+        UniversalTrack(title: "THANK GOD", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 184000, spotifyId: "utopia_2"),
+        UniversalTrack(title: "MODERN JAM", artists: ["Travis Scott", "Teezo Touchdown"], album: "UTOPIA", durationMs: 255000, spotifyId: "utopia_3"),
+        UniversalTrack(title: "MY EYES", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 251000, spotifyId: "utopia_4"),
+        UniversalTrack(title: "GOD'S COUNTRY", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 127000, spotifyId: "utopia_5"),
+        UniversalTrack(title: "SIRENS", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 204000, spotifyId: "utopia_6"),
+        UniversalTrack(title: "MELTDOWN", artists: ["Travis Scott", "Drake"], album: "UTOPIA", durationMs: 246000, spotifyId: "utopia_7"),
+        UniversalTrack(title: "FE!N", artists: ["Travis Scott", "Playboi Carti"], album: "UTOPIA", durationMs: 191000, spotifyId: "utopia_8"),
+        UniversalTrack(title: "DELRESTO (ECHOES)", artists: ["Travis Scott", "Beyonce"], album: "UTOPIA", durationMs: 274000, spotifyId: "utopia_9"),
+        UniversalTrack(title: "I KNOW ?", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 211000, spotifyId: "utopia_10")
+    ]
+    
+    private static let sosTracks: [UniversalTrack] = [
+        UniversalTrack(title: "SOS", artists: ["SZA"], album: "SOS", durationMs: 117000, spotifyId: "sos_1"),
+        UniversalTrack(title: "Kill Bill", artists: ["SZA"], album: "SOS", durationMs: 153000, spotifyId: "sos_2"),
+        UniversalTrack(title: "Seek & Destroy", artists: ["SZA"], album: "SOS", durationMs: 203000, spotifyId: "sos_3"),
+        UniversalTrack(title: "Low", artists: ["SZA"], album: "SOS", durationMs: 181000, spotifyId: "sos_4"),
+        UniversalTrack(title: "Love Language", artists: ["SZA"], album: "SOS", durationMs: 183000, spotifyId: "sos_5"),
+        UniversalTrack(title: "Blind", artists: ["SZA"], album: "SOS", durationMs: 150000, spotifyId: "sos_6"),
+        UniversalTrack(title: "Snooze", artists: ["SZA"], album: "SOS", durationMs: 201000, spotifyId: "sos_7"),
+        UniversalTrack(title: "Notice Me", artists: ["SZA"], album: "SOS", durationMs: 160000, spotifyId: "sos_8"),
+        UniversalTrack(title: "Gone Girl", artists: ["SZA"], album: "SOS", durationMs: 244000, spotifyId: "sos_9"),
+        UniversalTrack(title: "Ghost in the Machine", artists: ["SZA", "Phoebe Bridgers"], album: "SOS", durationMs: 218000, spotifyId: "sos_10")
+    ]
+    
+    private static let gutsTracks: [UniversalTrack] = [
+        UniversalTrack(title: "all-american bitch", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 165000, spotifyId: "guts_1"),
+        UniversalTrack(title: "bad idea right?", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 184000, spotifyId: "guts_2"),
+        UniversalTrack(title: "vampire", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 219000, spotifyId: "guts_3"),
+        UniversalTrack(title: "lacy", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 177000, spotifyId: "guts_4"),
+        UniversalTrack(title: "ballad of a homeschooled girl", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 203000, spotifyId: "guts_5"),
+        UniversalTrack(title: "making the bed", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 198000, spotifyId: "guts_6"),
+        UniversalTrack(title: "logical", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 231000, spotifyId: "guts_7"),
+        UniversalTrack(title: "get him back!", artists: ["Olivia Rodrigo"], album: "GUTS", durationMs: 211000, spotifyId: "guts_8")
+    ]
+    
+    private static let scaringTracks: [UniversalTrack] = [
+        UniversalTrack(title: "Lean Beef Patty", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 107000, spotifyId: "scaring_1"),
+        UniversalTrack(title: "Steppa Pig", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 207000, spotifyId: "scaring_2"),
+        UniversalTrack(title: "SCARING THE HOES", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 142000, spotifyId: "scaring_3"),
+        UniversalTrack(title: "Garbage Pale Kids", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 164000, spotifyId: "scaring_4"),
+        UniversalTrack(title: "Fentanyl Tester", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 156000, spotifyId: "scaring_5"),
+        UniversalTrack(title: "Burfict!", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 138000, spotifyId: "scaring_6"),
+        UniversalTrack(title: "Shut Yo Bitch Ass Up", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 166000, spotifyId: "scaring_7"),
+        UniversalTrack(title: "Kingdom Hearts Key", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 203000, spotifyId: "scaring_8")
+    ]
+    
     private let vaultAlbums: [VaultAlbumItem] = [
         VaultAlbumItem(
             id: 301,
             title: "UTOPIA",
             artist: "Travis Scott",
+            releaseYear: "2023",
+            genre: "Hip-Hop / Trap",
             trackCount: "19 tracks",
+            totalDuration: "1 hr 13 min",
             gradientColors: [Color(hex: "#2F3136"), Color(hex: "#141518")],
-            accentColor: Color(hex: "#EFE3D3")
+            accentColor: Color(hex: "#EFE3D3"),
+            tracks: utopiaTracks
         ),
         VaultAlbumItem(
             id: 302,
             title: "SOS",
             artist: "SZA",
+            releaseYear: "2022",
+            genre: "R&B / Soul",
             trackCount: "23 tracks",
+            totalDuration: "1 hr 8 min",
             gradientColors: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
-            accentColor: Color(hex: "#60A5FA")
+            accentColor: Color(hex: "#60A5FA"),
+            tracks: sosTracks
         ),
         VaultAlbumItem(
             id: 303,
             title: "GUTS",
             artist: "Olivia Rodrigo",
+            releaseYear: "2023",
+            genre: "Alt-Pop / Rock",
             trackCount: "12 tracks",
+            totalDuration: "39 min",
             gradientColors: [Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
-            accentColor: Color(hex: "#A78BFA")
+            accentColor: Color(hex: "#A78BFA"),
+            tracks: gutsTracks
         ),
         VaultAlbumItem(
             id: 304,
             title: "SCARING THE HOES",
             artist: "JPEGMAFIA, Danny Brown",
+            releaseYear: "2023",
+            genre: "Experimental Hip-Hop",
             trackCount: "14 tracks",
+            totalDuration: "36 min",
             gradientColors: [Color(hex: "#991B1B"), Color(hex: "#1E293B")],
-            accentColor: Color(hex: "#FDE68A")
+            accentColor: Color(hex: "#FDE68A"),
+            tracks: scaringTracks
         )
     ]
     
@@ -320,6 +390,9 @@ public struct SpotifyHomeFeedView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showingProfileSheet) {
                 UserProfileSheet()
+            }
+            .sheet(item: $selectedVaultAlbum) { album in
+                VaultAlbumDetailSheet(album: album)
             }
         }
     }
@@ -549,47 +622,48 @@ public struct SpotifyHomeFeedView: View {
                 HStack(spacing: 16) {
                     // Left: Sleeve Case with initially protruding vinyl disc
                     ZStack(alignment: .leading) {
-                        // 1. Vinyl Record - INITIALLY PROTRUDING BY 38pt
+                        // 1. Vinyl Record - INITIALLY PROTRUDING BY 52pt (High-Visibility Collector Wax)
                         ProtrudingVinylDiscView(
                             isPlaying: isHeroPlaying,
-                            diameter: 112
+                            diameter: 124
                         )
-                        .offset(x: 38)
+                        .offset(x: 52)
+                        .shadow(color: Color.black.opacity(0.85), radius: 14, x: 10, y: 5)
                         
                         // 2. Sleeve Jacket (Covers left part of disc)
                         ZStack(alignment: .bottomLeading) {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(
                                     LinearGradient(
-                                        colors: [Color(hex: "#23242A"), Color(hex: "#121316")],
+                                        colors: [Color(hex: "#25272F"), Color(hex: "#131418")],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .frame(width: 112, height: 112)
+                                .frame(width: 116, height: 116)
                             
                             // Subtle texture and border
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                                .frame(width: 112, height: 112)
+                                .frame(width: 116, height: 116)
                             
                             // Sleeve Mouth Drop Shadow (adds realistic physical depth on the protruding disc)
                             HStack {
                                 Spacer()
                                 LinearGradient(
-                                    colors: [Color.black.opacity(0.8), Color.clear],
+                                    colors: [Color.black.opacity(0.85), Color.clear],
                                     startPoint: .trailing,
                                     endPoint: .leading
                                 )
-                                .frame(width: 14, height: 112)
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .frame(width: 16, height: 116)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
-                            .frame(width: 112, height: 112)
+                            .frame(width: 116, height: 116)
                             
                             // Cover Content
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("NEW MUSIC\nFRIDAY")
-                                    .font(.system(size: 12, weight: .black))
+                                    .font(.system(size: 13, weight: .black))
                                     .foregroundColor(.white)
                                     .lineSpacing(1)
                                 
@@ -605,10 +679,10 @@ public struct SpotifyHomeFeedView: View {
                                 }
                             }
                             .padding(10)
-                            .frame(width: 112, height: 112, alignment: .topLeading)
+                            .frame(width: 116, height: 116, alignment: .topLeading)
                         }
                     }
-                    .frame(width: 154, height: 114)
+                    .frame(width: 178, height: 124)
                     
                     // Right: Information & Capsule Action
                     VStack(alignment: .leading, spacing: 6) {
@@ -715,13 +789,13 @@ public struct SpotifyHomeFeedView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 14) {
                     ForEach(vaultAlbums) { album in
-                        let isPlaying = player.isPlaying && player.currentTrack?.title == album.title
+                        let isPlaying = player.isPlaying && (player.currentTrack?.album == album.title || album.tracks.contains(where: { $0.id == player.currentTrack?.id }))
                         VaultAlbumCrateCard(
                             album: album,
                             isPlaying: isPlaying,
-                            onTogglePlay: {
+                            onOpenAlbum: {
                                 HapticManager.lightImpact()
-                                toggleVaultAlbumPlayback(album)
+                                selectedVaultAlbum = album
                             }
                         )
                     }
@@ -818,6 +892,8 @@ private final class AnalogRotationTracker: ObservableObject {
 }
 
 /// Protruding Vinyl Record that peaks out of the sleeve initially by default
+/// High-fidelity black wax, 6 micro-groove tracks, butterfly specular sheen,
+/// dead wax run-out zone, and rich collector amber/gold label with micro-typography
 public struct ProtrudingVinylDiscView: View {
     let isPlaying: Bool
     let diameter: CGFloat
@@ -830,32 +906,52 @@ public struct ProtrudingVinylDiscView: View {
             let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
             
             ZStack {
-                // Base Vinyl Wax (Charcoal Deep Black)
+                // 1. Deep Carbon Base Wax with outer lip
                 Circle()
-                    .fill(Color(hex: "#0C0D10"))
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(hex: "#1A1B22"), Color(hex: "#08090C")],
+                            center: .center,
+                            startRadius: 8,
+                            endRadius: diameter / 2
+                        )
+                    )
                     .frame(width: diameter, height: diameter)
                 
-                // Concentric Sound Grooves
-                ForEach(0..<4) { i in
-                    let inset = CGFloat(8 + (i * 9))
+                // Outer Lip Stroke
+                Circle()
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1.5)
+                    .frame(width: diameter, height: diameter)
+                
+                // 2. High-Fidelity Micro-Grooves (Concentric sound tracks)
+                ForEach(0..<6) { i in
+                    let insets: [CGFloat] = [7, 14, 21, 28, 34, 40]
+                    let opacities: [Double] = [0.08, 0.05, 0.09, 0.04, 0.07, 0.05]
+                    let inset = insets[i]
+                    let op = opacities[i]
                     Circle()
-                        .stroke(
-                            Color.white.opacity(0.06),
-                            lineWidth: 0.8
-                        )
+                        .stroke(Color.white.opacity(op), lineWidth: 0.9)
                         .frame(width: max(0, diameter - (inset * 2)), height: max(0, diameter - (inset * 2)))
                 }
                 
-                // Specular Luster (Angular sheen across grooves)
+                // 3. Dead Wax / Run-out Groove Zone (between tracks and label)
+                Circle()
+                    .stroke(Color.white.opacity(0.04), lineWidth: 2)
+                    .frame(width: max(0, diameter - 88), height: max(0, diameter - 88))
+                
+                // 4. Dual Butterfly Specular Sheen (Vinyl Light Reflection Flares)
                 Circle()
                     .fill(
                         AngularGradient(
-                            colors: [
-                                Color.white.opacity(0.12),
-                                Color.clear,
-                                Color.white.opacity(0.12),
-                                Color.clear,
-                                Color.white.opacity(0.12)
+                            stops: [
+                                .init(color: Color.white.opacity(0.18), location: 0.10),
+                                .init(color: Color.clear, location: 0.22),
+                                .init(color: Color.white.opacity(0.18), location: 0.35),
+                                .init(color: Color.clear, location: 0.48),
+                                .init(color: Color.white.opacity(0.18), location: 0.60),
+                                .init(color: Color.clear, location: 0.72),
+                                .init(color: Color.white.opacity(0.18), location: 0.85),
+                                .init(color: Color.clear, location: 0.98)
                             ],
                             center: .center
                         )
@@ -863,32 +959,59 @@ public struct ProtrudingVinylDiscView: View {
                     .frame(width: diameter, height: diameter)
                     .blendMode(.plusLighter)
                 
-                // Vinyl Outer Rim Stroke
-                Circle()
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                    .frame(width: diameter, height: diameter)
-                
-                // Center Amber Label (34pt)
+                // 5. Collector Amber/Gold Center Label (38pt)
                 ZStack {
+                    // Multi-Tone Amber Radial Gradient
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [Color(hex: "#FBBF24"), Color(hex: "#B45309")],
+                                colors: [
+                                    Color(hex: "#FEF08A"),
+                                    Color(hex: "#FBBF24"),
+                                    Color(hex: "#D97706"),
+                                    Color(hex: "#78350F")
+                                ],
                                 center: .center,
                                 startRadius: 4,
-                                endRadius: 18
+                                endRadius: 20
                             )
                         )
-                        .frame(width: 34, height: 34)
+                        .frame(width: 38, height: 38)
                     
+                    // Dark Inner Groove Ring
                     Circle()
-                        .stroke(Color(hex: "#0E0F12"), lineWidth: 2)
-                        .frame(width: 34, height: 34)
+                        .stroke(Color(hex: "#0E0F12"), lineWidth: 1.8)
+                        .frame(width: 38, height: 38)
                     
-                    // Spindle Center Hole
+                    // Printed Label Typography
+                    VStack(spacing: 0.5) {
+                        Text("SOUNDSHIFT")
+                            .font(.system(size: 4.5, weight: .black, design: .monospaced))
+                            .foregroundColor(Color(hex: "#0E0F12"))
+                        
+                        HStack(spacing: 5) {
+                            Text("33⅓")
+                                .font(.system(size: 3.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(Color(hex: "#0E0F12"))
+                            Text("STEREO")
+                                .font(.system(size: 3.5, weight: .bold, design: .monospaced))
+                                .foregroundColor(Color(hex: "#0E0F12"))
+                        }
+                        
+                        Text("DROP 45")
+                            .font(.system(size: 3.5, weight: .heavy, design: .monospaced))
+                            .foregroundColor(Color(hex: "#0E0F12"))
+                    }
+                    
+                    // Metallic Spindle Grommet
                     Circle()
-                        .fill(Color(hex: "#0E0F12"))
-                        .frame(width: 7, height: 7)
+                        .stroke(Color(hex: "#E5E7EB"), lineWidth: 1.2)
+                        .frame(width: 8, height: 8)
+                    
+                    // Spindle Hole
+                    Circle()
+                        .fill(Color(hex: "#090A0D"))
+                        .frame(width: 6.5, height: 6.5)
                 }
             }
             .rotationEffect(.degrees(rotation))
@@ -1184,40 +1307,83 @@ public struct CassetteBottomWedgeShape: Shape {
     }
 }
 
-/// Top Vault Album Crate Card
+/// Top Vault Album Crate Card with Rotating Vinyl Disc and Modal Album Sheet Trigger
 public struct VaultAlbumCrateCard: View {
     let album: SpotifyHomeFeedView.VaultAlbumItem
     let isPlaying: Bool
-    let onTogglePlay: () -> Void
+    let onOpenAlbum: () -> Void
+    
+    @StateObject private var motionTracker = AnalogRotationTracker()
     
     public var body: some View {
-        Button(action: onTogglePlay) {
+        Button(action: onOpenAlbum) {
             VStack(alignment: .leading, spacing: 8) {
-                // Jacket + Peeking Disc Container (124x100)
+                // Jacket + Peeking Disc Container (126x100)
                 ZStack(alignment: .leading) {
-                    // Vinyl disc peeking out to the right
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color(hex: "#202126"), Color(hex: "#090A0D")],
-                                center: .center,
-                                startRadius: 4,
-                                endRadius: 48
-                            )
-                        )
-                        .frame(width: 96, height: 96)
-                        .overlay(
+                    // Rotating Vinyl disc peeking out to the right by 26pt!
+                    TimelineView(.animation(paused: !isPlaying)) { timeline in
+                        let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
+                        let rotation = (playTime.truncatingRemainder(dividingBy: 3.0) / 3.0) * 360.0
+                        
+                        ZStack {
                             Circle()
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                        )
-                        .overlay(
+                                .fill(
+                                    RadialGradient(
+                                        colors: [Color(hex: "#1F2026"), Color(hex: "#090A0D")],
+                                        center: .center,
+                                        startRadius: 4,
+                                        endRadius: 48
+                                    )
+                                )
+                                .frame(width: 96, height: 96)
+                            
+                            // Sound Grooves
+                            ForEach(0..<3) { i in
+                                Circle()
+                                    .stroke(Color.white.opacity(0.06), lineWidth: 0.8)
+                                    .frame(width: CGFloat(96 - (14 + i * 16)), height: CGFloat(96 - (14 + i * 16)))
+                            }
+                            
+                            // Specular angular sheen
                             Circle()
-                                .fill(album.accentColor.opacity(0.85))
-                                .frame(width: 26, height: 26)
-                                .overlay(Circle().fill(Color(hex: "#0E0F12")).frame(width: 6, height: 6))
-                        )
-                        .offset(x: 24)
-                        .shadow(color: Color.black.opacity(0.6), radius: 8, x: 4, y: 2)
+                                .fill(
+                                    AngularGradient(
+                                        colors: [
+                                            Color.white.opacity(0.12),
+                                            Color.clear,
+                                            Color.white.opacity(0.12),
+                                            Color.clear,
+                                            Color.white.opacity(0.12)
+                                        ],
+                                        center: .center
+                                    )
+                                )
+                                .frame(width: 96, height: 96)
+                                .blendMode(.plusLighter)
+                            
+                            Circle()
+                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                .frame(width: 96, height: 96)
+                            
+                            // Center Label with album accent color
+                            ZStack {
+                                Circle()
+                                    .fill(album.accentColor.opacity(0.85))
+                                    .frame(width: 26, height: 26)
+                                
+                                Circle()
+                                    .stroke(Color(hex: "#0E0F12"), lineWidth: 1.5)
+                                    .frame(width: 26, height: 26)
+                                
+                                Circle()
+                                    .fill(Color(hex: "#0E0F12"))
+                                    .frame(width: 6, height: 6)
+                            }
+                        }
+                        .rotationEffect(.degrees(rotation))
+                    }
+                    .offset(x: 26)
+                    .shadow(color: Color.black.opacity(0.65), radius: 8, x: 5, y: 3)
                     
                     // Album Jacket Sleeve
                     ZStack(alignment: .bottomLeading) {
@@ -1235,6 +1401,19 @@ public struct VaultAlbumCrateCard: View {
                             .stroke(isPlaying ? PastelTheme.cardBorderFocused : PastelTheme.cardBorder, lineWidth: 1)
                             .frame(width: 98, height: 98)
                         
+                        // Mouth gradient shadow
+                        HStack {
+                            Spacer()
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.75), Color.clear],
+                                startPoint: .trailing,
+                                endPoint: .leading
+                            )
+                            .frame(width: 12, height: 98)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                        .frame(width: 98, height: 98)
+                        
                         VStack(alignment: .leading, spacing: 2) {
                             Text(album.title)
                                 .font(.system(size: 11, weight: .black))
@@ -1250,21 +1429,37 @@ public struct VaultAlbumCrateCard: View {
                     }
                     .frame(width: 98, height: 98)
                 }
-                .frame(width: 124, height: 100)
+                .frame(width: 126, height: 100)
                 
                 // Titles below
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(album.title)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(album.title)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        if isPlaying {
+                            HStack(spacing: 1.5) {
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 2, height: 8)
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 2, height: 11)
+                                RoundedRectangle(cornerRadius: 0.5)
+                                    .fill(PastelTheme.emeraldSuccess)
+                                    .frame(width: 2, height: 6)
+                            }
+                        }
+                    }
                     
                     Text("\(album.artist) • \(album.trackCount)")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundColor(Color(hex: "#9CA3AF"))
                         .lineLimit(1)
                 }
-                .frame(width: 124, alignment: .leading)
+                .frame(width: 126, alignment: .leading)
             }
         }
         .buttonStyle(PlainButtonStyle())
