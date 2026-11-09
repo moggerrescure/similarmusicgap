@@ -9,6 +9,10 @@ public struct WaveformBarsView: View {
         self.barColor = barColor
     }
     
+    public init(color: Color, isAnimating: Bool = true) {
+        self.barColor = color
+    }
+    
     public var body: some View {
         HStack(spacing: 2) {
             ForEach(0..<4) { i in

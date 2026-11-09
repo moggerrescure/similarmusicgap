@@ -15,6 +15,7 @@ public struct SpotifyHomeFeedView: View {
     @State private var selectedFilter: String = "All"
     @State private var showingProfileSheet: Bool = false
     @State private var selectedVaultAlbum: VaultAlbumItem? = nil
+    @State private var selectedCassetteTape: CassetteItem? = nil
     @State private var searchText: String = ""
     
     // MARK: - Models
@@ -68,6 +69,37 @@ public struct SpotifyHomeFeedView: View {
         public let glowColor: Color
         public let accentColor: Color
         public let tracks: [UniversalTrack]
+    }
+    
+    public struct VIPArtistPassItem: Identifiable {
+        public let id: Int
+        public let rank: String
+        public let name: String
+        public let photoGradient: [Color]
+        public let streamsText: String
+        public let affinityText: String
+        public let leadTrack: UniversalTrack
+    }
+    
+    public struct SoundStripReleaseItem: Identifiable {
+        public let id: Int
+        public let title: String
+        public let artists: String
+        public let badgeText: String
+        public let tagText: String
+        public let coverGradient: [Color]
+        public let symbolIcon: String
+        public let leadTrack: UniversalTrack
+    }
+    
+    public struct SmokedGlassVibeItem: Identifiable {
+        public let id: Int
+        public let title: String
+        public let subtitle: String
+        public let moodBadge: String
+        public let countsText: String
+        public let auraColor: Color
+        public let leadTrack: UniversalTrack
     }
     
     // MARK: - Data (Zero Emojis, High-Contrast Palette)
@@ -250,6 +282,117 @@ public struct SpotifyHomeFeedView: View {
         )
     ]
     
+    private let topArtistPasses: [VIPArtistPassItem] = [
+        VIPArtistPassItem(
+            id: 401,
+            rank: "#1",
+            name: "Travis Scott",
+            photoGradient: [Color(hex: "#1E1B4B"), Color(hex: "#0F0E2A")],
+            streamsText: "342M streams",
+            affinityText: "99% match",
+            leadTrack: UniversalTrack(title: "MY EYES", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 251000, spotifyId: "art_401")
+        ),
+        VIPArtistPassItem(
+            id: 402,
+            rank: "#2",
+            name: "SZA",
+            photoGradient: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+            streamsText: "285M streams",
+            affinityText: "98% match",
+            leadTrack: UniversalTrack(title: "Snooze", artists: ["SZA"], album: "SOS", durationMs: 201000, spotifyId: "art_402")
+        ),
+        VIPArtistPassItem(
+            id: 403,
+            rank: "#3",
+            name: "Playboi Carti",
+            photoGradient: [Color(hex: "#4A0E17"), Color(hex: "#1A0508")],
+            streamsText: "210M streams",
+            affinityText: "96% match",
+            leadTrack: UniversalTrack(title: "2024", artists: ["Playboi Carti"], album: "MUSIC", durationMs: 165000, spotifyId: "art_403")
+        ),
+        VIPArtistPassItem(
+            id: 404,
+            rank: "#4",
+            name: "Kendrick Lamar",
+            photoGradient: [Color(hex: "#78350F"), Color(hex: "#292524")],
+            streamsText: "194M streams",
+            affinityText: "95% match",
+            leadTrack: UniversalTrack(title: "Not Like Us", artists: ["Kendrick Lamar"], album: "GNX", durationMs: 274000, spotifyId: "art_404")
+        ),
+        VIPArtistPassItem(
+            id: 405,
+            rank: "#5",
+            name: "Дора",
+            photoGradient: [Color(hex: "#BE185D"), Color(hex: "#500724")],
+            streamsText: "140M streams",
+            affinityText: "94% match",
+            leadTrack: UniversalTrack(title: "Втюрилась", artists: ["Дора"], album: "Боже, храни кьют-рок", durationMs: 148000, spotifyId: "art_405")
+        )
+    ]
+    
+    private let soundStripReleases: [SoundStripReleaseItem] = [
+        SoundStripReleaseItem(
+            id: 501,
+            title: "Ruby Rosary",
+            artists: "A$AP Rocky, J. Cole",
+            badgeText: "TODAY",
+            tagText: "SINGLE",
+            coverGradient: [Color(hex: "#7F1D1D"), Color(hex: "#1C0505")],
+            symbolIcon: "sparkles",
+            leadTrack: UniversalTrack(title: "Ruby Rosary", artists: ["A$AP Rocky", "J. Cole"], album: "Don't Be Dumb", durationMs: 215000, spotifyId: "rel_501")
+        ),
+        SoundStripReleaseItem(
+            id: 502,
+            title: "CHROMAKOPIA",
+            artists: "Tyler, The Creator",
+            badgeText: "2D AGO",
+            tagText: "ALBUM • 14 TRACKS",
+            coverGradient: [Color(hex: "#14532D"), Color(hex: "#052E16")],
+            symbolIcon: "theatermasks.fill",
+            leadTrack: UniversalTrack(title: "St. Chroma", artists: ["Tyler, The Creator", "Daniel Caesar"], album: "CHROMAKOPIA", durationMs: 197000, spotifyId: "rel_502")
+        ),
+        SoundStripReleaseItem(
+            id: 503,
+            title: "Brat (Remix)",
+            artists: "Charli xcx, Billie Eilish",
+            badgeText: "THIS WEEK",
+            tagText: "DELUXE",
+            coverGradient: [Color(hex: "#65A30D"), Color(hex: "#1A2E05")],
+            symbolIcon: "bolt.fill",
+            leadTrack: UniversalTrack(title: "Guess feat. Billie Eilish", artists: ["Charli xcx", "Billie Eilish"], album: "Brat and it's completely different", durationMs: 178000, spotifyId: "rel_503")
+        )
+    ]
+    
+    private let smokedGlassVibes: [SmokedGlassVibeItem] = [
+        SmokedGlassVibeItem(
+            id: 601,
+            title: "Midnight Velocity",
+            subtitle: "Dark Synthwave & Heavy 808",
+            moodBadge: "LATE NIGHT 432Hz",
+            countsText: "32 tracks • 1 hr 54m",
+            auraColor: Color(hex: "#4338CA"),
+            leadTrack: UniversalTrack(title: "Night Drive Pulse", artists: ["Kavinsky", "HOME"], album: "Midnight Velocity", durationMs: 230000, spotifyId: "vibe_601")
+        ),
+        SmokedGlassVibeItem(
+            id: 602,
+            title: "Sub-Bass Coliseum",
+            subtitle: "Travis Scott, Carti, Metro",
+            moodBadge: "HEAVY BASS 808",
+            countsText: "28 tracks • 1 hr 35m",
+            auraColor: Color(hex: "#DC2626"),
+            leadTrack: UniversalTrack(title: "FE!N", artists: ["Travis Scott", "Playboi Carti"], album: "Sub-Bass Coliseum", durationMs: 191000, spotifyId: "vibe_602")
+        ),
+        SmokedGlassVibeItem(
+            id: 603,
+            title: "Morning Warm Wax",
+            subtitle: "Rhodes, Warm Vinyl, Soul",
+            moodBadge: "ANALOG WARMTH",
+            countsText: "26 tracks • 1 hr 22m",
+            auraColor: Color(hex: "#F59E0B"),
+            leadTrack: UniversalTrack(title: "Morning Warm Wax", artists: ["Nujabes", "Saib"], album: "Analog Coffee", durationMs: 210000, spotifyId: "vibe_603")
+        )
+    ]
+    
     private let newMusicFridayItems: [AlbumCardItem] = [
         AlbumCardItem(
             id: 101,
@@ -383,7 +526,7 @@ public struct SpotifyHomeFeedView: View {
     
     public var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .top) {
                 // Dynamic Ambient Gradient Wash (changes on each session)
                 AmbientWashBackgroundView(tab: .home)
                 
@@ -407,9 +550,46 @@ public struct SpotifyHomeFeedView: View {
                         
                         // 6. TOP VAULT ALBUMS (Vinyl Crate Shelf with Peeking Discs)
                         topAlbumsCrateSection
+                        
+                        // 7. TOP ARTISTS (VIP Backstage Pass Lanyards)
+                        topArtistsLanyardSection
+                        
+                        // 8. FRESH RELEASES (Interactive SoundStrip Samplers)
+                        freshReleasesSoundStripsSection
+                        
+                        // 9. CURATED MIXES (Smoked Glass Vibe Tiles)
+                        curatedMixesVibeTilesSection
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 120) // Full clearance for Floating Mini Player
+                }
+                
+                // TOP-DOWN ALBUM VAULT (SLIDES DOWN FROM TOP OF PHONE SCREEN)
+                if let album = selectedVaultAlbum {
+                    VaultAlbumTopDownView(album: album) {
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                            selectedVaultAlbum = nil
+                        }
+                    }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+                    .zIndex(100)
+                }
+                
+                // TOP-DOWN CASSETTE MIXTAPE RADIO (SLIDES DOWN FROM TOP OF PHONE SCREEN)
+                if let tape = selectedCassetteTape {
+                    CassetteRadioDetailView(tape: tape) {
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                            selectedCassetteTape = nil
+                        }
+                    }
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+                    .zIndex(101)
                 }
             }
             #if os(iOS)
@@ -417,9 +597,6 @@ public struct SpotifyHomeFeedView: View {
             #endif
             .sheet(isPresented: $showingProfileSheet) {
                 UserProfileSheet()
-            }
-            .sheet(item: $selectedVaultAlbum) { album in
-                VaultAlbumDetailSheet(album: album)
             }
         }
     }
@@ -768,16 +945,12 @@ public struct SpotifyHomeFeedView: View {
     private var cassetteTapesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("FRIDAY DROPS PICKED FOR YOU")
+                Text("FRIDAY DROPS")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
                 
                 Spacer()
-                
-                Text("CASSETTE DECK")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(PastelTheme.warmAmber)
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
@@ -789,7 +962,9 @@ public struct SpotifyHomeFeedView: View {
                             isPlaying: isPlaying,
                             onTogglePlay: {
                                 HapticManager.lightImpact()
-                                toggleCassettePlayback(drop)
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                    selectedCassetteTape = drop
+                                }
                             }
                         )
                     }
@@ -802,16 +977,12 @@ public struct SpotifyHomeFeedView: View {
     private var topAlbumsCrateSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("TOP VAULT ALBUMS")
+                Text("TOP ALBUMS")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
                 
                 Spacer()
-                
-                Text("VINYL CRATE")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(PastelTheme.slateBlue)
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
@@ -823,7 +994,99 @@ public struct SpotifyHomeFeedView: View {
                             isPlaying: isPlaying,
                             onOpenAlbum: {
                                 HapticManager.lightImpact()
-                                selectedVaultAlbum = album
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                    selectedVaultAlbum = album
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - 7. Top Artists (VIP Backstage Pass Lanyards)
+    private var topArtistsLanyardSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("TOP ARTISTS")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Spacer()
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(topArtistPasses) { pass in
+                        let isPlaying = player.isPlaying && player.currentTrack?.title == pass.leadTrack.title
+                        VIPArtistPassCard(
+                            pass: pass,
+                            isPlaying: isPlaying,
+                            onPlay: {
+                                HapticManager.lightImpact()
+                                player.play(track: pass.leadTrack)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - 8. Fresh Releases (Interactive SoundStrip Samplers)
+    private var freshReleasesSoundStripsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("FRESH RELEASES")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Spacer()
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(soundStripReleases) { release in
+                        let isPlaying = player.isPlaying && player.currentTrack?.title == release.leadTrack.title
+                        SoundStripReleaseCard(
+                            item: release,
+                            isPlaying: isPlaying,
+                            onPlay: {
+                                HapticManager.lightImpact()
+                                player.play(track: release.leadTrack)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - 9. Curated Mixes (Smoked Glass Vibe Tiles)
+    private var curatedMixesVibeTilesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("CURATED MIXES")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Spacer()
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(smokedGlassVibes) { vibe in
+                        let isPlaying = player.isPlaying && player.currentTrack?.title == vibe.leadTrack.title
+                        SmokedGlassVibeCard(
+                            item: vibe,
+                            isPlaying: isPlaying,
+                            onPlay: {
+                                HapticManager.lightImpact()
+                                player.play(track: vibe.leadTrack)
                             }
                         )
                     }
@@ -1515,6 +1778,310 @@ public struct VaultAlbumCrateCard: View {
                         .lineLimit(1)
                 }
                 .frame(width: 126, alignment: .leading)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - 7. VIP Backstage Pass Card
+public struct VIPArtistPassCard: View {
+    public let pass: SpotifyHomeFeedView.VIPArtistPassItem
+    public let isPlaying: Bool
+    public let onPlay: () -> Void
+    
+    public var body: some View {
+        Button(action: onPlay) {
+            ZStack(alignment: .top) {
+                // Background Photo / Gradient
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: pass.photoGradient,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 118, height: 168)
+                
+                // Dark Scrim for text readability
+                LinearGradient(
+                    colors: [Color.clear, Color.black.opacity(0.85)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .frame(width: 118, height: 168)
+                
+                // Hologram Foil Diagonal Sheen
+                LinearGradient(
+                    colors: [Color.clear, Color.white.opacity(0.12), Color.clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .frame(width: 118, height: 168)
+                
+                // Outer Border
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isPlaying ? PastelTheme.athleticEmerald : PastelTheme.cardBorder, lineWidth: 1)
+                    .frame(width: 118, height: 168)
+                
+                // Lanyard Clasp Assembly at Top
+                VStack(spacing: 0) {
+                    // Strap Tab
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color(hex: "#1A1B22"))
+                        .frame(width: 28, height: 10)
+                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                        .offset(y: -4)
+                    
+                    // Metal Chrome Grommet Clamp
+                    ZStack {
+                        Capsule()
+                            .fill(LinearGradient(colors: [Color(hex: "#E5E7EB"), Color(hex: "#6B7280")], startPoint: .top, endPoint: .bottom))
+                            .frame(width: 32, height: 8)
+                        Circle()
+                            .fill(Color(hex: "#0E0F12"))
+                            .frame(width: 4, height: 4)
+                    }
+                    .offset(y: -2)
+                }
+                
+                // Card Inner Contents
+                VStack(alignment: .leading, spacing: 0) {
+                    // Top Rank Pill (#1, #2, etc.)
+                    HStack {
+                        Text(pass.rank)
+                            .font(.system(size: 9.5, weight: .heavy, design: .rounded))
+                            .foregroundColor(PastelTheme.warmAmber)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(PastelTheme.warmAmber.opacity(0.2))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(PastelTheme.warmAmber.opacity(0.4), lineWidth: 0.8))
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 16)
+                    .padding(.horizontal, 8)
+                    
+                    Spacer()
+                    
+                    // Bottom Artist Name & Streams
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pass.name)
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Text(pass.streamsText)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(Color(hex: "#9CA3AF"))
+                            .lineLimit(1)
+                        
+                        HStack {
+                            Text(pass.affinityText)
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundColor(PastelTheme.athleticEmerald)
+                            
+                            Spacer()
+                            
+                            // Play Circle
+                            ZStack {
+                                Circle()
+                                    .fill(isPlaying ? PastelTheme.athleticEmerald : PastelTheme.pastelOat)
+                                    .frame(width: 22, height: 22)
+                                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundColor(isPlaying ? .white : PastelTheme.textOnOat)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 8)
+                }
+                .frame(width: 118, height: 168)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - 8. Interactive SoundStrip Release Card
+public struct SoundStripReleaseCard: View {
+    public let item: SpotifyHomeFeedView.SoundStripReleaseItem
+    public let isPlaying: Bool
+    public let onPlay: () -> Void
+    
+    public var body: some View {
+        Button(action: onPlay) {
+            HStack(spacing: 12) {
+                // Left: Square Cover Art
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: item.coverGradient,
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 84, height: 84)
+                    
+                    Image(systemName: item.symbolIcon)
+                        .font(.system(size: 24))
+                        .foregroundColor(.white.opacity(0.85))
+                        .frame(width: 84, height: 84)
+                    
+                    // Badge (TODAY, THIS WEEK)
+                    Text(item.badgeText)
+                        .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1.5)
+                        .background(PastelTheme.athleticEmerald)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                        .padding(5)
+                }
+                .frame(width: 84, height: 84)
+                
+                // Right: Information & Mini Waveform Bar
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.tagText)
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(PastelTheme.warmAmber)
+                    
+                    Text(item.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Text(item.artists)
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .lineLimit(1)
+                    
+                    Spacer(minLength: 2)
+                    
+                    // Mini Player Bar
+                    HStack(spacing: 6) {
+                        Text(item.leadTrack.title)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        if isPlaying {
+                            WaveformBarsView(color: PastelTheme.athleticEmerald, isAnimating: true)
+                                .frame(width: 14, height: 10)
+                        }
+                        
+                        // Mini Play Circle
+                        ZStack {
+                            Circle()
+                                .fill(PastelTheme.pastelOat)
+                                .frame(width: 18, height: 18)
+                            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: 7, weight: .bold))
+                                .foregroundColor(PastelTheme.textOnOat)
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 84)
+            }
+            .padding(10)
+            .frame(width: 236, height: 104)
+            .background(PastelTheme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isPlaying ? PastelTheme.athleticEmerald : PastelTheme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - 9. Smoked Glass Vibe Card
+public struct SmokedGlassVibeCard: View {
+    public let item: SpotifyHomeFeedView.SmokedGlassVibeItem
+    public let isPlaying: Bool
+    public let onPlay: () -> Void
+    
+    public var body: some View {
+        Button(action: onPlay) {
+            ZStack(alignment: .topLeading) {
+                // Smoked Glass Surface
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(hex: "#17181D").opacity(0.95))
+                    .frame(width: 160, height: 108)
+                
+                // Mood Aura Glow in top right corner
+                Circle()
+                    .fill(item.auraColor.opacity(0.45))
+                    .frame(width: 80, height: 80)
+                    .blur(radius: 20)
+                    .offset(x: 90, y: -20)
+                
+                // Border
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isPlaying ? PastelTheme.slateBlue : PastelTheme.cardBorder, lineWidth: 1)
+                    .frame(width: 160, height: 108)
+                
+                // Content
+                VStack(alignment: .leading, spacing: 6) {
+                    // Mood Badge
+                    Text(item.moodBadge)
+                        .font(.system(size: 7.5, weight: .heavy, design: .monospaced))
+                        .foregroundColor(PastelTheme.pastelOat)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(PastelTheme.cardBorder, lineWidth: 0.5))
+                    
+                    Spacer()
+                    
+                    // Title & Subtitle
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.title)
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Text(item.subtitle)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(Color(hex: "#9CA3AF"))
+                            .lineLimit(1)
+                    }
+                    
+                    // Footer: Counts & VU Meter
+                    HStack {
+                        Text(item.countsText)
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundColor(Color(hex: "#6B7280"))
+                        
+                        Spacer()
+                        
+                        // Animated VU Bars
+                        HStack(spacing: 2) {
+                            ForEach(0..<4) { i in
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(PastelTheme.slateBlue)
+                                    .frame(width: 2.5, height: isPlaying ? CGFloat([6, 11, 4, 9][i]) : 3)
+                            }
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(width: 160, height: 108, alignment: .leading)
             }
         }
         .buttonStyle(PlainButtonStyle())

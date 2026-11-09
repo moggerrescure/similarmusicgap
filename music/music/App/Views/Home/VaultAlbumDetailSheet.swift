@@ -416,18 +416,36 @@ public struct VaultAlbumDetailSheet: View {
 }
 
 // MARK: - Sheet Spinning Vinyl Disc View
-private struct SheetSpinningVinylDiscView: View {
-    let isPlaying: Bool
-    let waxGradient: [Color]
-    let labelGradient: [Color]
-    let labelTextColor: Color
-    let symbolOrInitial: String
-    let glowColor: Color
-    let diameter: CGFloat
+public struct SheetSpinningVinylDiscView: View {
+    public let isPlaying: Bool
+    public let waxGradient: [Color]
+    public let labelGradient: [Color]
+    public let labelTextColor: Color
+    public let symbolOrInitial: String
+    public let glowColor: Color
+    public let diameter: CGFloat
+    
+    public init(
+        isPlaying: Bool,
+        waxGradient: [Color],
+        labelGradient: [Color],
+        labelTextColor: Color,
+        symbolOrInitial: String,
+        glowColor: Color,
+        diameter: CGFloat
+    ) {
+        self.isPlaying = isPlaying
+        self.waxGradient = waxGradient
+        self.labelGradient = labelGradient
+        self.labelTextColor = labelTextColor
+        self.symbolOrInitial = symbolOrInitial
+        self.glowColor = glowColor
+        self.diameter = diameter
+    }
     
     @StateObject private var motionTracker = SheetRotationTracker()
     
-    var body: some View {
+    public var body: some View {
         TimelineView(.animation(paused: !isPlaying)) { timeline in
             let playTime = motionTracker.advance(currentDate: timeline.date, isPlaying: isPlaying)
             let rotation = (playTime.truncatingRemainder(dividingBy: 3.5) / 3.5) * 360.0
@@ -528,12 +546,14 @@ private struct SheetSpinningVinylDiscView: View {
     }
 }
 
-private final class SheetRotationTracker: ObservableObject {
-    @Published var tick: Bool = false
-    var accumulatedTime: Double = 0.0
-    var lastDate: Date? = nil
+public final class SheetRotationTracker: ObservableObject {
+    @Published public var tick: Bool = false
+    public var accumulatedTime: Double = 0.0
+    public var lastDate: Date? = nil
     
-    func advance(currentDate: Date, isPlaying: Bool) -> Double {
+    public init() {}
+    
+    public func advance(currentDate: Date, isPlaying: Bool) -> Double {
         guard isPlaying else {
             lastDate = nil
             return accumulatedTime

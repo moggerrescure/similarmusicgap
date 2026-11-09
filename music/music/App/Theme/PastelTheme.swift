@@ -52,6 +52,7 @@ public enum PastelTheme {
     // MARK: - Functional Accents
     /// 100% precision match, sync completed, PR
     public static let emeraldSuccess = Color(hex: "#10B981")
+    public static let athleticEmerald = emeraldSuccess
     /// Partial match, active transfer, streaks
     public static let amberWarning = Color(hex: "#FBBF24")
     public static let warmAmber = amberWarning
@@ -110,6 +111,14 @@ public enum HapticManager {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.prepare()
         generator.impactOccurred()
+        #endif
+    }
+    
+    public static func selectionChanged() {
+        #if os(iOS)
+        let generator = UISelectionFeedbackGenerator()
+        generator.prepare()
+        generator.selectionChanged()
         #endif
     }
     
