@@ -11,6 +11,23 @@ public struct TransferReportView: View {
     }
     
     private var isFailure: Bool { !report.didSucceed }
+    private var headlineColor: Color {
+        if isFailure { return Color.red.opacity(0.9) }
+        if report.isPartialSuccess || report.warningMessage != nil { return PastelTheme.amberWarning }
+        return PastelTheme.emeraldSuccess
+    }
+    private var headlineTitle: String {
+        if isFailure { return "Migration Failed" }
+        if report.isNothingNewSuccess { return "Nothing New to Write" }
+        if report.isPartialSuccess { return "Migration Partially Complete" }
+        if report.warningMessage != nil { return "Migration Complete with Warnings" }
+        return "Migration Complete"
+    }
+    private var headlineIcon: String {
+        if isFailure { return "xmark.octagon.fill" }
+        if report.isPartialSuccess || report.warningMessage != nil { return "exclamationmark.triangle.fill" }
+        return "checkmark.seal.fill"
+    }
     
     public var body: some View {
         NavigationStack {
@@ -24,21 +41,18 @@ public struct TransferReportView: View {
                             .fill(PastelTheme.card)
                             .frame(width: 90, height: 90)
                             .overlay(
-                                Image(systemName: isFailure ? "xmark.octagon.fill" : "checkmark.seal.fill")
+                                Image(systemName: headlineIcon)
                                     .font(.system(size: 48))
-                                    .foregroundColor(isFailure ? Color.red.opacity(0.9) : PastelTheme.emeraldSuccess)
+                                    .foregroundColor(headlineColor)
                             )
                             .overlay(
                                 Circle()
-                                    .stroke(
-                                        (isFailure ? Color.red : PastelTheme.emeraldSuccess).opacity(0.4),
-                                        lineWidth: 1
-                                    )
+                                    .stroke(headlineColor.opacity(0.4), lineWidth: 1)
                             )
                             .padding(.top, 24)
                         
                         VStack(spacing: 6) {
-                            Text(isFailure ? "Migration Failed" : "Migration Complete")
+                            Text(headlineTitle)
                                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                                 .foregroundColor(PastelTheme.textPrimary)
                             
@@ -55,18 +69,29 @@ public struct TransferReportView: View {
                                 .padding(.horizontal, 20)
                         }
                         
-                        HStack(spacing: 12) {
+                        if let warning = report.warningMessage {
+                            Text(warning)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(PastelTheme.amberWarning)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
+                        
+                        HStack(spacing: 10) {
                             ReportMetricCell(
                                 title: "TRANSFERRED",
                                 value: "\(report.successfullyTransferred)",
                                 color: PastelTheme.emeraldSuccess
                             )
                             ReportMetricCell(
-                                title: report.skippedExisting > 0 ? "ALREADY THERE" : "REMATCHED",
-                                value: report.skippedExisting > 0
-                                    ? "\(report.skippedExisting)"
-                                    : "\(report.alternatesAccepted)",
+                                title: "ALREADY",
+                                value: "\(report.skippedExisting)",
                                 color: PastelTheme.amberWarning
+                            )
+                            ReportMetricCell(
+                                title: "REMATCHED",
+                                value: "\(report.alternatesAccepted)",
+                                color: PastelTheme.slateBlue
                             )
                             ReportMetricCell(
                                 title: "MISSING",

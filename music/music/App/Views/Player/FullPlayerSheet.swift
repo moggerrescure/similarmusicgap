@@ -12,6 +12,11 @@ public struct FullPlayerSheet: View {
         self.track = track
     }
     
+    /// Always follow the live queue head — Next/Previous must not leave stale title/♥.
+    private var activeTrack: UniversalTrack {
+        player.currentTrack ?? track
+    }
+    
     /// Honest chrome: previews are not full playlist playback.
     private var playerContextEyebrow: String {
         if player.isPreviewPlayback {
@@ -20,17 +25,17 @@ public struct FullPlayerSheet: View {
         if !player.hasPlayablePreview {
             return "NO PREVIEW"
         }
-        if track.album != nil {
+        if activeTrack.album != nil {
             return "FROM ALBUM"
         }
         return "FROM LIBRARY"
     }
     
     private var playerContextTitle: String {
-        if let album = track.album, !album.isEmpty {
+        if let album = activeTrack.album, !album.isEmpty {
             return album
         }
-        return track.primaryArtist
+        return activeTrack.primaryArtist
     }
     
     public var body: some View {
@@ -74,23 +79,23 @@ public struct FullPlayerSheet: View {
                     Spacer()
                     
                     Menu {
-                        if track.spotifyId != nil {
+                        if activeTrack.spotifyId != nil {
                             Button("Open in Spotify") {
-                                DeepLinkManager.openTrack(track: track, in: .spotify)
+                                DeepLinkManager.openTrack(track: activeTrack, in: .spotify)
                             }
                         }
-                        if track.appleMusicId != nil {
+                        if activeTrack.appleMusicId != nil {
                             Button("Open in Apple Music") {
-                                DeepLinkManager.openTrack(track: track, in: .appleMusic)
+                                DeepLinkManager.openTrack(track: activeTrack, in: .appleMusic)
                             }
                         }
-                        if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil {
+                        if YandexMusicProvider.isConnectorEnabled, activeTrack.yandexId != nil {
                             Button("Open in Yandex Music") {
-                                DeepLinkManager.openTrack(track: track, in: .yandexMusic)
+                                DeepLinkManager.openTrack(track: activeTrack, in: .yandexMusic)
                             }
                         }
                         Button("Toggle favorite") {
-                            player.toggleFavorite(track: track)
+                            player.toggleFavorite(track: activeTrack)
                         }
                     } label: {
                         Image(systemName: "ellipsis")
@@ -127,13 +132,13 @@ public struct FullPlayerSheet: View {
                 // MARK: - Title & Artist & Favorite
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(track.title)
+                        Text(activeTrack.title)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
                             .lineLimit(1)
                             .contentTransition(.opacity)
                         
-                        Text(track.primaryArtist)
+                        Text(activeTrack.primaryArtist)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(PastelTheme.textSecondary)
                             .lineLimit(1)
@@ -149,22 +154,22 @@ public struct FullPlayerSheet: View {
                                 .foregroundColor(PastelTheme.amberWarning)
                         }
                     }
-                    .animation(.smooth(duration: 0.35), value: track.id)
+                    .animation(.smooth(duration: 0.35), value: activeTrack.id)
                     
                     Spacer()
                     
                     // Favorite Toggle (Clean borderless)
                     Button {
                         HapticManager.lightImpact()
-                        player.toggleFavorite(track: track)
+                        player.toggleFavorite(track: activeTrack)
                     } label: {
-                        Image(systemName: player.isFavorite(track: track) ? "heart.fill" : "heart")
+                        Image(systemName: player.isFavorite(track: activeTrack) ? "heart.fill" : "heart")
                             .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(player.isFavorite(track: track) ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
+                            .foregroundColor(player.isFavorite(track: activeTrack) ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
-                    .accessibilityLabel(player.isFavorite(track: track) ? "Remove from favorites" : "Add to favorites")
+                    .accessibilityLabel(player.isFavorite(track: activeTrack) ? "Remove from favorites" : "Add to favorites")
                 }
                 .padding(.horizontal, 28)
                 

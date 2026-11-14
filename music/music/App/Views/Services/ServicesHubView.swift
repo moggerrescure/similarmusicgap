@@ -3,6 +3,7 @@ import SwiftUI
 /// Screen: Connected Services Hub & Security Center
 public struct ServicesHubView: View {
     @StateObject private var coordinator = ServicesCoordinator.shared
+    @Environment(\.dismiss) private var dismiss
     @State private var showingExportSheet: Bool = false
     @State private var showingSpotifySetup: Bool = false
     @State private var exportURL: URL?
@@ -23,6 +24,7 @@ public struct ServicesHubView: View {
                                 value: "\(coordinator.totalTracksCount)",
                                 color: PastelTheme.pastelOat,
                                 onTap: {
+                                    dismiss()
                                     NavigationCoordinator.shared.navigateToLibrary()
                                 }
                             )
@@ -30,15 +32,14 @@ public struct ServicesHubView: View {
                                 title: "CONNECTED",
                                 value: "\(coordinator.activeProvidersCount) of 2",
                                 color: coordinator.activeProvidersCount > 0 ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary,
-                                onTap: {
-                                    NavigationCoordinator.shared.navigateToServices()
-                                }
+                                onTap: nil
                             )
                             HUDMetricBox(
                                 title: "PLAYLISTS",
                                 value: "\(coordinator.allPlaylists.count)",
                                 color: PastelTheme.slateBlue,
                                 onTap: {
+                                    dismiss()
                                     NavigationCoordinator.shared.navigateToLibrary()
                                 }
                             )
@@ -137,6 +138,7 @@ public struct ServicesHubView: View {
                         // MARK: - Migration CTA
                         Button {
                             HapticManager.lightImpact()
+                            dismiss()
                             NavigationCoordinator.shared.navigateToMove()
                         } label: {
                             HStack(spacing: 10) {

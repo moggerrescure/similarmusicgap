@@ -928,16 +928,22 @@ public struct TransferConfigView: View {
                                 Text("Живой мост")
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                             }
-                            .foregroundColor(PastelTheme.pastelOat)
+                            .foregroundColor(hasSelection && !transferManager.isMigrating ? PastelTheme.pastelOat : PastelTheme.textTertiary)
                             .frame(width: 130)
                             .frame(height: 44)
                             .background(PastelTheme.cardSubtle)
                             .clipShape(Capsule())
                             .overlay(
                                 Capsule()
-                                    .stroke(PastelTheme.marbleBorder, lineWidth: 1.2)
+                                    .stroke(
+                                        hasSelection && !transferManager.isMigrating
+                                            ? PastelTheme.marbleBorder
+                                            : PastelTheme.cardBorder.opacity(0.4),
+                                        lineWidth: 1.2
+                                    )
                             )
                         }
+                        .disabled(!hasSelection || transferManager.isMigrating)
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.2))
                     }
                 }

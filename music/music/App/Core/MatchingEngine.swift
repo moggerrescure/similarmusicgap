@@ -231,7 +231,8 @@ public final class MatchingEngine {
         
         let a = Array(s1)
         let b = Array(s2)
-        let maxDist = max(a.count, b.count) / 2 - 1
+        // Clamp: for 1-char strings `count/2 - 1` is negative and crashes Range.
+        let maxDist = max(0, max(a.count, b.count) / 2 - 1)
         
         var aMatches = [Bool](repeating: false, count: a.count)
         var bMatches = [Bool](repeating: false, count: b.count)
@@ -240,6 +241,7 @@ public final class MatchingEngine {
         for i in 0..<a.count {
             let start = max(0, i - maxDist)
             let end = min(i + maxDist + 1, b.count)
+            guard start < end else { continue }
             for j in start..<end {
                 if bMatches[j] || a[i] != b[j] { continue }
                 aMatches[i] = true

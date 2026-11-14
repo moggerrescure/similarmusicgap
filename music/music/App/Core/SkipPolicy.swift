@@ -9,14 +9,36 @@ public enum SkipPolicy {
         destinationLibrary: [UniversalTrack],
         source: UniversalTrack
     ) -> Bool {
+        // Prefer ISRC when both sides have it — but fall through if library rows lack ISRC.
         if let isrc = source.isrc?.uppercased(), !isrc.isEmpty {
-            return destinationLibrary.contains { $0.isrc?.uppercased() == isrc }
+            if destinationLibrary.contains(where: { $0.isrc?.uppercased() == isrc }) {
+                return true
+            }
+        }
+        if let matchedISRC = matched.isrc?.uppercased(), !matchedISRC.isEmpty {
+            if destinationLibrary.contains(where: { $0.isrc?.uppercased() == matchedISRC }) {
+                return true
+            }
         }
         if let sp = matched.spotifyId, !sp.isEmpty {
-            return destinationLibrary.contains { $0.spotifyId == sp }
+            if destinationLibrary.contains(where: { $0.spotifyId == sp }) {
+                return true
+            }
         }
         if let am = matched.appleMusicId, !am.isEmpty {
-            return destinationLibrary.contains { $0.appleMusicId == am }
+            if destinationLibrary.contains(where: { $0.appleMusicId == am }) {
+                return true
+            }
+        }
+        if let sourceSp = source.spotifyId, !sourceSp.isEmpty {
+            if destinationLibrary.contains(where: { $0.spotifyId == sourceSp }) {
+                return true
+            }
+        }
+        if let sourceAm = source.appleMusicId, !sourceAm.isEmpty {
+            if destinationLibrary.contains(where: { $0.appleMusicId == sourceAm }) {
+                return true
+            }
         }
         let title = matched.title.lowercased()
         let artist = matched.primaryArtist.lowercased()

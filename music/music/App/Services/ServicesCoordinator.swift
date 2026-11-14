@@ -178,6 +178,7 @@ public final class ServicesCoordinator: ObservableObject {
         var aggregatedTracks: [UniversalTrack] = []
         var aggregatedPlaylists: [UniversalPlaylist] = []
         var syncedProviders: [String] = []
+        var failedTypes: [MusicProviderType] = []
         var failures: [String] = []
         
         for type in MusicProviderType.allCases {
@@ -202,6 +203,7 @@ public final class ServicesCoordinator: ObservableObject {
                 aggregatedPlaylists.append(contentsOf: pls)
                 syncedProviders.append(type.displayName)
             } catch {
+                failedTypes.append(type)
                 failures.append("\(type.displayName): \(error.localizedDescription)")
             }
         }
@@ -223,11 +225,18 @@ public final class ServicesCoordinator: ObservableObject {
             return
         }
         
+        // Partial failure: keep previous rows for providers that errored (don't orphan Apple when Spotify-only succeeds).
+        for type in failedTypes {
+            aggregatedTracks.append(contentsOf: tracks(for: type))
+            aggregatedPlaylists.append(contentsOf: allPlaylists.filter { $0.providerType == type })
+        }
+        
         // Deduplicate by ISRC when possible, else title+artist+duration
         self.allTracks = Self.deduplicate(aggregatedTracks)
         self.allPlaylists = aggregatedPlaylists
         self.lastSyncAt = Date()
-        self.lastSyncSummary = "Synced \(allTracks.count) tracks from \(syncedProviders.joined(separator: ", "))"
+        let keptNote = failedTypes.isEmpty ? "" : " · kept cache for \(failedTypes.map(\.displayName).joined(separator: ", "))"
+        self.lastSyncSummary = "Synced \(allTracks.count) tracks from \(syncedProviders.joined(separator: ", "))\(keptNote)"
         
         if !failures.isEmpty {
             lastErrorMessage = failures.joined(separator: "\n")

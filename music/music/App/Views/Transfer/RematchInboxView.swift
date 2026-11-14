@@ -49,7 +49,9 @@ public struct RematchInboxView: View {
         let dryRun = transferManager.lastDryRun
         let report = transferManager.lastReport
         let allStrong = (dryRun?.alternateMatchesCount ?? -1) == 0
+            && (dryRun?.missingCount ?? -1) == 0
             && (dryRun?.totalTracks ?? 0) > 0
+            && (dryRun?.exactMatchesCount ?? 0) == (dryRun?.totalTracks ?? -1)
         
         VStack(spacing: 16) {
             Image(systemName: allStrong ? "checkmark.circle.fill" : "tray")

@@ -32,6 +32,16 @@ public struct PlaylistDetailSheet: View {
             }
             .navigationTitle(playlist.title)
             .inlineNavigationBarTitle()
+            .safeAreaInset(edge: .bottom) {
+                Text("Edits here update SoundShift’s local view — they don’t rewrite the playlist on Spotify or Apple Music yet.")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(PastelTheme.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(PastelTheme.canvas.opacity(0.95))
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -155,6 +165,7 @@ public struct PlaylistDetailSheet: View {
     private func removeTracks(at offsets: IndexSet) {
         for idx in offsets {
             let track = playlistTracks[idx]
+            // Local snapshot only — Spotify/Apple playlist membership is not rewritten here.
             coordinator.removeTrackFromPlaylist(track: track, playlistId: playlist.id)
         }
         playlistTracks.remove(atOffsets: offsets)

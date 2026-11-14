@@ -262,9 +262,13 @@ public final class TransferManager: ObservableObject {
             self.lastDryRun = summary
             self.rematchQueue = pendingRematches
             self.lastMatchResults = results
-            self.statusMessage = pool.destinationLibrary.isEmpty && !uniqueTracks.isEmpty
-                ? "Destination library empty — \(missingCount) unmatched. Connect & sync destination, then re-run."
-                : "Dry-run: \(exactCount) strong (ISRC/high) · \(alternateCount) alternate · \(missingCount) missing"
+            if pool.destinationLibrary.isEmpty && !uniqueTracks.isEmpty {
+                self.statusMessage = exactCount > 0
+                    ? "Destination library empty locally — \(exactCount) strong via catalog · \(alternateCount) alternate · \(missingCount) missing. Sync destination for Skip accuracy."
+                    : "Destination library empty — \(missingCount) unmatched. Connect & sync destination, then re-run."
+            } else {
+                self.statusMessage = "Dry-run: \(exactCount) strong (ISRC/high) · \(alternateCount) alternate · \(missingCount) missing"
+            }
             return summary
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -285,14 +289,31 @@ public final class TransferManager: ObservableObject {
         scope: TransferScope,
         policy: ConflictPolicy
     ) async -> TransferExecutionReport {
+        if isMigrating {
+            let busy = TransferExecutionReport(
+                sourceProvider: sourceType,
+                destinationProvider: destinationType,
+                totalTracks: totalToProcess,
+                successfullyTransferred: 0,
+                errorMessage: "A migration is already running — wait for it to finish."
+            )
+            lastErrorMessage = busy.errorMessage
+            return busy
+        }
+        
         self.isMigrating = true
         self.progress = 0.0
         self.processedCount = 0
+        self.totalToProcess = 0
+        self.currentTrackTitle = ""
+        self.currentTrackArtist = ""
         self.lastErrorMessage = nil
         self.statusMessage = "Preparing migration…"
         
         let startTime = Date()
         let destinationProvider = servicesCoordinator.provider(for: destinationType)
+        var missingList: [UniversalTrack] = []
+        var rematchSnapshot: [MatchResult] = []
         
         do {
             try requireLivePair(sourceType: sourceType, destinationType: destinationType)
@@ -312,7 +333,7 @@ public final class TransferManager: ObservableObject {
             let pool = try await buildCandidatePool(destinationType: destinationType, sourceTracks: sourceTracks)
             
             var transferable: [UniversalTrack] = []
-            var missingList: [UniversalTrack] = []
+            missingList = []
             var alternatesAccepted = 0
             var skippedExisting = 0
             var results: [MatchResult] = []
@@ -388,6 +409,13 @@ public final class TransferManager: ObservableObject {
             }
             
             self.lastMatchResults = results
+            rematchSnapshot = results.filter { result in
+                guard case .alternate = result.confidence else { return false }
+                if acceptedRematchIds.contains(result.sourceTrack.id) { return false }
+                if skippedRematchIds.contains(result.sourceTrack.id) { return false }
+                if autoAcceptAlternates { return false }
+                return missingList.contains(where: { $0.id == result.sourceTrack.id })
+            }
             
             // Deduplicate destination IDs before write
             transferable = Self.deduplicate(transferable)
@@ -460,10 +488,15 @@ public final class TransferManager: ObservableObject {
             )
             
             var likesSaved = 0
+            var likesWarning: String?
             if scope.transferFavorites {
                 statusMessage = "Saving Liked Songs on \(destinationType.displayName)…"
                 self.progress = 0.9
-                likesSaved = (try? await destinationProvider.saveTracksToLibrary(transferable)) ?? 0
+                do {
+                    likesSaved = try await destinationProvider.saveTracksToLibrary(transferable)
+                } catch {
+                    likesWarning = "Playlist saved, but Liked Songs failed: \(error.localizedDescription)"
+                }
             }
             
             // Refresh local snapshot with the new playlist
@@ -471,7 +504,12 @@ public final class TransferManager: ObservableObject {
             
             self.progress = 1.0
             self.processedCount = sourceTracks.count
-            let likesNote = scope.transferFavorites ? ", \(likesSaved) liked" : ""
+            let likesNote: String
+            if scope.transferFavorites {
+                likesNote = likesWarning == nil ? ", \(likesSaved) liked" : ", likes incomplete"
+            } else {
+                likesNote = ""
+            }
             let skipNote = skippedExisting > 0 ? ", \(skippedExisting) already there" : ""
             self.statusMessage = "Done — \(created.trackCount) in playlist\(likesNote)\(skipNote), \(missingList.count) missing"
             
@@ -486,23 +524,29 @@ public final class TransferManager: ObservableObject {
                 alternatesAccepted: alternatesAccepted,
                 durationSeconds: duration,
                 errorMessage: nil,
-                createdPlaylistName: created.title
+                createdPlaylistName: created.title,
+                warningMessage: likesWarning
             )
             
             self.lastReport = report
             self.history.insert(report, at: 0)
             TransferHistoryStore.save(history)
             // Keep only alternates that still need a Rematch Inbox decision (honest follow-up).
-            self.rematchQueue = results.filter { result in
+            rematchSnapshot = results.filter { result in
                 guard case .alternate = result.confidence else { return false }
                 if acceptedRematchIds.contains(result.sourceTrack.id) { return false }
                 if skippedRematchIds.contains(result.sourceTrack.id) { return false }
                 if autoAcceptAlternates { return false }
                 return missingList.contains(where: { $0.id == result.sourceTrack.id })
             }
+            self.rematchQueue = rematchSnapshot
             clearRematchDecisions()
             self.isMigrating = false
-            HapticManager.successNotification()
+            if likesWarning != nil {
+                HapticManager.lightImpact()
+            } else {
+                HapticManager.successNotification()
+            }
             return report
         } catch {
             self.lastErrorMessage = error.localizedDescription
@@ -510,12 +554,17 @@ public final class TransferManager: ObservableObject {
             self.isMigrating = false
             HapticManager.errorNotification()
             
+            // Preserve unresolved tracks so the report is not “MISSING 0” after a mid-flight fail.
+            if !rematchSnapshot.isEmpty {
+                rematchQueue = rematchSnapshot
+            }
+            
             let report = TransferExecutionReport(
                 sourceProvider: sourceType,
                 destinationProvider: destinationType,
                 totalTracks: totalToProcess,
                 successfullyTransferred: 0,
-                missingTracks: [],
+                missingTracks: missingList,
                 alternatesAccepted: 0,
                 durationSeconds: Date().timeIntervalSince(startTime),
                 errorMessage: error.localizedDescription,

@@ -16,7 +16,7 @@ tags:
 - tapOn:
     id: "plus"
 - extendedWaitUntil:
-    visible: ".*Transfer.*|.*Create.*|.*LIVE TRANSFER.*|Move|Тонкие"
+    visible: ".*Transfer.*|.*Create.*|.*LIVE TRANSFER.*|Move|Тонкие|Dry-run"
     timeout: 10000
 
 - scrollUntilVisible:
@@ -26,14 +26,12 @@ tags:
 
 - tapOn: "Тонкие настройки (для опытных)"
 - waitForAnimationToEnd
+- swipe:
+    direction: UP
+    duration: 400
 
-- scrollUntilVisible:
-    element: "Если трек уже есть в целевой библиотеке:"
-    direction: DOWN
+- extendedWaitUntil:
+    visible: "Skip Existing"
     timeout: 10000
-
-- assertVisible: "Если трек уже есть в целевой библиотеке:"
-- assertVisible:
-    text: "Skip Existing"
-- assertVisible:
-    text: "Merge"
+- assertVisible: "Skip Existing"
+- assertVisible: "Merge"

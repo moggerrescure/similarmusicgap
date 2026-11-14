@@ -263,6 +263,30 @@ struct CoreBrokenFixesTestsMain {
             !SkipPolicy.isAlreadyInLibrary(matched: catalogOnly, destinationLibrary: destLib, source: UniversalTrack(isrc: "USCAT1", title: "Catalog", artists: ["C"], durationMs: 1000, spotifyId: "sp_cat")),
             "SkipPolicy: catalog-only match is NOT already in library"
         )
+        // Source has ISRC, library row lacks ISRC but shares Apple ID — must still Skip.
+        let libNoISRC = [UniversalTrack(title: "In Lib", artists: ["L"], durationMs: 1000, appleMusicId: "am_lib")]
+        let matchedNoISRC = UniversalTrack(title: "In Lib", artists: ["L"], durationMs: 1000, appleMusicId: "am_lib")
+        let srcWithISRC = UniversalTrack(isrc: "USLIB1", title: "In Lib", artists: ["L"], durationMs: 1000, spotifyId: "sp_lib")
+        expect(
+            SkipPolicy.isAlreadyInLibrary(matched: matchedNoISRC, destinationLibrary: libNoISRC, source: srcWithISRC),
+            "SkipPolicy: fall through to platform ID when library lacks ISRC"
+        )
+        
+        // One-character titles must not crash Jaro-Winkler
+        _ = engine.match(
+            source: UniversalTrack(title: "X", artists: ["Y"], durationMs: 1000, spotifyId: "sp_x"),
+            candidates: [UniversalTrack(title: "Z", artists: ["Y"], durationMs: 1000, appleMusicId: "am_z")]
+        )
+        expect(true, "MatchingEngine: 1-char titles do not crash")
+        
+        expect(
+            MatchingEngine.normalizeStatic("A Sky") == MatchingEngine.normalizeStatic("Sky"),
+            "MatchingEngine: A Sky ↔ Sky article strip"
+        )
+        expect(
+            MatchingEngine.normalizeStatic("Theatre") == "theatre",
+            "MatchingEngine: Theatre is not stripped as article"
+        )
         
         // --- LibraryLocalSearch ---
         let searchTracks = [

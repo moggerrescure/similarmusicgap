@@ -248,14 +248,9 @@ public struct SpotifySearchBrowseView: View {
                             if let first = playlist.tracks.first {
                                 player.play(track: first, in: playlist.tracks)
                                 browseNotice = nil
-                            } else if let first = LibraryLocalSearch.firstTrack(
-                                matchingTag: playlist.title,
-                                in: coordinator.allTracks
-                            ) {
-                                player.play(track: first, in: coordinator.allTracks)
-                                browseNotice = nil
                             } else {
-                                browseNotice = "Playlist “\(playlist.title)” has no loaded tracks yet — open Library and sync."
+                                // Never substitute an unrelated library track by playlist title.
+                                browseNotice = "Playlist “\(playlist.title)” has no loaded tracks yet — open Library and Sync."
                             }
                         } label: {
                             searchRow(

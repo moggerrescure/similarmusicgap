@@ -19,20 +19,18 @@ tags:
     visible: "Create"
     timeout: 10000
 
-- scroll
-- assertVisible:
-    text: ".*Проверить совместимость.*|.*compatible.*"
-    optional: true
+- scrollUntilVisible:
+    element: "Dry-run match preview"
+    direction: DOWN
+    timeout: 12000
 
-- scroll
-- assertVisible:
-    text: ".*Живой мост.*|.*Dry.*|.*Migrate.*|.*Transfer.*"
-    optional: true
+- assertVisible: "Dry-run match preview"
+- assertVisible: "Живой мост"
 
-# Without live pair, live action should stay gated / honest
+# Without selection / live pair, live action stays gated
 - tapOn:
     text: "Живой мост"
     optional: true
 - assertVisible:
-    text: ".*Connect.*|.*Client ID.*|.*Demo.*|.*нельзя.*|.*pair.*|.*Spotify.*|.*Apple.*"
+    text: ".*Connect.*|.*Client ID.*|.*Demo.*|.*нельзя.*|.*pair.*|.*Spotify.*|.*Apple.*|.*Dry-run.*|.*tracks.*"
     optional: true

@@ -80,6 +80,8 @@ public struct TransferExecutionReport: Identifiable, Codable {
     public let durationSeconds: Double
     public let errorMessage: String?
     public let createdPlaylistName: String?
+    /// Soft warning (e.g. playlist OK but Liked Songs write failed).
+    public let warningMessage: String?
     
     public init(
         id: UUID = UUID(),
@@ -93,7 +95,8 @@ public struct TransferExecutionReport: Identifiable, Codable {
         alternatesAccepted: Int = 0,
         durationSeconds: Double = 0.0,
         errorMessage: String? = nil,
-        createdPlaylistName: String? = nil
+        createdPlaylistName: String? = nil,
+        warningMessage: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -107,6 +110,7 @@ public struct TransferExecutionReport: Identifiable, Codable {
         self.durationSeconds = durationSeconds
         self.errorMessage = errorMessage
         self.createdPlaylistName = createdPlaylistName
+        self.warningMessage = warningMessage
     }
     
     public init(from decoder: Decoder) throws {
@@ -123,6 +127,7 @@ public struct TransferExecutionReport: Identifiable, Codable {
         durationSeconds = try c.decode(Double.self, forKey: .durationSeconds)
         errorMessage = try c.decodeIfPresent(String.self, forKey: .errorMessage)
         createdPlaylistName = try c.decodeIfPresent(String.self, forKey: .createdPlaylistName)
+        warningMessage = try c.decodeIfPresent(String.self, forKey: .warningMessage)
     }
     
     /// Soft success: wrote tracks, or Skip left nothing new to write.
@@ -132,6 +137,10 @@ public struct TransferExecutionReport: Identifiable, Codable {
     
     public var isHardFailure: Bool {
         errorMessage != nil
+    }
+    
+    public var isPartialSuccess: Bool {
+        didSucceed && !missingTracks.isEmpty
     }
     
     /// True when Skip policy found everything already on destination.
