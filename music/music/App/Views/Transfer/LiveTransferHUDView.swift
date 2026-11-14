@@ -15,19 +15,18 @@ public struct LiveTransferHUDView: View {
             VStack(spacing: 36) {
                 Spacer()
                 
-                // MARK: - Central Circular Progress Ring
                 ZStack {
-                    // Track circle
                     Circle()
                         .stroke(PastelTheme.cardBorder, lineWidth: 14)
                         .frame(width: 230, height: 230)
                     
-                    // Animated Progress Bar
                     Circle()
                         .trim(from: 0.0, to: CGFloat(transferManager.progress))
                         .stroke(
                             AngularGradient(
-                                colors: [PastelTheme.emeraldSuccess, PastelTheme.pastelOat],
+                                colors: transferManager.lastErrorMessage == nil
+                                    ? [PastelTheme.emeraldSuccess, PastelTheme.pastelOat]
+                                    : [Color.red.opacity(0.8), PastelTheme.amberWarning],
                                 center: .center,
                                 startAngle: .degrees(-90),
                                 endAngle: .degrees(270)
@@ -38,7 +37,6 @@ public struct LiveTransferHUDView: View {
                         .frame(width: 230, height: 230)
                         .animation(.linear(duration: 0.2), value: transferManager.progress)
                     
-                    // Inside HUD Stats
                     VStack(spacing: 4) {
                         Text("\(Int(transferManager.progress * 100))%")
                             .font(.system(size: 48, weight: .heavy, design: .rounded))
@@ -52,23 +50,41 @@ public struct LiveTransferHUDView: View {
                     }
                 }
                 
-                // MARK: - Current Track Ticker
                 VStack(spacing: 8) {
-                    Text("NOW TRANSFERRING")
+                    Text(transferManager.lastErrorMessage == nil ? "NOW TRANSFERRING" : "TRANSFER FAILED")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(1.2)
-                        .foregroundColor(PastelTheme.emeraldSuccess)
+                        .foregroundColor(transferManager.lastErrorMessage == nil ? PastelTheme.emeraldSuccess : Color.red.opacity(0.9))
                     
-                    Text(transferManager.currentTrackTitle.isEmpty ? "Connecting to Target Stream..." : transferManager.currentTrackTitle)
+                    Text(
+                        transferManager.currentTrackTitle.isEmpty
+                            ? (transferManager.statusMessage.isEmpty ? "Preparing…" : transferManager.statusMessage)
+                            : transferManager.currentTrackTitle
+                    )
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(PastelTheme.textPrimary)
                         .multilineTextAlignment(.center)
-                        .lineLimit(1)
+                        .lineLimit(2)
                         .padding(.horizontal, 24)
                     
                     Text(transferManager.currentTrackArtist)
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(PastelTheme.textSecondary)
+                    
+                    if let err = transferManager.lastErrorMessage {
+                        Text(err)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Color.red.opacity(0.9))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 4)
+                    } else if !transferManager.statusMessage.isEmpty {
+                        Text(transferManager.statusMessage)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
                 }
                 .padding(.vertical, 16)
                 .frame(maxWidth: .infinity)
@@ -82,14 +98,28 @@ public struct LiveTransferHUDView: View {
                 
                 Spacer()
                 
-                // Status hint
-                Text("Preserving original playlist track order & metadata.")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(PastelTheme.textTertiary)
+                if !transferManager.isMigrating {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(transferManager.lastErrorMessage == nil ? "Continue" : "Close")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 24)
                     .padding(.bottom, 20)
+                } else {
+                    Text("Writing to destination…")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .padding(.bottom, 20)
+                }
             }
         }
         .interactiveDismissDisabled(transferManager.isMigrating)
     }
 }
-

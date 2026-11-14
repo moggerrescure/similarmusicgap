@@ -1,0 +1,39 @@
+appId: qere.music
+name: Conflict policy Skip/Merge honesty
+tags:
+  - transfer
+  - honesty
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "plus"
+- extendedWaitUntil:
+    visible: ".*Transfer.*|.*Create.*|.*LIVE TRANSFER.*|Move|Тонкие"
+    timeout: 10000
+
+- scrollUntilVisible:
+    element: "Тонкие настройки (для опытных)"
+    direction: DOWN
+    timeout: 15000
+
+- tapOn: "Тонкие настройки (для опытных)"
+- waitForAnimationToEnd
+
+- scrollUntilVisible:
+    element: "Если трек уже есть в целевой библиотеке:"
+    direction: DOWN
+    timeout: 10000
+
+- assertVisible: "Если трек уже есть в целевой библиотеке:"
+- assertVisible:
+    text: "Skip Existing"
+- assertVisible:
+    text: "Merge"

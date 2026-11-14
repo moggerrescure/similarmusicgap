@@ -5,10 +5,23 @@ public enum TransferRouteFilter: String, CaseIterable, Identifiable {
     case all = "All Migrations"
     case yandexToApple = "Yandex → Apple"
     case spotifyToApple = "Spotify → Apple"
+    case appleToSpotify = "Apple → Spotify"
     case yandexToSpotify = "Yandex → Spotify"
-    case exactISRC = "100% ISRC"
+    case needsRematch = "Needs rematch"
     
     public var id: String { rawValue }
+    
+    /// Hide YM routes while Yandex connector is flagged off.
+    public static var visibleCases: [TransferRouteFilter] {
+        allCases.filter { route in
+            switch route {
+            case .yandexToApple, .yandexToSpotify:
+                return YandexMusicProvider.isConnectorEnabled
+            default:
+                return true
+            }
+        }
+    }
 }
 
 /// Transferred Track Item Model with Migration Provenance
@@ -116,268 +129,63 @@ public struct LibraryView: View {
     @State private var selectedFilter: TransferRouteFilter = .all
     @State private var selectedSessionForReport: MigrationSessionSummary? = nil
     
-    // MARK: - Past Migration Sessions (История того, что происходило)
-    private let migrationSessions: [MigrationSessionSummary] = [
-        MigrationSessionSummary(
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            timestampStr: "Today, 14:20",
-            scopeName: "Favorite Tracks & 3 Playlists",
-            successfullyTransferred: 482,
-            totalTracks: 486,
-            matchRate: 99.2,
-            durationSeconds: 3.4
-        ),
-        MigrationSessionSummary(
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            timestampStr: "Nov 5, 2026",
-            scopeName: "Liked Songs Vault",
-            successfullyTransferred: 312,
-            totalTracks: 318,
-            matchRate: 98.1,
-            durationSeconds: 2.8
-        ),
-        MigrationSessionSummary(
-            sourceService: .yandexMusic,
-            destinationService: .spotify,
-            timestampStr: "Oct 28, 2026",
-            scopeName: "Russian Indie & Rock Vault",
-            successfullyTransferred: 50,
-            totalTracks: 50,
-            matchRate: 100.0,
-            durationSeconds: 1.2
-        )
-    ]
+    // MARK: - Past Migration Sessions (real TransferManager history only)
+    private var migrationSessions: [MigrationSessionSummary] {
+        transferManager.history.map { report in
+            let status: String
+            if let error = report.errorMessage, !error.isEmpty {
+                status = "Failed"
+            } else if report.isNothingNewSuccess {
+                status = "Already there"
+            } else if report.didSucceed {
+                status = report.missingTracks.isEmpty ? "Completed" : "Partial"
+            } else {
+                status = "Empty"
+            }
+            return MigrationSessionSummary(
+                id: report.id,
+                sourceService: report.sourceProvider,
+                destinationService: report.destinationProvider,
+                timestampStr: report.timestamp.formatted(date: .abbreviated, time: .shortened),
+                scopeName: report.createdPlaylistName
+                    ?? (report.isNothingNewSuccess ? "Nothing new to write" : "Migration job"),
+                successfullyTransferred: report.successfullyTransferred,
+                totalTracks: report.totalTracks,
+                matchRate: report.matchRate,
+                durationSeconds: report.durationSeconds,
+                status: status
+            )
+        }
+    }
     
-    // MARK: - Pool of Transferred Tracks (Все перемещённые песни)
-    private let transferredRecords: [TransferredTrackRecord] = [
-        // 1. Yandex -> Apple Music
-        TransferredTrackRecord(
-            title: "Где нас нет",
-            artist: "Oxxxymiron",
-            album: "ГОРГОРОД",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA12000042",
-            durationMs: 265000,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "заставь меня плакать",
-            artist: "CUPSIZE",
-            album: "Королева двора",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "High Confidence Match",
-            isrc: "RUA112300091",
-            durationMs: 185000,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "Город под подошвой",
-            artist: "Oxxxymiron",
-            album: "Город под подошвой",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA11500012",
-            durationMs: 247000,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "Instant Crush",
-            artist: "Daft Punk, Julian Casablancas",
-            album: "Random Access Memories",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "FRUM71300088",
-            durationMs: 337560,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "Судно (Борис Рыжий)",
-            artist: "Молчат Дома",
-            album: "Этажи",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "DEZ651900143",
-            durationMs: 141000,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "Барбисайз",
-            artist: "Дора, Мэйби Бэйби",
-            album: "МЕНТАЛЬНЫЙ",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA12000318",
-            durationMs: 168000,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "Поезда",
-            artist: "Молчат Дома",
-            album: "С крыш наших домов",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "DEZ651700082",
-            durationMs: 236000,
-            transferDateStr: "Today"
-        ),
-        TransferredTrackRecord(
-            title: "5 минут назад",
-            artist: "Pharaoh, Boulevard Depo",
-            album: "Плакшери",
-            sourceService: .yandexMusic,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA11600045",
-            durationMs: 202000,
-            transferDateStr: "Today"
-        ),
-        
-        // 2. Spotify -> Apple Music
-        TransferredTrackRecord(
-            title: "Starboy",
-            artist: "The Weeknd, Daft Punk",
-            album: "Starboy",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "USUM71703861",
-            durationMs: 230453,
-            transferDateStr: "Nov 5"
-        ),
-        TransferredTrackRecord(
-            title: "The Less I Know the Better",
-            artist: "Tame Impala",
-            album: "Currents",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "GBUM71505080",
-            durationMs: 216320,
-            transferDateStr: "Nov 5"
-        ),
-        TransferredTrackRecord(
-            title: "Blinding Lights",
-            artist: "The Weeknd",
-            album: "After Hours",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "USAT21900122",
-            durationMs: 200040,
-            transferDateStr: "Nov 5"
-        ),
-        TransferredTrackRecord(
-            title: "Midnight City",
-            artist: "M83",
-            album: "Hurry Up, We're Dreaming",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "USWB11200021",
-            durationMs: 243000,
-            transferDateStr: "Nov 5"
-        ),
-        TransferredTrackRecord(
-            title: "UTOPIA",
-            artist: "Travis Scott",
-            album: "UTOPIA",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "USSM12304910",
-            durationMs: 215000,
-            transferDateStr: "Nov 5"
-        ),
-        TransferredTrackRecord(
-            title: "Kill Bill",
-            artist: "SZA",
-            album: "SOS",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "USRC12204128",
-            durationMs: 153000,
-            transferDateStr: "Nov 5"
-        ),
-        TransferredTrackRecord(
-            title: "vampire",
-            artist: "Olivia Rodrigo",
-            album: "GUTS",
-            sourceService: .spotify,
-            destinationService: .appleMusic,
-            matchType: "100% ISRC Match",
-            isrc: "USUG12303810",
-            durationMs: 219000,
-            transferDateStr: "Nov 5"
-        ),
-        
-        // 3. Yandex -> Spotify
-        TransferredTrackRecord(
-            title: "Искала",
-            artist: "Zemfira",
-            album: "Прости меня моя любовь",
-            sourceService: .yandexMusic,
-            destinationService: .spotify,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA10000008",
-            durationMs: 213000,
-            transferDateStr: "Oct 28"
-        ),
-        TransferredTrackRecord(
-            title: "Полковнику никто не пишет",
-            artist: "Би-2",
-            album: "Би-2",
-            sourceService: .yandexMusic,
-            destinationService: .spotify,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA10100045",
-            durationMs: 292000,
-            transferDateStr: "Oct 28"
-        ),
-        TransferredTrackRecord(
-            title: "дели на два",
-            artist: "CUPSIZE",
-            album: "дели на два",
-            sourceService: .yandexMusic,
-            destinationService: .spotify,
-            matchType: "100% ISRC Match",
-            isrc: "RUA112300104",
-            durationMs: 172000,
-            transferDateStr: "Oct 28"
-        ),
-        TransferredTrackRecord(
-            title: "синий кит",
-            artist: "влад пиво",
-            album: "влад пиво singles",
-            sourceService: .yandexMusic,
-            destinationService: .spotify,
-            matchType: "Acoustic Match",
-            isrc: "RUA112400032",
-            durationMs: 198000,
-            transferDateStr: "Oct 28"
-        ),
-        TransferredTrackRecord(
-            title: "Люди",
-            artist: "Дайте танк (!)",
-            album: "Человеко-часы",
-            sourceService: .yandexMusic,
-            destinationService: .spotify,
-            matchType: "100% ISRC Match",
-            isrc: "RUAA12000781",
-            durationMs: 189000,
-            transferDateStr: "Oct 28"
-        )
-    ]
+    // MARK: - Unresolved / missing tracks from latest report (not successful writes)
+    private var transferredRecords: [TransferredTrackRecord] {
+        guard let last = transferManager.lastReport ?? transferManager.history.first else { return [] }
+        return last.missingTracks.prefix(50).map { track in
+            TransferredTrackRecord(
+                id: track.id,
+                title: track.title,
+                artist: track.primaryArtist,
+                album: track.album ?? "",
+                sourceService: last.sourceProvider,
+                destinationService: last.destinationProvider,
+                matchType: last.errorMessage != nil ? "Transfer failed" : "Needs rematch",
+                isrc: track.isrc ?? "",
+                durationMs: track.durationMs,
+                isSuccess: false,
+                transferDateStr: last.timestamp.formatted(date: .abbreviated, time: .omitted)
+            )
+        }
+    }
+    
+    private func statusAccent(for status: String) -> Color {
+        switch status {
+        case "Completed": return PastelTheme.emeraldSuccess
+        case "Partial": return PastelTheme.amberWarning
+        case "Failed": return Color.red.opacity(0.85)
+        default: return PastelTheme.textTertiary
+        }
+    }
     
     // Filtered transferred tracks
     private var filteredRecords: [TransferredTrackRecord] {
@@ -390,10 +198,15 @@ public struct LibraryView: View {
             list = list.filter { $0.sourceService == .yandexMusic && $0.destinationService == .appleMusic }
         case .spotifyToApple:
             list = list.filter { $0.sourceService == .spotify && $0.destinationService == .appleMusic }
+        case .appleToSpotify:
+            list = list.filter { $0.sourceService == .appleMusic && $0.destinationService == .spotify }
         case .yandexToSpotify:
             list = list.filter { $0.sourceService == .yandexMusic && $0.destinationService == .spotify }
-        case .exactISRC:
-            list = list.filter { $0.matchType.contains("ISRC") }
+        case .needsRematch:
+            list = list.filter {
+                $0.matchType.localizedCaseInsensitiveContains("rematch")
+                    || $0.matchType.localizedCaseInsensitiveContains("failed")
+            }
         }
         
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -424,16 +237,19 @@ public struct LibraryView: View {
                         libraryHeaderBar
                             .padding(.top, 10)
                         
-                        // 2. Migration History Carousel (История того, что происходило)
-                        migrationSessionsSection
+                        syncedCollectionCard
                         
-                        // 4. Sticky Search & Route Filter Bar
-                        transferredSearchBar
+                        if migrationSessions.isEmpty {
+                            emptyMigrationsCard
+                        } else {
+                            migrationSessionsSection
+                        }
                         
-                        routeFilterStrip
-                        
-                        // 5. Transferred Tracks List (Все песни, перемещённые между сервисами)
-                        transferredTracksSection
+                        if !transferredRecords.isEmpty {
+                            transferredSearchBar
+                            routeFilterStrip
+                            transferredTracksSection
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 120) // Full clearance for Floating Mini Player
@@ -443,16 +259,123 @@ public struct LibraryView: View {
             .navigationBarHidden(true)
             #endif
             .sheet(item: $selectedSessionForReport) { session in
-                let report = TransferExecutionReport(
-                    sourceProvider: session.sourceService,
-                    destinationProvider: session.destinationService,
-                    totalTracks: session.totalTracks,
-                    successfullyTransferred: session.successfullyTransferred,
-                    durationSeconds: session.durationSeconds
-                )
-                TransferReportView(report: report)
+                if let report = transferManager.history.first(where: { $0.id == session.id })
+                    ?? transferManager.lastReport {
+                    TransferReportView(report: report)
+                } else {
+                    TransferReportView(
+                        report: TransferExecutionReport(
+                            id: session.id,
+                            sourceProvider: session.sourceService,
+                            destinationProvider: session.destinationService,
+                            totalTracks: session.totalTracks,
+                            successfullyTransferred: session.successfullyTransferred,
+                            durationSeconds: session.durationSeconds,
+                            createdPlaylistName: session.scopeName == "Migration job" ? nil : session.scopeName
+                        )
+                    )
+                }
             }
         }
+    }
+    
+    private var syncedCollectionCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Synced Collection")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(PastelTheme.textPrimary)
+                    Text(coordinator.activeProvidersCount == 0
+                         ? "Connect Spotify or Apple Music to import liked songs."
+                         : "\(coordinator.allTracks.count) tracks · \(coordinator.allPlaylists.count) playlists")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(PastelTheme.textSecondary)
+                }
+                Spacer()
+                if coordinator.isSyncing {
+                    ProgressView().tint(PastelTheme.pastelOat)
+                }
+            }
+            
+            HStack(spacing: 10) {
+                if coordinator.activeProvidersCount == 0 {
+                    Button {
+                        NavigationCoordinator.shared.navigateToConnect()
+                    } label: {
+                        Text("Connect services")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                } else {
+                    Button {
+                        Task { await coordinator.syncAll() }
+                    } label: {
+                        Text("Sync now")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    Button {
+                        navCoordinator.openPersonalLibrary()
+                    } label: {
+                        Text("Open collection")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(PastelTheme.pastelOat)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(PastelTheme.cardSubtle)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+        }
+        .padding(16)
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
+    }
+    
+    private var emptyMigrationsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Migration History")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(PastelTheme.textPrimary)
+            Text("No transfers yet. Run a migration from Create — reports land here automatically.")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(PastelTheme.textSecondary)
+            Button {
+                NavigationCoordinator.shared.navigateToCreate()
+            } label: {
+                Text("Go to Create")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.pastelOat)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.top, 4)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
     }
     
     // MARK: - 1. Header Bar with Direct 1-Tap Bridge to Personal Library
@@ -463,7 +386,9 @@ public struct LibraryView: View {
                     .font(.system(size: 26, weight: .bold))
                     .foregroundColor(PastelTheme.textPrimary)
                 
-                Text("Transferred songs & migration history")
+                Text(coordinator.allTracks.isEmpty
+                       ? "Sync a service to fill your collection"
+                       : "\(coordinator.allTracks.count) synced tracks · migration history below")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(PastelTheme.textSecondary)
             }
@@ -537,18 +462,19 @@ public struct LibraryView: View {
                     
                     Spacer()
                     
-                    // Completed status pill
+                    // Status pill — color matches Completed / Partial / Failed
+                    let accent = statusAccent(for: session.status)
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(PastelTheme.emeraldSuccess)
+                            .fill(accent)
                             .frame(width: 6, height: 6)
                         Text(session.status)
                             .font(.system(size: 10, weight: .bold, design: .rounded))
-                            .foregroundColor(PastelTheme.emeraldSuccess)
+                            .foregroundColor(accent)
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(PastelTheme.emeraldSuccess.opacity(0.12))
+                    .background(accent.opacity(0.12))
                     .clipShape(Capsule())
                 }
                 
@@ -637,7 +563,7 @@ public struct LibraryView: View {
     private var routeFilterStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(TransferRouteFilter.allCases) { route in
+                ForEach(TransferRouteFilter.visibleCases) { route in
                     let isSel = selectedFilter == route
                     Button {
                         HapticManager.lightImpact()
@@ -667,15 +593,15 @@ public struct LibraryView: View {
     private var transferredTracksSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("All Transferred Tracks (\(filteredRecords.count))")
+                Text("Needs attention (\(filteredRecords.count))")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(PastelTheme.textPrimary)
                 
                 Spacer()
                 
-                Text("Tap to play")
+                Text("Missing / rematch")
                     .font(.system(size: 12))
-                    .foregroundColor(PastelTheme.textTertiary)
+                    .foregroundColor(PastelTheme.amberWarning)
             }
             
             LazyVStack(spacing: 0) {
@@ -764,11 +690,11 @@ public struct LibraryView: View {
                     
                     Spacer()
                     
-                    // Status Checkmark & Date
+                    // Status icon & Date — missing tracks are not successes
                     VStack(alignment: .trailing, spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: record.isSuccess ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
                             .font(.system(size: 15))
-                            .foregroundColor(PastelTheme.emeraldSuccess)
+                            .foregroundColor(record.isSuccess ? PastelTheme.emeraldSuccess : PastelTheme.amberWarning)
                         
                         Text(record.transferDateStr)
                             .font(.system(size: 11, weight: .medium))

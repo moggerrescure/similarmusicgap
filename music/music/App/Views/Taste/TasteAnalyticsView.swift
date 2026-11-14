@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Screen: Taste Analytics & Acoustic Profile
 public struct TasteAnalyticsView: View {
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     @State private var profile: FullTasteProfile = TasteAnalyticsEngine.shared.analyzeLibrary(tracks: ServicesCoordinator.shared.allTracks)
     @State private var showingStorySheet: Bool = false
     @State private var generatedStoryImage: PlatformImage?
@@ -18,7 +19,7 @@ public struct TasteAnalyticsView: View {
                 VStack(spacing: 20) {
                     // MARK: - Archetype Insight Card
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("ACOUSTIC ARCHETYPE")
+                        Text("LIBRARY ARCHETYPE")
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .tracking(0.6)
                             .foregroundColor(PastelTheme.textTertiary)
@@ -32,6 +33,11 @@ public struct TasteAnalyticsView: View {
                             .foregroundColor(PastelTheme.textSecondary)
                             .lineSpacing(4)
                             .padding(.top, 2)
+                        
+                        Text("On-device summary from your synced library — not an AI model.")
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .padding(.top, 4)
                     }
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -42,11 +48,15 @@ public struct TasteAnalyticsView: View {
                             .stroke(PastelTheme.cardBorder, lineWidth: 1)
                     )
                     
-                    // MARK: - Acoustic Spectrum (Apple Health Style Horizontal Bars)
+                    // MARK: - Acoustic Spectrum (heuristic from library shape — not Spotify audio features)
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("ACOUSTIC SPECTRUM")
+                        Text("DERIVED SPECTRUM")
                             .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .tracking(0.6)
+                            .foregroundColor(PastelTheme.textTertiary)
+                        
+                        Text("Heuristic from your library shape — not official Spotify audio features.")
+                            .font(.system(size: 11))
                             .foregroundColor(PastelTheme.textTertiary)
                         
                         VStack(spacing: 12) {
@@ -67,7 +77,7 @@ public struct TasteAnalyticsView: View {
                             AcousticMetricRow(
                                 title: "Danceability",
                                 value: profile.acousticProfile.danceability,
-                                icon: "figure.dance",
+                                icon: "music.note",
                                 color: PastelTheme.emeraldSuccess
                             )
                             
@@ -84,6 +94,12 @@ public struct TasteAnalyticsView: View {
                                 icon: "waveform.badge.magnifyingglass",
                                 color: PastelTheme.lavenderAI
                             )
+                        }
+                        
+                        if profile.totalAnalyzedTracks > 0 {
+                            TasteRadarView(profile: profile.acousticProfile)
+                                .frame(height: 220)
+                                .padding(.top, 8)
                         }
                     }
                     .padding(18)
@@ -222,12 +238,23 @@ public struct TasteAnalyticsView: View {
         }
         .navigationTitle("Taste Profile")
         .inlineNavigationBarTitle()
+        .onAppear { refreshProfile() }
+        .onChange(of: coordinator.allTracks.count) { _, _ in
+            refreshProfile()
+        }
+        .onChange(of: coordinator.lastSyncAt) { _, _ in
+            refreshProfile()
+        }
         .sheet(isPresented: $showingStorySheet) {
             StoryPreviewModal(profile: profile)
         }
         .sheet(item: $selectedCluster) { cluster in
             HabitDetailSheet(cluster: cluster)
         }
+    }
+    
+    private func refreshProfile() {
+        profile = TasteAnalyticsEngine.shared.analyzeLibrary(tracks: coordinator.allTracks)
     }
 }
 

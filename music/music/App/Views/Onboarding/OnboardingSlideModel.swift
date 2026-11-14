@@ -16,9 +16,9 @@ public struct OnboardingSlide: Identifiable {
             videoResourceName: "onboarding_1_sofa",
             badgeText: "ALL-IN-ONE LIBRARY",
             headline: "Your Entire Music Universe.\nWithout Boundaries.",
-            subheadline: "Unite Spotify, Apple Music, and Yandex Music into a single living catalog. No lost likes, no isolated silos.",
-            metricValue: "14,800+",
-            metricLabel: "Tracks in Unified View",
+            subheadline: "Unite Spotify and Apple Music into one living catalog. No lost likes, no isolated silos.",
+            metricValue: "2",
+            metricLabel: "Services Live Now",
             actionButtonTitle: "Continue"
         ),
         OnboardingSlide(
@@ -26,9 +26,9 @@ public struct OnboardingSlide: Identifiable {
             videoResourceName: "onboarding_2_walk",
             badgeText: "ZERO-EFFORT MIGRATION",
             headline: "Switch Streaming Services.\nKeep Every Single Track.",
-            subheadline: "Moving platforms shouldn't mean starting over. Seamlessly transfer playlists, albums, and favorites with preserved order.",
-            metricValue: "99.4%",
-            metricLabel: "ISRC Match Accuracy",
+            subheadline: "Moving platforms shouldn't mean starting over. Transfer liked songs and playlists with ISRC matching on the Create tab.",
+            metricValue: "ISRC",
+            metricLabel: "Match Engine Ready",
             actionButtonTitle: "Next"
         ),
         OnboardingSlide(
@@ -36,20 +36,20 @@ public struct OnboardingSlide: Identifiable {
             videoResourceName: "onboarding_3_beach",
             badgeText: "DEEP TASTE ANALYTICS",
             headline: "Beyond Superficial Top 5s.\nDecode Your Sonic DNA.",
-            subheadline: "Explore acoustic dimensions, mood clusters, and decade affinities. Understand your true taste across all services.",
-            metricValue: "18 Moods",
-            metricLabel: "Autonomous Cluster Engine",
+            subheadline: "Explore decade affinities and listening habits computed on-device from your synced library — not demo numbers.",
+            metricValue: "On-device",
+            metricLabel: "Taste from Your Library",
             actionButtonTitle: "Explore"
         ),
         OnboardingSlide(
             id: 3,
             videoResourceName: "onboarding_4_space",
-            badgeText: "INFINITE SOUNDSCAPE",
+            badgeText: "CONNECT → TASTE → MOVE",
             headline: "Break Free from Lock-in.\nYour Music Is Truly Yours.",
-            subheadline: "Export universal backups, discover cross-service music twins, and step into an infinite sonic universe.",
-            metricValue: "Zero",
-            metricLabel: "Lock-in Forever",
-            actionButtonTitle: "Start Your Sonic Journey"
+            subheadline: "Connect Spotify or Apple Music, sync your library, review Taste, then run a live migration from Create.",
+            metricValue: "Start",
+            metricLabel: "With Connect",
+            actionButtonTitle: "Connect Your Music"
         )
     ]
 }

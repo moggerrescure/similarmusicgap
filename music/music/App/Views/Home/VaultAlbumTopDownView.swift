@@ -11,14 +11,28 @@ import Combine
 public struct VaultAlbumTopDownView: View {
     public let album: SpotifyHomeFeedView.VaultAlbumItem
     public let onDismiss: () -> Void
+    public var onOpenDetailSheet: (() -> Void)? = nil
     
     @ObservedObject private var player = AudioPlayerManager.shared
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     @State private var toastMessage: String? = nil
     @State private var showToast: Bool = false
     
-    public init(album: SpotifyHomeFeedView.VaultAlbumItem, onDismiss: @escaping () -> Void) {
+    public init(
+        album: SpotifyHomeFeedView.VaultAlbumItem,
+        onDismiss: @escaping () -> Void,
+        onOpenDetailSheet: (() -> Void)? = nil
+    ) {
         self.album = album
         self.onDismiss = onDismiss
+        self.onOpenDetailSheet = onOpenDetailSheet
+    }
+    
+    /// True when album rows resolve to synced library ids (not designer fixtures).
+    private var usesSyncedLibrary: Bool {
+        album.tracks.contains { track in
+            coordinator.allTracks.contains(where: { $0.id == track.id })
+        }
     }
     
     private var isAlbumPlaying: Bool {
@@ -48,6 +62,28 @@ public struct VaultAlbumTopDownView: View {
                         // 2. Play All & Shuffle Actions
                         actionButtonsView
                             .padding(.horizontal, 20)
+                        
+                        if !usesSyncedLibrary {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(PastelTheme.amberWarning)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("SHOWCASE CRATE")
+                                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                        .foregroundColor(PastelTheme.amberWarning)
+                                    Text("Connect & Sync to play real previews — showcase titles won’t invent audio.")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(PastelTheme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(PastelTheme.amberWarning.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
+                        }
                         
                         // 3. Tracklist Header
                         HStack {
@@ -97,7 +133,7 @@ public struct VaultAlbumTopDownView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Назад")
+                    Text("Back")
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(PastelTheme.pastelOat)
@@ -121,6 +157,26 @@ public struct VaultAlbumTopDownView: View {
                 .foregroundColor(Color(hex: "#9CA3AF"))
             
             Spacer()
+            
+            if onOpenDetailSheet != nil {
+                Button {
+                    HapticManager.lightImpact()
+                    onOpenDetailSheet?()
+                } label: {
+                    Image(systemName: "list.bullet.rectangle.portrait")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(PastelTheme.pastelOat)
+                        .frame(width: 32, height: 32)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Open album detail sheet")
+            }
             
             // Close "✕" Button
             Button {
@@ -264,9 +320,13 @@ public struct VaultAlbumTopDownView: View {
                 playAllTracks()
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: isAlbumPlaying ? "pause.fill" : "play.fill")
+                    Image(systemName: isAlbumPlaying ? "pause.fill" : (usesSyncedLibrary ? "play.fill" : "link"))
                         .font(.system(size: 13, weight: .bold))
-                    Text(isAlbumPlaying ? "Pause Album" : "Play All")
+                    Text(
+                        isAlbumPlaying
+                        ? "Pause Album"
+                        : (usesSyncedLibrary ? "Play All" : "Connect to Play")
+                    )
                         .font(.system(size: 14, weight: .bold))
                 }
                 .foregroundColor(PastelTheme.textOnOat)
@@ -277,6 +337,7 @@ public struct VaultAlbumTopDownView: View {
                 .shadow(color: PastelTheme.pastelOat.opacity(0.22), radius: 8, y: 3)
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(usesSyncedLibrary ? "Play album" : "Connect to play album")
             
             // Shuffle Button
             Button {
@@ -284,9 +345,9 @@ public struct VaultAlbumTopDownView: View {
                 shufflePlayTracks()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "shuffle")
+                    Image(systemName: usesSyncedLibrary ? "shuffle" : "link")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Shuffle")
+                    Text(usesSyncedLibrary ? "Shuffle" : "Connect")
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -300,6 +361,7 @@ public struct VaultAlbumTopDownView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(usesSyncedLibrary ? "Shuffle album" : "Connect to shuffle")
         }
     }
     
@@ -360,19 +422,24 @@ public struct VaultAlbumTopDownView: View {
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(Color(hex: "#6B7280"))
             
-            // "Add to Queue" Quick Button
             Button {
+                guard usesSyncedLibrary else {
+                    showQueueToastFeedback(trackTitle: "Connect & Sync to queue real tracks")
+                    return
+                }
                 player.addToQueue(track: track)
                 showQueueToastFeedback(trackTitle: track.title)
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(PastelTheme.pastelOat)
+                    .foregroundColor(usesSyncedLibrary ? PastelTheme.pastelOat : PastelTheme.textTertiary)
                     .frame(width: 28, height: 28)
                     .background(Color.white.opacity(0.06))
                     .clipShape(Circle())
             }
             .buttonStyle(BorderlessButtonStyle())
+            .disabled(!usesSyncedLibrary)
+            .accessibilityLabel(usesSyncedLibrary ? "Add to queue" : "Connect to queue tracks")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -385,24 +452,44 @@ public struct VaultAlbumTopDownView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             HapticManager.selectionChanged()
-            player.play(track: track, in: album.tracks)
+            playSyncedOrPrompt(track)
         }
     }
     
     // MARK: - Actions
+    private func playSyncedOrPrompt(_ track: UniversalTrack) {
+        guard usesSyncedLibrary else {
+            onDismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        let queue = album.tracks.compactMap { row in
+            coordinator.allTracks.first(where: { $0.id == row.id })
+        }
+        let playable = coordinator.allTracks.first(where: { $0.id == track.id }) ?? track
+        player.play(track: playable, in: queue.isEmpty ? [playable] : queue)
+    }
+    
     private func playAllTracks() {
         if isAlbumPlaying {
             player.pause()
-        } else {
-            if let first = album.tracks.first {
-                player.play(track: first, in: album.tracks)
-            }
+            return
         }
+        guard usesSyncedLibrary, let first = album.tracks.first else {
+            onDismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        playSyncedOrPrompt(first)
     }
     
     private func shufflePlayTracks() {
-        guard let randomTrack = album.tracks.randomElement() else { return }
-        player.play(track: randomTrack, in: album.tracks.shuffled())
+        guard usesSyncedLibrary, let randomTrack = album.tracks.randomElement() else {
+            onDismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        playSyncedOrPrompt(randomTrack)
     }
     
     private func showQueueToastFeedback(trackTitle: String) {

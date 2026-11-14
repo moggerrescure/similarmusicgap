@@ -120,12 +120,16 @@ public struct TransferBridgeFlowView: View {
                             .foregroundColor(PastelTheme.emeraldSuccess)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(transferManager.currentTrackTitle.isEmpty ? "Starboy" : transferManager.currentTrackTitle)
+                            Text(transferManager.currentTrackTitle.isEmpty
+                                 ? (transferManager.isMigrating ? "Matching…" : "Waiting for migration")
+                                 : transferManager.currentTrackTitle)
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundColor(PastelTheme.textPrimary)
                                 .lineLimit(1)
                             
-                            Text(transferManager.currentTrackArtist.isEmpty ? "The Weeknd" : transferManager.currentTrackArtist)
+                            Text(transferManager.currentTrackArtist.isEmpty
+                                 ? transferManager.statusMessage
+                                 : transferManager.currentTrackArtist)
                                 .font(.system(size: 11))
                                 .foregroundColor(PastelTheme.textSecondary)
                                 .lineLimit(1)
@@ -224,6 +228,11 @@ public struct TransferBridgeFlowView: View {
     }
     
     private func animateTrackCrossing() {
+        guard transferManager.isMigrating else {
+            flowingTrackOffset = 0
+            return
+        }
+        
         flowingTrackOffset = -130
         
         withAnimation(.easeInOut(duration: 2.2)) {
@@ -231,7 +240,9 @@ public struct TransferBridgeFlowView: View {
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
-            HapticManager.lightImpact()
+            if transferManager.isMigrating {
+                HapticManager.lightImpact()
+            }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 animateTrackCrossing()

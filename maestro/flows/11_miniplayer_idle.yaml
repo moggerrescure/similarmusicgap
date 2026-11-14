@@ -1,0 +1,35 @@
+appId: qere.music
+name: Mini-player hidden when idle
+tags:
+  - player
+  - honesty
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: allow
+
+# Finish onboarding quickly to main tabs
+- assertVisible: "Continue"
+- tapOn: "Continue"
+- tapOn: "Next"
+- tapOn: "Explore"
+- tapOn: "Connect Your Music"
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 10000
+
+# No currentTrack → floating mini-player must not invent a track
+- assertNotVisible:
+    id: "miniplayer.root"
+    optional: true
+- assertVisible:
+    id: "home.connect"

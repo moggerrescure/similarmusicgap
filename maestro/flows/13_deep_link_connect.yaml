@@ -1,0 +1,47 @@
+appId: qere.music
+name: Connect sheet via deep-link path + YM hidden
+tags:
+  - deep-link
+  - connect
+  - yandex
+---
+# Deep-link routing is covered by AppDeepLinkRouter unit tests.
+# This flow verifies the Connect destination UX (YM hidden) using the Home entry,
+# then optionally exercises soundshift://connect if the OS confirmation is absent.
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Cancel"
+
+- tapOn:
+    id: "house.fill"
+- tapOn:
+    id: "home.connect"
+
+- extendedWaitUntil:
+    visible: "STREAMING ACCOUNTS"
+    timeout: 10000
+
+- assertVisible: "Spotify"
+- assertVisible: "Apple Music"
+- assertNotVisible: "Coming in TestFlight"
+- assertNotVisible: "Yandex Music — later"
+
+# Warm deep link — if iOS shows Open confirmation, dismiss Cancel (sheet already proven above)
+- openLink: soundshift://connect
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Cancel"
+- assertVisible: "STREAMING ACCOUNTS"

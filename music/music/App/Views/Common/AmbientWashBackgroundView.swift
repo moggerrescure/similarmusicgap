@@ -130,6 +130,7 @@ public final class AmbientSessionTheme: ObservableObject {
 /// Renders an organic Spotify-grade color wash from top to bottom into pitch black, specialized per tab.
 public struct AmbientWashBackgroundView: View {
     @ObservedObject private var theme = AmbientSessionTheme.shared
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     
     public var tab: AppTab? = nil
     public var customTone: AmbientSessionTheme.AtmosphericTone? = nil
@@ -198,6 +199,13 @@ public struct AmbientWashBackgroundView: View {
                 }
             }
             .ignoresSafeArea()
+            
+            if coordinator.backgroundParticlesEnabled {
+                CosmicParticleBackgroundView(particleCount: 28, includeCanvasBase: false)
+                    .allowsHitTesting(false)
+                    .opacity(0.55)
+                    .ignoresSafeArea()
+            }
         }
     }
 }

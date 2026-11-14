@@ -18,7 +18,8 @@ public struct UserPersonalLibrarySheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var searchText: String = ""
-    @State private var selectedSegment: LibrarySegment = .favorites // Opens on Favorites / Liked Songs by default!
+    // Liked Songs shortcut opens synced tracks (not local ♥ which may be empty).
+    @State private var selectedSegment: LibrarySegment = .tracks
     @State private var selectedProviderFilter: MusicProviderType? = nil
     
     // Sheets
@@ -32,19 +33,8 @@ public struct UserPersonalLibrarySheet: View {
     @State private var liftedTrackId: UUID? = nil
     @State private var customOrderedTracks: [UniversalTrack] = []
     
-    // Sample tracks fallback
     private var baseTracks: [UniversalTrack] {
-        if coordinator.allTracks.isEmpty {
-            return [
-                UniversalTrack(isrc: "USUM71703861", title: "Starboy", artists: ["The Weeknd", "Daft Punk"], album: "Starboy", durationMs: 230453, yandexId: "29871638", spotifyId: "7a26vX02Y4vYj9P6RrqU04"),
-                UniversalTrack(isrc: "GBUM71505080", title: "The Less I Know the Better", artists: ["Tame Impala"], album: "Currents", durationMs: 216320, spotifyId: "6K4t31amVTKVgPeRoxXErq"),
-                UniversalTrack(isrc: "USAT21900122", title: "Blinding Lights", artists: ["The Weeknd"], album: "After Hours", durationMs: 200040, appleMusicId: "1499378607"),
-                UniversalTrack(isrc: "RUAA12000042", title: "Где нас нет", artists: ["Oxxxymiron"], album: "ГОРГОРОД", durationMs: 265000, yandexId: "24981120"),
-                UniversalTrack(isrc: "FRUM71300088", title: "Instant Crush", artists: ["Daft Punk", "Julian Casablancas"], album: "Random Access Memories", durationMs: 337560, yandexId: "14589231", spotifyId: "2bpgKp31sOVoTeStOXzi8C"),
-                UniversalTrack(isrc: "USWB11200021", title: "Midnight City", artists: ["M83"], album: "Hurry Up, We're Dreaming", durationMs: 243000, spotifyId: "1eyzqe2QqGZUmfcPZtrIyt", appleMusicId: "466487841")
-            ]
-        }
-        return coordinator.allTracks
+        coordinator.allTracks
     }
     
     private var allTracks: [UniversalTrack] {
@@ -63,27 +53,7 @@ public struct UserPersonalLibrarySheet: View {
     }
     
     private var playlists: [UniversalPlaylist] {
-        if coordinator.allPlaylists.isEmpty {
-            return [
-                UniversalPlaylist(
-                    providerPlaylistId: "pl_demo_1",
-                    providerType: .spotify,
-                    title: "Deep Focus Ambient",
-                    description: "Atmospheric soundscapes for deep flow states",
-                    trackCount: 3,
-                    tracks: Array(baseTracks.prefix(3))
-                ),
-                UniversalPlaylist(
-                    providerPlaylistId: "pl_demo_2",
-                    providerType: .appleMusic,
-                    title: "Late Night Drive",
-                    description: "Electronic synthwave & dark pop anthems",
-                    trackCount: 4,
-                    tracks: Array(baseTracks.suffix(4))
-                )
-            ]
-        }
-        return coordinator.allPlaylists
+        coordinator.allPlaylists
     }
     
     private var filteredTracks: [UniversalTrack] {
@@ -95,8 +65,7 @@ public struct UserPersonalLibrarySheet: View {
         case .playlists:
             break
         case .favorites:
-            let favs = list.filter { player.isFavorite(track: $0) }
-            list = favs.isEmpty ? list : favs
+            list = list.filter { player.isFavorite(track: $0) }
         case .duplicates:
             let dupKeys = Set(duplicates.map { $0.canonicalTitle })
             list = list.filter { dupKeys.contains($0.title) }
@@ -257,7 +226,7 @@ public struct UserPersonalLibrarySheet: View {
                         switch seg {
                         case .tracks: return "(\(allTracks.count))"
                         case .playlists: return "(\(playlists.count))"
-                        case .favorites: return "(\(max(favoriteCount, allTracks.count)))"
+                        case .favorites: return "(\(favoriteCount))"
                         case .duplicates: return "(\(duplicates.count))"
                         }
                     }()
@@ -298,7 +267,7 @@ public struct UserPersonalLibrarySheet: View {
     // MARK: - Provider Filter Strip
     private var providerFilterStrip: some View {
         HStack(spacing: 8) {
-            ForEach(MusicProviderType.allCases) { provider in
+            ForEach(MusicProviderType.availableConnectors) { provider in
                 let isSel = selectedProviderFilter == provider
                 Button {
                     HapticManager.lightImpact()
@@ -491,14 +460,41 @@ public struct UserPersonalLibrarySheet: View {
     @ViewBuilder
     private var tracksContentView: some View {
         if filteredTracks.isEmpty {
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 Spacer()
                 Image(systemName: "music.note.list")
                     .font(.system(size: 38))
                     .foregroundColor(PastelTheme.textTertiary)
-                Text("No tracks found")
+                Text(
+                    coordinator.allTracks.isEmpty
+                        ? "Library is empty"
+                        : (selectedSegment == .favorites
+                           ? "No local hearts yet — synced Liked Songs are under Tracks"
+                           : "No tracks match filters")
+                )
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(PastelTheme.textSecondary)
+                if coordinator.allTracks.isEmpty {
+                    Text("Connect Spotify or Apple Music, then Sync — demo tracks are gone.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    Button {
+                        dismiss()
+                        NavigationCoordinator.shared.navigateToConnect()
+                    } label: {
+                        Text("Connect services")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.top, 4)
+                }
                 Spacer()
             }
         } else {
@@ -570,12 +566,37 @@ public struct UserPersonalLibrarySheet: View {
     }
     
     private func moveTracks(from source: IndexSet, to destination: Int) {
-        guard !customOrderedTracks.isEmpty else { return }
-        guard let maxIdx = source.max(), maxIdx < customOrderedTracks.count else { return }
-        guard destination >= 0 && destination <= customOrderedTracks.count else { return }
-        customOrderedTracks.move(fromOffsets: source, toOffset: destination)
-        if !coordinator.allTracks.isEmpty && coordinator.allTracks.count == customOrderedTracks.count {
-            coordinator.reorderTracks(fromOffsets: source, toOffset: destination)
+        // Indices come from filteredTracks — map to full customOrderedTracks by id.
+        if customOrderedTracks.isEmpty {
+            customOrderedTracks = allTracks
+        }
+        let visible = filteredTracks
+        let movingIds = source.compactMap { idx -> UUID? in
+            guard visible.indices.contains(idx) else { return nil }
+            return visible[idx].id
+        }
+        guard !movingIds.isEmpty else { return }
+        
+        var working = customOrderedTracks
+        let fromOffsets = IndexSet(movingIds.compactMap { id in working.firstIndex(where: { $0.id == id }) })
+        guard !fromOffsets.isEmpty else { return }
+        
+        // Destination: index among full list of the item currently at `destination` in filtered view
+        let destId: UUID? = {
+            if destination < visible.count { return visible[destination].id }
+            return nil
+        }()
+        let toOffset: Int = {
+            if let destId, let idx = working.firstIndex(where: { $0.id == destId }) {
+                return idx
+            }
+            return working.count
+        }()
+        
+        working.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        customOrderedTracks = working
+        if coordinator.allTracks.count == customOrderedTracks.count {
+            coordinator.reorderTracks(fromOffsets: fromOffsets, toOffset: toOffset)
         }
         HapticManager.lightImpact()
     }
@@ -654,7 +675,7 @@ private struct PersonalLibraryTrackRow: View {
                         if track.appleMusicId != nil {
                             PlatformBrandBadgeView(type: .appleMusic, size: 14)
                         }
-                        if track.yandexId != nil {
+                        if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil {
                             PlatformBrandBadgeView(type: .yandexMusic, size: 14)
                         }
                     }

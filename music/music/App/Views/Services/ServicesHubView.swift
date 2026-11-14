@@ -12,7 +12,7 @@ public struct ServicesHubView: View {
     public var body: some View {
         NavigationStack {
             ZStack {
-                AmbientWashBackgroundView()
+                AmbientWashBackgroundView(tab: .home)
                 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
@@ -28,7 +28,7 @@ public struct ServicesHubView: View {
                             )
                             HUDMetricBox(
                                 title: "CONNECTED",
-                                value: "\(coordinator.activeProvidersCount) of 3",
+                                value: "\(coordinator.activeProvidersCount) of 2",
                                 color: coordinator.activeProvidersCount > 0 ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary,
                                 onTap: {
                                     NavigationCoordinator.shared.navigateToServices()
@@ -44,6 +44,31 @@ public struct ServicesHubView: View {
                             )
                         }
                         
+                        if !coordinator.lastSyncSummary.isEmpty {
+                            Text(coordinator.lastSyncSummary)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundColor(PastelTheme.textSecondary)
+                        }
+                        
+                        if let error = coordinator.lastErrorMessage {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(PastelTheme.amberWarning)
+                                Text(error)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(PastelTheme.textSecondary)
+                                Spacer(minLength: 0)
+                                Button("Dismiss") {
+                                    coordinator.lastErrorMessage = nil
+                                }
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(PastelTheme.pastelOat)
+                            }
+                            .padding(12)
+                            .background(PastelTheme.amberWarning.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        
                         // MARK: - Streaming Providers List
                         VStack(alignment: .leading, spacing: 10) {
                             Text("STREAMING ACCOUNTS")
@@ -54,23 +79,10 @@ public struct ServicesHubView: View {
                             
                             VStack(spacing: 12) {
                                 ServiceCardView(
-                                    type: .yandexMusic,
-                                    isAuthenticated: coordinator.yandexMusic.isAuthenticated,
-                                    userDisplayName: coordinator.yandexMusic.userDisplayName,
-                                    trackCount: coordinator.yandexMusic.trackCount,
-                                    onConnect: {
-                                        Task { await coordinator.authenticate(type: .yandexMusic) }
-                                    },
-                                    onRevoke: {
-                                        Task { await coordinator.revoke(type: .yandexMusic) }
-                                    }
-                                )
-                                
-                                ServiceCardView(
                                     type: .spotify,
                                     isAuthenticated: coordinator.spotify.isAuthenticated,
                                     userDisplayName: coordinator.spotify.userDisplayName,
-                                    trackCount: coordinator.spotify.trackCount,
+                                    trackCount: max(coordinator.spotify.trackCount, coordinator.tracks(for: .spotify).count),
                                     onConnect: {
                                         if SpotifyConfig.isConfigured {
                                             Task { await coordinator.authenticate(type: .spotify) }
@@ -83,23 +95,70 @@ public struct ServicesHubView: View {
                                     },
                                     onConfigure: {
                                         showingSpotifySetup = true
-                                    }
+                                    },
+                                    statusHint: coordinator.spotify.isUsingDemoData ? "Demo data" : nil
                                 )
                                 
                                 ServiceCardView(
                                     type: .appleMusic,
                                     isAuthenticated: coordinator.appleMusic.isAuthenticated,
                                     userDisplayName: coordinator.appleMusic.userDisplayName,
-                                    trackCount: coordinator.appleMusic.trackCount,
+                                    trackCount: max(coordinator.appleMusic.trackCount, coordinator.tracks(for: .appleMusic).count),
                                     onConnect: {
                                         Task { await coordinator.authenticate(type: .appleMusic) }
                                     },
                                     onRevoke: {
                                         Task { await coordinator.revoke(type: .appleMusic) }
-                                    }
+                                    },
+                                    statusHint: {
+                                        #if targetEnvironment(simulator)
+                                        "Use a physical iPhone — Simulator library is often empty"
+                                        #else
+                                        nil
+                                        #endif
+                                    }()
                                 )
+                                
+                                if YandexMusicProvider.isConnectorEnabled {
+                                    ServiceCardView(
+                                        type: .yandexMusic,
+                                        isAuthenticated: false,
+                                        userDisplayName: nil,
+                                        trackCount: 0,
+                                        onConnect: {},
+                                        onRevoke: {},
+                                        isAvailable: false,
+                                        unavailableReason: "Coming in TestFlight — Spotify & Apple Music first"
+                                    )
+                                }
                             }
                         }
+                        
+                        // MARK: - Migration CTA
+                        Button {
+                            HapticManager.lightImpact()
+                            NavigationCoordinator.shared.navigateToMove()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "arrow.left.arrow.right.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Move library between services")
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    Text("Live Spotify ↔ Apple Music — Demo Mode cannot migrate")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .opacity(0.85)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .bold))
+                            }
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .padding(16)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .buttonStyle(TouchFeedbackButtonStyle())
                         
                         // MARK: - Privacy & Local Storage
                         VStack(alignment: .leading, spacing: 10) {
@@ -133,6 +192,8 @@ public struct ServicesHubView: View {
                                     if let url = coordinator.exportUniversalJSON() {
                                         self.exportURL = url
                                         self.showingExportSheet = true
+                                    } else {
+                                        coordinator.lastErrorMessage = "Nothing to export yet — sync a library first."
                                     }
                                 } label: {
                                     HStack(spacing: 8) {
@@ -161,7 +222,7 @@ public struct ServicesHubView: View {
                     .padding(.vertical, 16)
                 }
             }
-            .navigationTitle("Services")
+            .navigationTitle("Connect")
             .inlineNavigationBarTitle()
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -249,6 +310,9 @@ private struct ServiceCardView: View {
     let onConnect: () -> Void
     let onRevoke: () -> Void
     var onConfigure: (() -> Void)? = nil
+    var isAvailable: Bool = true
+    var unavailableReason: String? = nil
+    var statusHint: String? = nil
     
     private var bannerName: String {
         switch type {
@@ -258,19 +322,43 @@ private struct ServiceCardView: View {
         }
     }
     
+    private var subtitle: String {
+        if !isAvailable {
+            return unavailableReason ?? "Coming soon"
+        }
+        if isAuthenticated {
+            let base = "\(trackCount) tracks • \(userDisplayName ?? "Connected")"
+            if let statusHint { return "\(base) • \(statusHint)" }
+            return base
+        }
+        if onConfigure != nil && !SpotifyConfig.isConfigured {
+            return "Setup required • Tap to configure"
+        }
+        return "Tap Connect to sync library"
+    }
+    
+    /// DEMO / SIM / LIVE — never show LIVE when statusHint marks a non-live session.
+    private var connectionBadge: (title: String, color: Color) {
+        if statusHint == "Demo data" {
+            return ("DEMO", PastelTheme.amberWarning)
+        }
+        if let statusHint, !statusHint.isEmpty {
+            return ("SIM", PastelTheme.amberWarning)
+        }
+        return ("LIVE", PastelTheme.emeraldSuccess)
+    }
+    
     var body: some View {
         ZStack {
-            // Layer 1: Atmospheric Background Banner Image
             GeometryReader { geo in
                 Image(bannerName)
                     .resizable()
                     .scaledToFill()
                     .frame(width: geo.size.width, height: geo.size.height)
                     .clipped()
-                    .opacity(0.38)
+                    .opacity(isAvailable ? 0.38 : 0.18)
             }
             
-            // Layer 2: Deep Dark Glass Scrim for 100% High-Contrast Text
             LinearGradient(
                 stops: [
                     .init(color: PastelTheme.card.opacity(0.92), location: 0.0),
@@ -281,18 +369,16 @@ private struct ServiceCardView: View {
                 endPoint: .trailing
             )
             
-            // Layer 3: Brand Ambient Radial Glow
             RadialGradient(
-                colors: [Color(hex: type.brandColorHex).opacity(0.18), Color.clear],
+                colors: [Color(hex: type.brandColorHex).opacity(isAvailable ? 0.18 : 0.08), Color.clear],
                 center: .trailing,
                 startRadius: 20,
                 endRadius: 260
             )
             
-            // Layer 4: Interactive HUD Content
             HStack(spacing: 14) {
-                // Official Vector Brand Badge
                 PlatformBrandBadgeView(type: type, size: 46)
+                    .opacity(isAvailable ? 1 : 0.55)
                 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -301,21 +387,31 @@ private struct ServiceCardView: View {
                             .foregroundColor(PastelTheme.textPrimary)
                         
                         if isAuthenticated {
+                            let badge = connectionBadge
                             HStack(spacing: 3) {
                                 Circle()
-                                    .fill(PastelTheme.emeraldSuccess)
+                                    .fill(badge.color)
                                     .frame(width: 5, height: 5)
-                                Text("LIVE")
+                                Text(badge.title)
                                     .font(.system(size: 8, weight: .heavy, design: .rounded))
-                                    .foregroundColor(PastelTheme.emeraldSuccess)
+                                    .foregroundColor(badge.color)
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(PastelTheme.emeraldSuccess.opacity(0.16))
+                            .background(badge.color.opacity(0.16))
                             .clipShape(Capsule())
+                            .accessibilityIdentifier("services.badge.\(badge.title.lowercased())")
+                        } else if !isAvailable {
+                            Text("SOON")
+                                .font(.system(size: 8, weight: .heavy, design: .rounded))
+                                .foregroundColor(PastelTheme.amberWarning)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(PastelTheme.amberWarning.opacity(0.16))
+                                .clipShape(Capsule())
                         }
                         
-                        if let onConfigure = onConfigure {
+                        if let onConfigure = onConfigure, isAvailable {
                             Button(action: onConfigure) {
                                 Image(systemName: "slider.horizontal.3")
                                     .font(.system(size: 11, weight: .medium))
@@ -324,16 +420,23 @@ private struct ServiceCardView: View {
                         }
                     }
                     
-                    Text(isAuthenticated ? "\(trackCount) tracks • \(userDisplayName ?? "Connected")" : (onConfigure != nil && !SpotifyConfig.isConfigured ? "Setup required • Tap to configure" : "Tap Connect to sync library"))
+                    Text(subtitle)
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(isAuthenticated ? PastelTheme.textSecondary : PastelTheme.textTertiary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                 }
                 
                 Spacer()
                 
-                // Action Button
-                if isAuthenticated {
+                if !isAvailable {
+                    Text("Soon")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(PastelTheme.cardSubtle.opacity(0.85))
+                        .clipShape(Capsule())
+                } else if isAuthenticated {
                     Button(action: onRevoke) {
                         Text("Disconnect")
                             .font(.system(size: 12, weight: .medium))
@@ -377,6 +480,7 @@ private struct ServiceCardView: View {
                     lineWidth: 1
                 )
         )
+        .opacity(isAvailable ? 1 : 0.9)
     }
 }
 

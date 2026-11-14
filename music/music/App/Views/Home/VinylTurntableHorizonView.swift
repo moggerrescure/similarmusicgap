@@ -22,70 +22,132 @@ public struct VinylTurntableHorizonView: View {
         public let labelGradient: [Color]
         public let labelTextColor: Color
         public let glowColor: Color
+        public let trackId: UUID?
+        public let opensLikedSongs: Bool
+        
+        public init(
+            id: Int,
+            title: String,
+            artist: String,
+            symbolOrInitial: String,
+            waxGradient: [Color],
+            labelGradient: [Color],
+            labelTextColor: Color,
+            glowColor: Color,
+            trackId: UUID? = nil,
+            opensLikedSongs: Bool = false
+        ) {
+            self.id = id
+            self.title = title
+            self.artist = artist
+            self.symbolOrInitial = symbolOrInitial
+            self.waxGradient = waxGradient
+            self.labelGradient = labelGradient
+            self.labelTextColor = labelTextColor
+            self.glowColor = glowColor
+            self.trackId = trackId
+            self.opensLikedSongs = opensLikedSongs
+        }
     }
     
-    public let vinyls: [ColoredVinylItem] = [
-        ColoredVinylItem(
-            id: 1,
-            title: "Liked Songs",
-            artist: "Favorites",
-            symbolOrInitial: "heart.fill",
-            waxGradient: [Color(hex: "#4A1FB8"), Color(hex: "#291266"), Color(hex: "#150938")],
-            labelGradient: [Color(hex: "#450AF5"), Color(hex: "#C4EFD9")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#4A1FB8")
+    private static let waxPalettes: [(wax: [Color], label: [Color], text: Color, glow: Color)] = [
+        (
+            [Color(hex: "#4A1FB8"), Color(hex: "#291266"), Color(hex: "#150938")],
+            [Color(hex: "#450AF5"), Color(hex: "#C4EFD9")],
+            .white,
+            Color(hex: "#4A1FB8")
         ),
-        ColoredVinylItem(
-            id: 2,
-            title: "Дора",
-            artist: "Дора",
-            symbolOrInitial: "Д",
-            waxGradient: [Color(hex: "#E11D74"), Color(hex: "#880E43"), Color(hex: "#42041E")],
-            labelGradient: [Color(hex: "#E11D74"), Color(hex: "#9C124E")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#E11D74")
+        (
+            [Color(hex: "#E11D74"), Color(hex: "#880E43"), Color(hex: "#42041E")],
+            [Color(hex: "#E11D74"), Color(hex: "#9C124E")],
+            .white,
+            Color(hex: "#E11D74")
         ),
-        ColoredVinylItem(
-            id: 3,
-            title: "50 Cent",
-            artist: "50 Cent",
-            symbolOrInitial: "50",
-            waxGradient: [Color(hex: "#10B981"), Color(hex: "#065F46"), Color(hex: "#022C22")],
-            labelGradient: [Color(hex: "#10B981"), Color(hex: "#059669")],
-            labelTextColor: Color.black,
-            glowColor: Color(hex: "#10B981")
+        (
+            [Color(hex: "#10B981"), Color(hex: "#065F46"), Color(hex: "#022C22")],
+            [Color(hex: "#10B981"), Color(hex: "#059669")],
+            .black,
+            Color(hex: "#10B981")
         ),
-        ColoredVinylItem(
-            id: 4,
-            title: "влад пиво",
-            artist: "влад пиво",
-            symbolOrInitial: "В",
-            waxGradient: [Color(hex: "#FBBF24"), Color(hex: "#B45309"), Color(hex: "#451A03")],
-            labelGradient: [Color(hex: "#FBBF24"), Color(hex: "#D97706")],
-            labelTextColor: Color.black,
-            glowColor: Color(hex: "#FBBF24")
+        (
+            [Color(hex: "#FBBF24"), Color(hex: "#B45309"), Color(hex: "#451A03")],
+            [Color(hex: "#FBBF24"), Color(hex: "#D97706")],
+            .black,
+            Color(hex: "#FBBF24")
         ),
-        ColoredVinylItem(
-            id: 5,
-            title: "Zemfira",
-            artist: "Zemfira",
-            symbolOrInitial: "Z",
-            waxGradient: [Color(hex: "#2563EB"), Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
-            labelGradient: [Color(hex: "#2563EB"), Color(hex: "#1D4ED8")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#2563EB")
+        (
+            [Color(hex: "#2563EB"), Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+            [Color(hex: "#2563EB"), Color(hex: "#1D4ED8")],
+            .white,
+            Color(hex: "#2563EB")
         ),
-        ColoredVinylItem(
-            id: 6,
-            title: "заставь меня плакать",
-            artist: "CUPSIZE",
-            symbolOrInitial: "C",
-            waxGradient: [Color(hex: "#991B1B"), Color(hex: "#450A0A"), Color(hex: "#1C0505")],
-            labelGradient: [Color(hex: "#EF4444"), Color(hex: "#991B1B")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#EF4444")
+        (
+            [Color(hex: "#991B1B"), Color(hex: "#450A0A"), Color(hex: "#1C0505")],
+            [Color(hex: "#EF4444"), Color(hex: "#991B1B")],
+            .white,
+            Color(hex: "#EF4444")
         )
     ]
+    
+    /// Prefer synced library artists/tracks; showcase discs only when library is empty.
+    private var vinyls: [ColoredVinylItem] {
+        if !coordinator.allTracks.isEmpty {
+            var items: [ColoredVinylItem] = [
+                ColoredVinylItem(
+                    id: 1,
+                    title: "Liked Songs",
+                    artist: "\(coordinator.allTracks.count) synced",
+                    symbolOrInitial: "heart.fill",
+                    waxGradient: Self.waxPalettes[0].wax,
+                    labelGradient: Self.waxPalettes[0].label,
+                    labelTextColor: Self.waxPalettes[0].text,
+                    glowColor: Self.waxPalettes[0].glow,
+                    opensLikedSongs: true
+                )
+            ]
+            
+            let artists = Array(
+                Set(coordinator.allTracks.prefix(60).map(\.primaryArtist))
+                    .sorted()
+                    .prefix(5)
+            )
+            for (idx, artist) in artists.enumerated() {
+                let palette = Self.waxPalettes[(idx + 1) % Self.waxPalettes.count]
+                let sample = coordinator.allTracks.first {
+                    $0.primaryArtist.localizedCaseInsensitiveContains(artist)
+                }
+                let initial = String(artist.prefix(1)).uppercased()
+                items.append(
+                    ColoredVinylItem(
+                        id: 10 + idx,
+                        title: artist,
+                        artist: sample?.album ?? "In your library",
+                        symbolOrInitial: initial.isEmpty ? "♪" : initial,
+                        waxGradient: palette.wax,
+                        labelGradient: palette.label,
+                        labelTextColor: palette.text,
+                        glowColor: palette.glow,
+                        trackId: sample?.id
+                    )
+                )
+            }
+            return items
+        }
+        
+        return [
+            ColoredVinylItem(
+                id: 1,
+                title: "Liked Songs",
+                artist: "Connect to sync",
+                symbolOrInitial: "heart.fill",
+                waxGradient: Self.waxPalettes[0].wax,
+                labelGradient: Self.waxPalettes[0].label,
+                labelTextColor: Self.waxPalettes[0].text,
+                glowColor: Self.waxPalettes[0].glow,
+                opensLikedSongs: true
+            )
+        ]
+    }
     
     @State private var activeVinylIndex: Int = 0
     
@@ -252,23 +314,26 @@ public struct VinylTurntableHorizonView: View {
     
     private func selectAndPlayVinyl(at index: Int) {
         HapticManager.lightImpact()
-        // Instant disc change without animations
+        guard index >= 0, index < vinyls.count else { return }
         activeVinylIndex = index
         
         let selected = vinyls[index]
-        if selected.title == "Liked Songs" {
+        if selected.opensLikedSongs {
             NavigationCoordinator.shared.openPersonalLibrary()
+            return
         }
         
-        let track = UniversalTrack(
-            isrc: "VN-\(selected.id)",
-            title: selected.title,
-            artists: [selected.artist],
-            album: selected.title == "Liked Songs" ? "Favorites" : "Vinyl Vault",
-            durationMs: 195000,
-            spotifyId: "vn_\(selected.id)"
-        )
-        player.play(track: track)
+        if let trackId = selected.trackId,
+           let track = coordinator.allTracks.first(where: { $0.id == trackId }) {
+            let queue = coordinator.allTracks.filter {
+                $0.primaryArtist.localizedCaseInsensitiveContains(selected.title)
+            }
+            player.play(track: track, in: queue.isEmpty ? coordinator.allTracks : queue)
+            return
+        }
+        
+        // Empty showcase vinyl — open Connect instead of inventing audio
+        NavigationCoordinator.shared.navigateToConnect()
     }
 }
 

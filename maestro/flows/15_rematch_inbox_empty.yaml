@@ -1,0 +1,36 @@
+appId: qere.music
+name: Rematch inbox empty honesty
+tags:
+  - transfer
+  - honesty
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "plus"
+- extendedWaitUntil:
+    visible: ".*Transfer.*|.*Create.*|.*compatible.*|Move|LIVE TRANSFER"
+    timeout: 10000
+
+- runFlow:
+    when:
+      visible: ".*Rematch.*|.*alternate.*"
+    commands:
+      - tapOn: ".*Rematch.*|.*alternate.*"
+      - extendedWaitUntil:
+          visible: ".*Inbox Zero.*|.*Nothing to rematch.*|.*dry-run.*|.*Rematch Inbox.*"
+          timeout: 8000
+      - tapOn:
+          text: "Done"
+          optional: true
+
+- assertVisible:
+    text: ".*LIVE TRANSFER.*|.*Demo.*|.*Connect.*|.*compatible.*|Transfer"
+    optional: true

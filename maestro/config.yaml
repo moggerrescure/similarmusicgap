@@ -1,0 +1,4 @@
+# Maestro suite config for SoundShift (qere.music)
+# Run: ./maestro/scripts/run_suite.sh
+flows:
+  - flows/*

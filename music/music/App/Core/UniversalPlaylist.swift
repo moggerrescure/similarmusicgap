@@ -13,7 +13,7 @@ public struct UniversalPlaylist: Identifiable, Codable, Equatable, Hashable {
     public var tracks: [UniversalTrack]
     
     public init(
-        id: UUID = UUID(),
+        id: UUID? = nil,
         providerPlaylistId: String,
         providerType: MusicProviderType,
         title: String,
@@ -23,7 +23,10 @@ public struct UniversalPlaylist: Identifiable, Codable, Equatable, Hashable {
         isPublic: Bool = true,
         tracks: [UniversalTrack] = []
     ) {
-        self.id = id
+        self.id = id ?? UniversalTrack.stableUUID(
+            title: "\(providerType.rawValue):\(providerPlaylistId)",
+            artist: "playlist"
+        )
         self.providerPlaylistId = providerPlaylistId
         self.providerType = providerType
         self.title = title

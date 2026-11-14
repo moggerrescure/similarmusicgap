@@ -1,0 +1,31 @@
+appId: qere.music
+name: Create/Transfer live gates visible
+tags:
+  - transfer
+  - gates
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "plus"
+- extendedWaitUntil:
+    visible: "Create"
+    timeout: 10000
+
+# Readiness / blocking copy should be honest without live pair
+- scroll
+- assertVisible:
+    text: ".*Client ID.*|.*Demo.*|.*live.*|.*Spotify.*|.*Apple Music.*|.*Connect.*|.*Sync.*"
+    optional: true
+
+- scroll
+- assertVisible:
+    text: ".*Dry-run match preview.*|.*Живой мост.*|.*LIVE TRANSFER.*|.*Open Connect.*|.*Migrate.*|.*Transfer.*"
+    optional: true

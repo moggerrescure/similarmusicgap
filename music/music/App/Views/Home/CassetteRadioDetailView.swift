@@ -14,6 +14,7 @@ public struct CassetteRadioDetailView: View {
     public let onDismiss: () -> Void
     
     @ObservedObject private var player = AudioPlayerManager.shared
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     @State private var toastMessage: String? = nil
     @State private var showToast: Bool = false
     @State private var spoolAngle: Double = 0
@@ -23,48 +24,44 @@ public struct CassetteRadioDetailView: View {
         self.onDismiss = onDismiss
     }
     
-    // Curated Radio Stream Tracks based on Cassette Theme
+    private var usesSyncedLibrary: Bool {
+        !coordinator.allTracks.isEmpty
+    }
+    
+    /// Prefer a slice of the synced library; showcase fixtures only when empty.
     private var curatedTracks: [UniversalTrack] {
+        if usesSyncedLibrary {
+            let offset = (tape.id % max(1, coordinator.allTracks.count))
+            let rotated = Array(coordinator.allTracks[offset...]) + Array(coordinator.allTracks[..<offset])
+            return Array(rotated.prefix(8))
+        }
+        return showcaseTracks
+    }
+    
+    private var showcaseTracks: [UniversalTrack] {
         switch tape.id {
-        case 201: // Night Drive Pulse
+        case 201:
             return [
                 UniversalTrack(title: "Resonance", artists: ["HOME"], album: "Odyssey", durationMs: 212000, spotifyId: "tape_201_1"),
                 UniversalTrack(title: "Nightcall", artists: ["Kavinsky", "Lovefoxxx"], album: "OutRun", durationMs: 259000, spotifyId: "tape_201_2"),
                 UniversalTrack(title: "Turbo Killer", artists: ["Carpenter Brut"], album: "Trilogy", durationMs: 208000, spotifyId: "tape_201_3"),
-                UniversalTrack(title: "Tech Noir", artists: ["GUNSHIP"], album: "GUNSHIP", durationMs: 297000, spotifyId: "tape_201_4"),
-                UniversalTrack(title: "After Dark", artists: ["Mr.Kitty"], album: "Time", durationMs: 257000, spotifyId: "tape_201_5"),
-                UniversalTrack(title: "Dust", artists: ["M|O|O|N"], album: "Moon EP", durationMs: 302000, spotifyId: "tape_201_6"),
-                UniversalTrack(title: "Vortex", artists: ["Perturbator"], album: "The Uncanny Valley", durationMs: 270000, spotifyId: "tape_201_7"),
-                UniversalTrack(title: "Pacific Coast Highway", artists: ["Kavinsky"], album: "OutRun", durationMs: 230000, spotifyId: "tape_201_8")
+                UniversalTrack(title: "Tech Noir", artists: ["GUNSHIP"], album: "GUNSHIP", durationMs: 297000, spotifyId: "tape_201_4")
             ]
-        case 202: // Silk Lo-Fi Flow
+        case 202:
             return [
                 UniversalTrack(title: "Affection", artists: ["Jinsang"], album: "Solitude", durationMs: 134000, spotifyId: "tape_202_1"),
                 UniversalTrack(title: "Again", artists: ["Wun Two"], album: "Rio", durationMs: 118000, spotifyId: "tape_202_2"),
-                UniversalTrack(title: "Can We Kiss Forever?", artists: ["Kina", "Adriana Proenza"], album: "Things I Wanted to Tell You", durationMs: 187000, spotifyId: "tape_202_3"),
-                UniversalTrack(title: "Feather", artists: ["Nujabes", "Cise Starr"], album: "Modal Soul", durationMs: 175000, spotifyId: "tape_202_4"),
-                UniversalTrack(title: "Coffee", artists: ["Kavv"], album: "Morning Roast", durationMs: 141000, spotifyId: "tape_202_5"),
-                UniversalTrack(title: "Get You The Moon", artists: ["Kina", "Snøw"], album: "Things I Wanted to Tell You", durationMs: 179000, spotifyId: "tape_202_6"),
-                UniversalTrack(title: "Contretemps", artists: ["Saib"], album: "Buena Vista", durationMs: 192000, spotifyId: "tape_202_7")
+                UniversalTrack(title: "Feather", artists: ["Nujabes", "Cise Starr"], album: "Modal Soul", durationMs: 175000, spotifyId: "tape_202_4")
             ]
-        case 203: // Tokyo Drift Phonk
+        case 203:
             return [
                 UniversalTrack(title: "Metamorphosis", artists: ["INTERWORLD"], album: "Metamorphosis", durationMs: 142000, spotifyId: "tape_203_1"),
-                UniversalTrack(title: "Murder In My Mind", artists: ["Kordhell"], album: "Beat Tape", durationMs: 145000, spotifyId: "tape_203_2"),
-                UniversalTrack(title: "RAVE", artists: ["Dxrk ダーク"], album: "RAVE", durationMs: 169000, spotifyId: "tape_203_3"),
-                UniversalTrack(title: "MIDNIGHT", artists: ["PLAYAMANE", "Nateki"], album: "MIDNIGHT", durationMs: 124000, spotifyId: "tape_203_4"),
-                UniversalTrack(title: "Close Eyes", artists: ["DVRST"], album: "Close Eyes", durationMs: 132000, spotifyId: "tape_203_5"),
-                UniversalTrack(title: "Warning", artists: ["MC ORSEN"], album: "Warning", durationMs: 138000, spotifyId: "tape_203_6"),
-                UniversalTrack(title: "Montagem Mysterious Game", artists: ["LXNGVX"], album: "Mysterious", durationMs: 122000, spotifyId: "tape_203_7")
+                UniversalTrack(title: "Close Eyes", artists: ["DVRST"], album: "Close Eyes", durationMs: 132000, spotifyId: "tape_203_5")
             ]
-        default: // Club Mix Surge
+        default:
             return [
                 UniversalTrack(title: "Where You Are", artists: ["John Summit", "Hayla"], album: "Where You Are", durationMs: 235000, spotifyId: "tape_204_1"),
-                UniversalTrack(title: "Delilah (pull me out of this)", artists: ["Fred again.."], album: "Actual Life 3", durationMs: 250000, spotifyId: "tape_204_2"),
-                UniversalTrack(title: "(It Goes Like) Nanana", artists: ["Peggy Gou"], album: "I Hear You", durationMs: 231000, spotifyId: "tape_204_3"),
-                UniversalTrack(title: "Losing It", artists: ["FISHER"], album: "Losing It", durationMs: 248000, spotifyId: "tape_204_4"),
-                UniversalTrack(title: "Glue", artists: ["Bicep"], album: "Bicep", durationMs: 269000, spotifyId: "tape_204_5"),
-                UniversalTrack(title: "Rumble", artists: ["Skrillex", "Fred again..", "Flowdan"], album: "Quest For Fire", durationMs: 146000, spotifyId: "tape_204_6")
+                UniversalTrack(title: "Glue", artists: ["Bicep"], album: "Bicep", durationMs: 269000, spotifyId: "tape_204_5")
             ]
         }
     }
@@ -99,7 +96,7 @@ public struct CassetteRadioDetailView: View {
                         
                         // 3. Curated Radio Stream Header
                         HStack {
-                            Text("CURATED RADIO STREAM")
+                            Text(usesSyncedLibrary ? "FROM YOUR LIBRARY" : "SHOWCASE STREAM")
                                 .font(.system(size: 11, weight: .heavy))
                                 .tracking(0.8)
                                 .foregroundColor(Color(hex: "#9CA3AF"))
@@ -112,6 +109,23 @@ public struct CassetteRadioDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 6)
+                        
+                        if !usesSyncedLibrary {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(PastelTheme.amberWarning)
+                                Text("Connect & Sync to play real previews — showcase titles won’t invent audio.")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(PastelTheme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(PastelTheme.amberWarning.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
+                        }
                         
                         // 4. Radio Tracklist
                         tracklistSection
@@ -145,7 +159,7 @@ public struct CassetteRadioDetailView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Назад")
+                    Text("Back")
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(PastelTheme.pastelOat)
@@ -327,27 +341,35 @@ public struct CassetteRadioDetailView: View {
             }
             .frame(width: 270, height: 165)
             
-            // Vibe Metadata & Algorithmic Description
+            // Vibe Metadata — honest badges (no fake match %)
             VStack(spacing: 5) {
-                // Smart Vibe Radio Pill
-                Text("SMART VIBE RADIO • 99% MATCH")
+                Text(usesSyncedLibrary ? "FROM YOUR LIBRARY" : "SHOWCASE MIXTAPE")
                     .font(.system(size: 8.5, weight: .heavy))
                     .tracking(0.8)
-                    .foregroundColor(PastelTheme.warmAmber)
+                    .foregroundColor(usesSyncedLibrary ? PastelTheme.emeraldSuccess : PastelTheme.amberWarning)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
-                    .background(PastelTheme.warmAmber.opacity(0.15))
+                    .background(
+                        (usesSyncedLibrary ? PastelTheme.emeraldSuccess : PastelTheme.amberWarning).opacity(0.15)
+                    )
                     .clipShape(Capsule())
                     .overlay(
                         Capsule()
-                            .stroke(PastelTheme.warmAmber.opacity(0.4), lineWidth: 1)
+                            .stroke(
+                                (usesSyncedLibrary ? PastelTheme.emeraldSuccess : PastelTheme.amberWarning).opacity(0.4),
+                                lineWidth: 1
+                            )
                     )
                 
                 Text(tape.title)
                     .font(.system(size: 20, weight: .black))
                     .foregroundColor(.white)
                 
-                Text("\(tape.subtitle) • Handcrafted analog stream matching your drive state")
+                Text(
+                    usesSyncedLibrary
+                    ? "\(tape.subtitle) • Built from your synced playlists"
+                    : "\(tape.subtitle) • Design fixture until you Connect & Sync"
+                )
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundColor(Color(hex: "#9CA3AF"))
                     .multilineTextAlignment(.center)
@@ -426,9 +448,13 @@ public struct CassetteRadioDetailView: View {
                 playAllTracks()
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: isTapePlaying ? "pause.fill" : "play.fill")
+                    Image(systemName: isTapePlaying ? "pause.fill" : (usesSyncedLibrary ? "play.fill" : "link"))
                         .font(.system(size: 13, weight: .bold))
-                    Text(isTapePlaying ? "Pause Mixtape" : "Play Mixtape")
+                    Text(
+                        isTapePlaying
+                        ? "Pause Mixtape"
+                        : (usesSyncedLibrary ? "Play Mixtape" : "Connect to Play")
+                    )
                         .font(.system(size: 14, weight: .bold))
                 }
                 .foregroundColor(PastelTheme.textOnOat)
@@ -439,6 +465,7 @@ public struct CassetteRadioDetailView: View {
                 .shadow(color: PastelTheme.pastelOat.opacity(0.22), radius: 8, y: 3)
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(usesSyncedLibrary ? "Play mixtape" : "Connect to play mixtape")
             
             // Shuffle Vibe Button
             Button {
@@ -446,9 +473,9 @@ public struct CassetteRadioDetailView: View {
                 shufflePlayTracks()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "shuffle")
+                    Image(systemName: usesSyncedLibrary ? "shuffle" : "link")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Shuffle Vibe")
+                    Text(usesSyncedLibrary ? "Shuffle" : "Connect")
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -462,6 +489,7 @@ public struct CassetteRadioDetailView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(usesSyncedLibrary ? "Shuffle mixtape" : "Connect to shuffle")
         }
     }
     
@@ -522,19 +550,25 @@ public struct CassetteRadioDetailView: View {
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundColor(Color(hex: "#6B7280"))
             
-            // "Add to Queue" Quick Button
+            // "Add to Queue" — only when synced library (no showcase ghosts)
             Button {
+                guard usesSyncedLibrary else {
+                    showQueueToastFeedback(trackTitle: "Connect & Sync to queue real tracks")
+                    return
+                }
                 player.addToQueue(track: track)
                 showQueueToastFeedback(trackTitle: track.title)
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(PastelTheme.pastelOat)
+                    .foregroundColor(usesSyncedLibrary ? PastelTheme.pastelOat : PastelTheme.textTertiary)
                     .frame(width: 28, height: 28)
                     .background(Color.white.opacity(0.06))
                     .clipShape(Circle())
             }
             .buttonStyle(BorderlessButtonStyle())
+            .disabled(!usesSyncedLibrary)
+            .accessibilityLabel(usesSyncedLibrary ? "Add to queue" : "Connect to queue tracks")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -547,23 +581,39 @@ public struct CassetteRadioDetailView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             HapticManager.selectionChanged()
-            player.play(track: track, in: curatedTracks)
+            playSyncedOrPrompt(track)
         }
     }
     
     // MARK: - Actions
+    private func playSyncedOrPrompt(_ track: UniversalTrack) {
+        guard usesSyncedLibrary else {
+            onDismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        player.play(track: track, in: curatedTracks)
+    }
+    
     private func playAllTracks() {
         if isTapePlaying {
             player.pause()
-        } else {
-            if let first = curatedTracks.first {
-                player.play(track: first, in: curatedTracks)
-            }
+            return
         }
+        guard usesSyncedLibrary, let first = curatedTracks.first else {
+            onDismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        player.play(track: first, in: curatedTracks)
     }
     
     private func shufflePlayTracks() {
-        guard let randomTrack = curatedTracks.randomElement() else { return }
+        guard usesSyncedLibrary, let randomTrack = curatedTracks.randomElement() else {
+            onDismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
         player.play(track: randomTrack, in: curatedTracks.shuffled())
     }
     

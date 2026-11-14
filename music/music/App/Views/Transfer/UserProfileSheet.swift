@@ -9,7 +9,7 @@ public struct UserProfileSheet: View {
     
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var cacheCleared: Bool = false
-    @State private var cacheSizeText: String = "18.4 MB"
+    @State private var cacheSizeText: String = "—"
     @State private var showingExportSheet: Bool = false
     @State private var exportURL: URL?
     @State private var exportTitle: String = "Backup"
@@ -119,7 +119,7 @@ public struct UserProfileSheet: View {
                             
                             MetricPill(
                                 title: "SERVICES",
-                                value: "\(coordinator.activeProvidersCount) of 3",
+                                value: "\(coordinator.activeProvidersCount) of 2",
                                 color: coordinator.activeProvidersCount > 0 ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary
                             ) {
                                 dismiss()
@@ -127,12 +127,12 @@ public struct UserProfileSheet: View {
                             }
                             
                             MetricPill(
-                                title: "PLAYLISTS",
-                                value: "\(coordinator.allPlaylists.count)",
-                                color: PastelTheme.slateBlue
+                                title: "TASTE",
+                                value: coordinator.allTracks.isEmpty ? "—" : "Live",
+                                color: PastelTheme.lavenderAI
                             ) {
                                 dismiss()
-                                navCoordinator.navigateToLibrary()
+                                navCoordinator.navigateToTaste()
                             }
                         }
                         
@@ -163,13 +163,15 @@ public struct UserProfileSheet: View {
                                     navCoordinator.navigateToServices()
                                 }
                                 
-                                AccountStatusRow(
-                                    type: .yandexMusic,
-                                    isConnected: coordinator.yandexMusic.isAuthenticated,
-                                    detail: coordinator.yandexMusic.userDisplayName ?? "Not connected"
-                                ) {
-                                    dismiss()
-                                    navCoordinator.navigateToServices()
+                                if YandexMusicProvider.isConnectorEnabled {
+                                    AccountStatusRow(
+                                        type: .yandexMusic,
+                                        isConnected: coordinator.yandexMusic.isAuthenticated,
+                                        detail: coordinator.yandexMusic.userDisplayName ?? "Not connected"
+                                    ) {
+                                        dismiss()
+                                        navCoordinator.navigateToServices()
+                                    }
                                 }
                             }
                         }
@@ -247,7 +249,9 @@ public struct UserProfileSheet: View {
                                     
                                     Spacer()
                                     
-                                    Text("01:56 • Живой предпросмотр")
+                                    Text(AudioPlayerManager.shared.currentTrack != nil
+                                          ? "\(AudioPlayerManager.shared.formattedCurrentTime) • style preview"
+                                          : "Style preview")
                                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                         .foregroundColor(coordinator.flaskFillingStyle.primaryColor)
                                 }
@@ -456,6 +460,9 @@ public struct UserProfileSheet: View {
                     .foregroundColor(PastelTheme.pastelOat)
                 }
             }
+            .onAppear {
+                refreshCacheSizeLabel()
+            }
             .sheet(isPresented: $showingExportSheet) {
                 if let url = exportURL {
                     ProfileShareSheet(activityItems: [url])
@@ -484,10 +491,20 @@ public struct UserProfileSheet: View {
         return "SoundShift Member"
     }
     
+    private func refreshCacheSizeLabel() {
+        let bytes = URLCache.shared.currentDiskUsage
+        if bytes <= 0 {
+            cacheSizeText = "0 KB"
+            return
+        }
+        cacheSizeText = ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+    
     private func clearAudioCache() {
         HapticManager.lightImpact()
         URLCache.shared.removeAllCachedResponses()
         cacheCleared = true
+        cacheSizeText = "0 KB"
         HapticManager.successNotification()
     }
     
@@ -503,7 +520,7 @@ public struct UserProfileSheet: View {
     private func exportCSVSpreadsheet() {
         HapticManager.lightImpact()
         var csv = "Title,Artist,Album,Duration,ISRC,Spotify_ID,Apple_ID,Yandex_ID\n"
-        let tracks = coordinator.allTracks.isEmpty ? coordinator.spotify.fetchFavoritesFallback() : coordinator.allTracks
+        let tracks = coordinator.allTracks
         for t in tracks {
             let title = "\"\(t.title.replacingOccurrences(of: "\"", with: "\"\""))\""
             let artist = "\"\(t.primaryArtist.replacingOccurrences(of: "\"", with: "\"\""))\""

@@ -217,7 +217,7 @@ private struct PlaylistTrackRow: View {
                     if track.appleMusicId != nil {
                         PlatformBrandBadgeView(type: .appleMusic, size: 14)
                     }
-                    if track.yandexId != nil {
+                    if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil {
                         PlatformBrandBadgeView(type: .yandexMusic, size: 14)
                     }
                 }

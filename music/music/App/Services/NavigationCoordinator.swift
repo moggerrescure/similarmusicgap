@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-/// App Tab Identifiers (Matching Spotify Production 4-Tab Standard)
+/// App Tab Identifiers (Matching Spotify Production 4-Tab Standard — designer)
 public enum AppTab: Int, CaseIterable, Identifiable {
     case home = 0
     case search = 1
@@ -12,6 +12,7 @@ public enum AppTab: Int, CaseIterable, Identifiable {
     public static let services = AppTab.home
     public static let transfer = AppTab.create
     public static let taste = AppTab.create
+    public static let move = AppTab.create
     
     public var id: Int { rawValue }
     
@@ -32,6 +33,10 @@ public final class NavigationCoordinator: ObservableObject {
     
     @Published public var selectedTab: Int = AppTab.home.rawValue
     @Published public var showingPersonalLibrarySheet: Bool = false
+    @Published public var showingConnectSheet: Bool = false
+    @Published public var showingTasteSheet: Bool = false
+    /// Consumed by Search tab when jumping from Home search.
+    @Published public var pendingSearchQuery: String?
     
     private init() {}
     
@@ -55,6 +60,18 @@ public final class NavigationCoordinator: ObservableObject {
         navigateTo(tab: .search)
     }
     
+    public func navigateToSearch(query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        pendingSearchQuery = trimmed.isEmpty ? nil : trimmed
+        navigateTo(tab: .search)
+    }
+    
+    public func consumePendingSearchQuery() -> String? {
+        let value = pendingSearchQuery
+        pendingSearchQuery = nil
+        return value
+    }
+    
     public func navigateToLibrary() {
         navigateTo(tab: .library)
     }
@@ -63,8 +80,17 @@ public final class NavigationCoordinator: ObservableObject {
         navigateTo(tab: .create)
     }
     
+    public func navigateToMove() {
+        navigateTo(tab: .create)
+    }
+    
     public func navigateToServices() {
-        navigateTo(tab: .home)
+        HapticManager.lightImpact()
+        showingConnectSheet = true
+    }
+    
+    public func navigateToConnect() {
+        navigateToServices()
     }
     
     public func navigateToTransfer() {
@@ -72,6 +98,46 @@ public final class NavigationCoordinator: ObservableObject {
     }
     
     public func navigateToTaste() {
-        navigateTo(tab: .create)
+        HapticManager.lightImpact()
+        showingTasteSheet = true
+    }
+    
+    /// Apply a parsed `soundshift://` deep link (cold start or while running).
+    public func apply(_ link: AppDeepLink) {
+        switch link {
+        case .spotifyCallback:
+            return
+        case .home:
+            showingConnectSheet = false
+            showingTasteSheet = false
+            showingPersonalLibrarySheet = false
+            navigateTo(tab: .home)
+        case .search(let query):
+            showingConnectSheet = false
+            showingTasteSheet = false
+            if let query, !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                navigateToSearch(query: query)
+            } else {
+                navigateToSearch()
+            }
+        case .library:
+            showingConnectSheet = false
+            showingTasteSheet = false
+            navigateTo(tab: .library)
+            openPersonalLibrary()
+        case .connect:
+            showingTasteSheet = false
+            showingPersonalLibrarySheet = false
+            navigateToConnect()
+        case .move:
+            showingConnectSheet = false
+            showingTasteSheet = false
+            showingPersonalLibrarySheet = false
+            navigateToMove()
+        case .taste:
+            showingConnectSheet = false
+            showingPersonalLibrarySheet = false
+            navigateToTaste()
+        }
     }
 }

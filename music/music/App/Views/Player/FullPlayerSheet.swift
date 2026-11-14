@@ -12,6 +12,27 @@ public struct FullPlayerSheet: View {
         self.track = track
     }
     
+    /// Honest chrome: previews are not full playlist playback.
+    private var playerContextEyebrow: String {
+        if player.isPreviewPlayback {
+            return "30S PREVIEW"
+        }
+        if !player.hasPlayablePreview {
+            return "NO PREVIEW"
+        }
+        if track.album != nil {
+            return "FROM ALBUM"
+        }
+        return "FROM LIBRARY"
+    }
+    
+    private var playerContextTitle: String {
+        if let album = track.album, !album.isEmpty {
+            return album
+        }
+        return track.primaryArtist
+    }
+    
     public var body: some View {
         ZStack {
             // Spotify Dark Background (#121212)
@@ -32,25 +53,45 @@ public struct FullPlayerSheet: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
+                    .accessibilityLabel("Close player")
                     
                     Spacer()
                     
                     VStack(spacing: 2) {
-                        Text("PLAYING FROM PLAYLIST")
+                        Text(playerContextEyebrow)
                             .font(.system(size: 10, weight: .bold))
                             .tracking(0.8)
                             .foregroundColor(Color(hex: "#B3B3B3"))
                         
-                        Text(track.album ?? "Universal Vault")
+                        Text(playerContextTitle)
                             .font(.system(size: 12, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(1)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(playerContextEyebrow), \(playerContextTitle)")
                     
                     Spacer()
                     
-                    Button {
-                        HapticManager.lightImpact()
+                    Menu {
+                        if track.spotifyId != nil {
+                            Button("Open in Spotify") {
+                                DeepLinkManager.openTrack(track: track, in: .spotify)
+                            }
+                        }
+                        if track.appleMusicId != nil {
+                            Button("Open in Apple Music") {
+                                DeepLinkManager.openTrack(track: track, in: .appleMusic)
+                            }
+                        }
+                        if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil {
+                            Button("Open in Yandex Music") {
+                                DeepLinkManager.openTrack(track: track, in: .yandexMusic)
+                            }
+                        }
+                        Button("Toggle favorite") {
+                            player.toggleFavorite(track: track)
+                        }
                     } label: {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 18, weight: .bold))
@@ -97,6 +138,16 @@ public struct FullPlayerSheet: View {
                             .foregroundColor(PastelTheme.textSecondary)
                             .lineLimit(1)
                             .contentTransition(.opacity)
+                        
+                        if player.isPreviewPlayback {
+                            Text("30s preview")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(PastelTheme.emeraldSuccess)
+                        } else if !player.hasPlayablePreview {
+                            Text("No preview available")
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundColor(PastelTheme.amberWarning)
+                        }
                     }
                     .animation(.smooth(duration: 0.35), value: track.id)
                     
@@ -113,6 +164,7 @@ public struct FullPlayerSheet: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
+                    .accessibilityLabel(player.isFavorite(track: track) ? "Remove from favorites" : "Add to favorites")
                 }
                 .padding(.horizontal, 28)
                 
@@ -180,6 +232,7 @@ public struct FullPlayerSheet: View {
                             .frame(width: 40, height: 40)
                     }
                     .buttonStyle(PlayerCleanButtonStyle())
+                    .accessibilityLabel(player.isShuffled ? "Shuffle on" : "Shuffle off")
                     
                     // Previous
                     Button {
@@ -191,6 +244,7 @@ public struct FullPlayerSheet: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.90))
+                    .accessibilityLabel("Previous track")
                     
                     // Big Play/Pause CTA (Solid Oat Circle, Clean without outer stroke)
                     Button {
@@ -206,6 +260,7 @@ public struct FullPlayerSheet: View {
                             )
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.95))
+                    .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
                     
                     // Next
                     Button {
@@ -217,6 +272,7 @@ public struct FullPlayerSheet: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.90))
+                    .accessibilityLabel("Next track")
                     
                     // Loop Mode
                     Button {
@@ -228,6 +284,7 @@ public struct FullPlayerSheet: View {
                             .frame(width: 40, height: 40)
                     }
                     .buttonStyle(PlayerCleanButtonStyle())
+                    .accessibilityLabel("Repeat \(player.loopMode == .off ? "off" : "on")")
                 }
                 .padding(.top, 8)
                 
@@ -235,7 +292,7 @@ public struct FullPlayerSheet: View {
                 
                 // Service deep link chip (Marble White Capsule)
                 HStack(spacing: 8) {
-                    if track.yandexId != nil {
+                    if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil {
                         Button { DeepLinkManager.openTrack(track: track, in: .yandexMusic) } label: {
                             Label("Yandex", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))

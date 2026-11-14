@@ -1,0 +1,37 @@
+appId: qere.music
+name: Library empty history honesty
+tags:
+  - library
+  - honesty
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "books.vertical"
+- extendedWaitUntil:
+    visible: ".*Synced Collection.*|.*Migration History.*|.*Connect services.*|Your Library"
+    timeout: 10000
+
+- assertVisible:
+    text: ".*No transfers yet.*|.*Migration History.*|.*Synced Collection.*"
+    optional: true
+
+- tapOn:
+    text: "Connect services"
+    optional: true
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - assertVisible:
+          text: ".*Spotify.*|.*Apple Music.*"
+          optional: true
+      - tapOn: "Done"

@@ -1,0 +1,41 @@
+appId: qere.music
+name: Home Connect + Taste entry points
+tags:
+  - home
+  - connect
+  - taste
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "house.fill"
+- extendedWaitUntil:
+    visible:
+      id: "home.connect"
+    timeout: 8000
+
+# Connect button
+- tapOn:
+    id: "home.connect"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 8000
+- assertVisible:
+    text: ".*Spotify.*|.*Apple Music.*"
+- tapOn: "Done"
+
+# Taste button
+- tapOn:
+    id: "home.taste"
+- extendedWaitUntil:
+    visible: "Taste Profile"
+    timeout: 8000
+- assertVisible: "Taste Profile"
+- tapOn: "Done"

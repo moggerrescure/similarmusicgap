@@ -10,6 +10,9 @@ public struct CreatePlaylistSheet: View {
     @State private var selectedTrackIds: Set<UUID> = []
     @State private var searchTrackText: String = ""
     @State private var selectedThemeIndex: Int = 0
+    @State private var destination: MusicProviderType = .spotify
+    @State private var isSaving: Bool = false
+    @State private var saveError: String?
     
     // Preset cover gradient themes
     private let themes: [(name: String, colors: [Color])] = [
@@ -20,16 +23,12 @@ public struct CreatePlaylistSheet: View {
         ("Oat Cashmere", [PastelTheme.pastelOat, Color(hex: "#27272A")])
     ]
     
+    private var availableDestinations: [MusicProviderType] {
+        MusicProviderType.availableConnectors.filter { coordinator.provider(for: $0).isAuthenticated }
+    }
+    
     private var availableTracks: [UniversalTrack] {
-        let list = coordinator.allTracks.isEmpty ? [
-            UniversalTrack(isrc: "USUM71703861", title: "Starboy", artists: ["The Weeknd", "Daft Punk"], album: "Starboy", durationMs: 230453, yandexId: "29871638", spotifyId: "7a26vX02Y4vYj9P6RrqU04"),
-            UniversalTrack(isrc: "GBUM71505080", title: "The Less I Know the Better", artists: ["Tame Impala"], album: "Currents", durationMs: 216320, spotifyId: "6K4t31amVTKVgPeRoxXErq"),
-            UniversalTrack(isrc: "USAT21900122", title: "Blinding Lights", artists: ["The Weeknd"], album: "After Hours", durationMs: 200040, appleMusicId: "1499378607"),
-            UniversalTrack(isrc: "RUAA12000042", title: "Где нас нет", artists: ["Oxxxymiron"], album: "ГОРГОРОД", durationMs: 265000, yandexId: "24981120"),
-            UniversalTrack(isrc: "FRUM71300088", title: "Instant Crush", artists: ["Daft Punk", "Julian Casablancas"], album: "Random Access Memories", durationMs: 337560, yandexId: "14589231", spotifyId: "2bpgKp31sOVoTeStOXzi8C"),
-            UniversalTrack(isrc: "USWB11200021", title: "Midnight City", artists: ["M83"], album: "Hurry Up, We're Dreaming", durationMs: 243000, spotifyId: "1eyzqe2QqGZUmfcPZtrIyt", appleMusicId: "466487841")
-        ] : coordinator.allTracks
-        
+        let list = coordinator.allTracks
         if searchTrackText.isEmpty {
             return list
         }
@@ -38,6 +37,10 @@ public struct CreatePlaylistSheet: View {
             $0.title.lowercased().contains(q) ||
             $0.primaryArtist.lowercased().contains(q)
         }
+    }
+    
+    private var canCreatePlaylist: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty && !availableDestinations.isEmpty
     }
     
     public init() {}
@@ -78,6 +81,64 @@ public struct CreatePlaylistSheet: View {
                             }
                         }
                         .padding(.top, 10)
+                        
+                        if !availableDestinations.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("SAVE TO")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .tracking(0.6)
+                                    .foregroundColor(PastelTheme.textTertiary)
+                                HStack(spacing: 8) {
+                                    ForEach(availableDestinations) { type in
+                                        Button {
+                                            destination = type
+                                            HapticManager.lightImpact()
+                                        } label: {
+                                            Text(type.displayName)
+                                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                                .foregroundColor(destination == type ? PastelTheme.textOnOat : PastelTheme.textSecondary)
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 8)
+                                                .background(destination == type ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
+                                                .clipShape(Capsule())
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                        } else {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Connect a service first")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundColor(PastelTheme.textPrimary)
+                                Text("Playlists save to Spotify or Apple Music — local-only stubs are disabled so nothing looks “saved” when it isn’t.")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(PastelTheme.amberWarning)
+                                Button {
+                                    HapticManager.lightImpact()
+                                    dismiss()
+                                    NavigationCoordinator.shared.navigateToConnect()
+                                } label: {
+                                    Text("Open Connect")
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundColor(PastelTheme.textOnOat)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(PastelTheme.pastelOat)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                            .padding(.horizontal, 16)
+                        }
+                        
+                        if let saveError {
+                            Text(saveError)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.red.opacity(0.9))
+                                .padding(.horizontal, 16)
+                        }
                         
                         // MARK: - Theme Color Swatches
                         HStack(spacing: 12) {
@@ -161,6 +222,13 @@ public struct CreatePlaylistSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .padding(.horizontal, 16)
                             
+                            if coordinator.allTracks.isEmpty {
+                                Text("No synced tracks yet — you can still create an empty playlist on the service, then Sync to fill the picker.")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(PastelTheme.textTertiary)
+                                    .padding(.horizontal, 16)
+                            }
+                            
                             // Track picker list
                             VStack(spacing: 4) {
                                 ForEach(availableTracks) { track in
@@ -202,10 +270,9 @@ public struct CreatePlaylistSheet: View {
                                             
                                             Spacer()
                                             
-                                            PlatformBrandBadgeView(
-                                                type: track.spotifyId != nil ? .spotify : (track.appleMusicId != nil ? .appleMusic : .yandexMusic),
-                                                size: 18
-                                            )
+                                            if let badgeType = Self.badgeType(for: track) {
+                                                PlatformBrandBadgeView(type: badgeType, size: 18)
+                                            }
                                         }
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 10)
@@ -223,21 +290,39 @@ public struct CreatePlaylistSheet: View {
                             createPlaylist()
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 16, weight: .bold))
-                                Text("Create Playlist")
+                                if isSaving {
+                                    ProgressView()
+                                        .tint(PastelTheme.textOnOat)
+                                } else {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 16, weight: .bold))
+                                }
+                                Text(
+                                    isSaving
+                                    ? "Saving…"
+                                    : (availableDestinations.isEmpty ? "Connect to create" : "Create Playlist")
+                                )
                                     .font(.system(size: 16, weight: .bold, design: .rounded))
                             }
                             .foregroundColor(PastelTheme.textOnOat)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
-                            .background(title.trimmingCharacters(in: .whitespaces).isEmpty ? PastelTheme.cardSubtle : PastelTheme.pastelOat)
+                            .background(
+                                (!canCreatePlaylist || isSaving)
+                                ? PastelTheme.cardSubtle
+                                : PastelTheme.pastelOat
+                            )
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(!canCreatePlaylist || isSaving)
                         .padding(.horizontal, 16)
                         .padding(.top, 10)
                         .padding(.bottom, 30)
+                        .onAppear {
+                            if let first = availableDestinations.first {
+                                destination = first
+                            }
+                        }
                     }
                 }
             }
@@ -252,18 +337,56 @@ public struct CreatePlaylistSheet: View {
         }
     }
     
+    private static func badgeType(for track: UniversalTrack) -> MusicProviderType? {
+        if track.spotifyId != nil { return .spotify }
+        if track.appleMusicId != nil { return .appleMusic }
+        if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil { return .yandexMusic }
+        return nil
+    }
+    
     private func createPlaylist() {
         let cleanTitle = title.trimmingCharacters(in: .whitespaces)
         guard !cleanTitle.isEmpty else { return }
         
-        let chosenTracks = availableTracks.filter { selectedTrackIds.contains($0.id) }
-        _ = coordinator.createPlaylist(
-            title: cleanTitle,
-            description: descriptionText.isEmpty ? nil : descriptionText,
-            tracks: chosenTracks
-        )
-        HapticManager.successNotification()
-        dismiss()
+        // Never invent a local-only playlist — that looked like a service save.
+        guard !availableDestinations.isEmpty else {
+            saveError = "Connect Spotify or Apple Music before creating a playlist."
+            HapticManager.errorNotification()
+            dismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        
+        // Always resolve from full library — search filter must not drop prior selections.
+        let chosenTracks = coordinator.allTracks.filter { selectedTrackIds.contains($0.id) }
+        
+        if !availableDestinations.contains(destination) {
+            destination = availableDestinations[0]
+        }
+        
+        isSaving = true
+        saveError = nil
+        Task {
+            do {
+                let created = try await coordinator.provider(for: destination).createPlaylist(
+                    name: cleanTitle,
+                    description: descriptionText.isEmpty ? nil : descriptionText,
+                    tracks: chosenTracks
+                )
+                await MainActor.run {
+                    coordinator.ingestRemotePlaylist(created)
+                    isSaving = false
+                    HapticManager.successNotification()
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    saveError = error.localizedDescription
+                    HapticManager.errorNotification()
+                }
+            }
+        }
     }
 }
 

@@ -12,9 +12,10 @@ public struct SpotifyHomeFeedView: View {
     @ObservedObject private var player = AudioPlayerManager.shared
     @ObservedObject private var navCoordinator = NavigationCoordinator.shared
     
-    @State private var selectedFilter: String = "All"
+    @State private var selectedFilter: HomeFeedFilter = .all
     @State private var showingProfileSheet: Bool = false
     @State private var selectedVaultAlbum: VaultAlbumItem? = nil
+    @State private var detailVaultAlbum: VaultAlbumItem? = nil
     @State private var selectedCassetteTape: CassetteItem? = nil
     @State private var searchText: String = ""
     
@@ -29,16 +30,29 @@ public struct SpotifyHomeFeedView: View {
         public let isLikedSongs: Bool
         public let coverHex: String
         public let initialOrSymbol: String
-    }
-    
-    public struct AlbumCardItem: Identifiable {
-        public let id: Int
-        public let title: String
-        public let subtitle: String
-        public let badgeText: String?
-        public let gradientColors: [Color]
-        public let systemImage: String
-        public let accentColor: Color
+        public let trackId: UUID?
+        
+        public init(
+            id: Int,
+            title: String,
+            artist: String,
+            isArtist: Bool,
+            isPlayingNow: Bool,
+            isLikedSongs: Bool,
+            coverHex: String,
+            initialOrSymbol: String,
+            trackId: UUID? = nil
+        ) {
+            self.id = id
+            self.title = title
+            self.artist = artist
+            self.isArtist = isArtist
+            self.isPlayingNow = isPlayingNow
+            self.isLikedSongs = isLikedSongs
+            self.coverHex = coverHex
+            self.initialOrSymbol = initialOrSymbol
+            self.trackId = trackId
+        }
     }
     
     public struct CassetteItem: Identifiable {
@@ -104,63 +118,115 @@ public struct SpotifyHomeFeedView: View {
     
     // MARK: - Data (Zero Emojis, High-Contrast Palette)
     
-    private let shortcuts: [RecentShortcut] = [
-        RecentShortcut(id: 1, title: "заставь меня плакать", artist: "CUPSIZE", isArtist: false, isPlayingNow: true, isLikedSongs: false, coverHex: "#2E3440", initialOrSymbol: "cloud.rain.fill"),
-        RecentShortcut(id: 2, title: "Liked Songs", artist: "Favorites", isArtist: false, isPlayingNow: false, isLikedSongs: true, coverHex: "#450AF5", initialOrSymbol: "heart.fill"),
-        RecentShortcut(id: 3, title: "Дора", artist: "Дора", isArtist: true, isPlayingNow: false, isLikedSongs: false, coverHex: "#D08770", initialOrSymbol: "person.fill"),
-        RecentShortcut(id: 4, title: "50 Cent", artist: "50 Cent", isArtist: true, isPlayingNow: false, isLikedSongs: false, coverHex: "#4C566A", initialOrSymbol: "person.fill"),
-        RecentShortcut(id: 5, title: "влад пиво", artist: "влад пиво", isArtist: true, isPlayingNow: false, isLikedSongs: false, coverHex: "#EBCB8B", initialOrSymbol: "person.fill"),
-        RecentShortcut(id: 6, title: "Zemfira", artist: "Zemfira", isArtist: true, isPlayingNow: false, isLikedSongs: false, coverHex: "#3B4252", initialOrSymbol: "person.fill"),
-        RecentShortcut(id: 7, title: "неуравновешеннолетние", artist: "CUPSIZE", isArtist: false, isPlayingNow: false, isLikedSongs: false, coverHex: "#BF616A", initialOrSymbol: "music.note"),
-        RecentShortcut(id: 8, title: "дели на два", artist: "CUPSIZE", isArtist: false, isPlayingNow: false, isLikedSongs: false, coverHex: "#5E81AC", initialOrSymbol: "music.note.list")
+    private let shortcutPalette: [String] = [
+        "#2E3440", "#450AF5", "#D08770", "#4C566A",
+        "#EBCB8B", "#3B4252", "#BF616A", "#5E81AC"
     ]
     
-    private let cassetteDrops: [CassetteItem] = [
-        CassetteItem(
-            id: 201,
-            title: "Night Drive Pulse",
-            subtitle: "Dark Synthwave • 44:20",
-            sideText: "SIDE A",
-            tapeType: "TYPE II • HIGH BIAS",
-            tapeLength: "60 MIN",
-            labelGradient: [Color(hex: "#C2410C"), Color(hex: "#7C2D12")],
-            accentColor: Color(hex: "#F97316"),
-            trackIsrc: "TAPE-201"
-        ),
-        CassetteItem(
-            id: 202,
-            title: "Silk Lo-Fi Flow",
-            subtitle: "Chill Focus Beats • 38:15",
-            sideText: "SIDE A",
-            tapeType: "CHROME CrO2",
-            tapeLength: "45 MIN",
-            labelGradient: [Color(hex: "#4338CA"), Color(hex: "#312E81")],
-            accentColor: Color(hex: "#818CF8"),
-            trackIsrc: "TAPE-202"
-        ),
-        CassetteItem(
-            id: 203,
-            title: "Tokyo Drift Phonk",
-            subtitle: "Drift Wave & Cowbell • 52:10",
-            sideText: "SIDE A",
-            tapeType: "METAL TAPE IV",
-            tapeLength: "60 MIN",
-            labelGradient: [Color(hex: "#065F46"), Color(hex: "#022C22")],
-            accentColor: Color(hex: "#10B981"),
-            trackIsrc: "TAPE-203"
-        ),
-        CassetteItem(
-            id: 204,
-            title: "Club Mix Surge",
-            subtitle: "138+ BPM Peak Beats • 64:00",
-            sideText: "SIDE A",
-            tapeType: "TYPE I • NORMAL",
-            tapeLength: "90 MIN",
-            labelGradient: [Color(hex: "#831843"), Color(hex: "#500724")],
-            accentColor: Color(hex: "#F43F5E"),
-            trackIsrc: "TAPE-204"
+    /// Prefer synced library; otherwise a single Liked Songs CTA (no demo catalog).
+    private var shortcuts: [RecentShortcut] {
+        var items: [RecentShortcut] = [
+            RecentShortcut(
+                id: 0,
+                title: "Liked Songs",
+                artist: coordinator.allTracks.isEmpty ? "Connect to sync" : "\(coordinator.allTracks.count) tracks",
+                isArtist: false,
+                isPlayingNow: false,
+                isLikedSongs: true,
+                coverHex: "#450AF5",
+                initialOrSymbol: "heart.fill"
+            )
+        ]
+        
+        guard !coordinator.allTracks.isEmpty || !coordinator.allPlaylists.isEmpty else {
+            return items
+        }
+        
+        for (idx, playlist) in coordinator.allPlaylists.prefix(3).enumerated() {
+            items.append(
+                RecentShortcut(
+                    id: 100 + idx,
+                    title: playlist.title,
+                    artist: playlist.providerType.displayName,
+                    isArtist: false,
+                    isPlayingNow: false,
+                    isLikedSongs: false,
+                    coverHex: shortcutPalette[(idx + 1) % shortcutPalette.count],
+                    initialOrSymbol: "music.note.list",
+                    trackId: playlist.tracks.first?.id
+                )
+            )
+        }
+        
+        let artists = Array(
+            Set(coordinator.allTracks.prefix(40).map(\.primaryArtist))
+                .sorted()
+                .prefix(3)
         )
+        for (idx, artist) in artists.enumerated() {
+            items.append(
+                RecentShortcut(
+                    id: 200 + idx,
+                    title: artist,
+                    artist: artist,
+                    isArtist: true,
+                    isPlayingNow: false,
+                    isLikedSongs: false,
+                    coverHex: shortcutPalette[(idx + 3) % shortcutPalette.count],
+                    initialOrSymbol: "person.fill"
+                )
+            )
+        }
+        
+        for (idx, track) in coordinator.allTracks.prefix(4).enumerated() {
+            items.append(
+                RecentShortcut(
+                    id: 300 + idx,
+                    title: track.title,
+                    artist: track.primaryArtist,
+                    isArtist: false,
+                    isPlayingNow: player.currentTrack?.id == track.id && player.isPlaying,
+                    isLikedSongs: false,
+                    coverHex: shortcutPalette[(idx + 5) % shortcutPalette.count],
+                    initialOrSymbol: "music.note",
+                    trackId: track.id
+                )
+            )
+        }
+        
+        return Array(items.prefix(8))
+    }
+    
+    private static let cassettePalettes: [(label: [Color], accent: Color)] = [
+        ([Color(hex: "#C2410C"), Color(hex: "#7C2D12")], Color(hex: "#F97316")),
+        ([Color(hex: "#4338CA"), Color(hex: "#312E81")], Color(hex: "#818CF8")),
+        ([Color(hex: "#065F46"), Color(hex: "#022C22")], Color(hex: "#10B981")),
+        ([Color(hex: "#831843"), Color(hex: "#500724")], Color(hex: "#F43F5E"))
     ]
+    
+    private var cassetteDescriptors: [HomeCassetteDescriptor] {
+        HomeCassetteBuilder.build(
+            playlists: coordinator.allPlaylists,
+            tracks: coordinator.allTracks
+        )
+    }
+    
+    private var cassetteDrops: [CassetteItem] {
+        cassetteDescriptors.enumerated().map { idx, desc in
+            let palette = Self.cassettePalettes[idx % Self.cassettePalettes.count]
+            return CassetteItem(
+                id: desc.id,
+                title: desc.title,
+                subtitle: desc.subtitle,
+                sideText: desc.sideText,
+                tapeType: desc.tapeType,
+                tapeLength: desc.tapeLength,
+                labelGradient: palette.label,
+                accentColor: palette.accent,
+                trackIsrc: desc.trackIsrc
+            )
+        }
+    }
     
     // MARK: - Album Master Tracklists
     private static let utopiaTracks: [UniversalTrack] = [
@@ -211,304 +277,331 @@ public struct SpotifyHomeFeedView: View {
         UniversalTrack(title: "Kingdom Hearts Key", artists: ["JPEGMAFIA", "Danny Brown"], album: "SCARING THE HOES", durationMs: 203000, spotifyId: "scaring_8")
     ]
     
-    private let vaultAlbums: [VaultAlbumItem] = [
-        VaultAlbumItem(
-            id: 301,
-            title: "UTOPIA",
-            artist: "Travis Scott",
-            symbolOrInitial: "TS",
-            releaseYear: "2023",
-            genre: "Hip-Hop / Trap",
-            trackCount: "19 tracks",
-            totalDuration: "1 hr 13 min",
-            gradientColors: [Color(hex: "#2F3136"), Color(hex: "#141518")],
-            waxGradient: [Color(hex: "#4B5563"), Color(hex: "#1F2937"), Color(hex: "#111827")],
-            labelGradient: [Color(hex: "#EFE3D3"), Color(hex: "#D1D5DB")],
-            labelTextColor: Color(hex: "#0E0F12"),
-            glowColor: Color(hex: "#EFE3D3"),
-            accentColor: Color(hex: "#EFE3D3"),
-            tracks: utopiaTracks
-        ),
-        VaultAlbumItem(
-            id: 302,
-            title: "SOS",
-            artist: "SZA",
-            symbolOrInitial: "SZA",
-            releaseYear: "2022",
-            genre: "R&B / Soul",
-            trackCount: "23 tracks",
-            totalDuration: "1 hr 8 min",
-            gradientColors: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
-            waxGradient: [Color(hex: "#2563EB"), Color(hex: "#1D4ED8"), Color(hex: "#0F172A")],
-            labelGradient: [Color(hex: "#60A5FA"), Color(hex: "#2563EB")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#60A5FA"),
-            accentColor: Color(hex: "#60A5FA"),
-            tracks: sosTracks
-        ),
-        VaultAlbumItem(
-            id: 303,
-            title: "GUTS",
-            artist: "Olivia Rodrigo",
-            symbolOrInitial: "OR",
-            releaseYear: "2023",
-            genre: "Alt-Pop / Rock",
-            trackCount: "12 tracks",
-            totalDuration: "39 min",
-            gradientColors: [Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
-            waxGradient: [Color(hex: "#9333EA"), Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
-            labelGradient: [Color(hex: "#C084FC"), Color(hex: "#7E22CE")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#C084FC"),
-            accentColor: Color(hex: "#A78BFA"),
-            tracks: gutsTracks
-        ),
-        VaultAlbumItem(
-            id: 304,
-            title: "SCARING THE HOES",
-            artist: "JPEGMAFIA, Danny Brown",
-            symbolOrInitial: "SH",
-            releaseYear: "2023",
-            genre: "Experimental Hip-Hop",
-            trackCount: "14 tracks",
-            totalDuration: "36 min",
-            gradientColors: [Color(hex: "#991B1B"), Color(hex: "#1E293B")],
-            waxGradient: [Color(hex: "#DC2626"), Color(hex: "#991B1B"), Color(hex: "#2B0B0B")],
-            labelGradient: [Color(hex: "#F87171"), Color(hex: "#B91C1C")],
-            labelTextColor: Color.white,
-            glowColor: Color(hex: "#EF4444"),
-            accentColor: Color(hex: "#FDE68A"),
-            tracks: scaringTracks
-        )
+    private var showcaseVaultAlbums: [VaultAlbumItem] {
+        [
+            VaultAlbumItem(
+                id: 301,
+                title: "UTOPIA",
+                artist: "Travis Scott",
+                symbolOrInitial: "TS",
+                releaseYear: "2023",
+                genre: "Hip-Hop / Trap",
+                trackCount: "19 tracks",
+                totalDuration: "1 hr 13 min",
+                gradientColors: [Color(hex: "#2F3136"), Color(hex: "#141518")],
+                waxGradient: [Color(hex: "#4B5563"), Color(hex: "#1F2937"), Color(hex: "#111827")],
+                labelGradient: [Color(hex: "#EFE3D3"), Color(hex: "#D1D5DB")],
+                labelTextColor: Color(hex: "#0E0F12"),
+                glowColor: Color(hex: "#EFE3D3"),
+                accentColor: Color(hex: "#EFE3D3"),
+                tracks: Self.utopiaTracks
+            ),
+            VaultAlbumItem(
+                id: 302,
+                title: "SOS",
+                artist: "SZA",
+                symbolOrInitial: "SZA",
+                releaseYear: "2022",
+                genre: "R&B / Soul",
+                trackCount: "23 tracks",
+                totalDuration: "1 hr 8 min",
+                gradientColors: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+                waxGradient: [Color(hex: "#2563EB"), Color(hex: "#1D4ED8"), Color(hex: "#0F172A")],
+                labelGradient: [Color(hex: "#60A5FA"), Color(hex: "#2563EB")],
+                labelTextColor: Color.white,
+                glowColor: Color(hex: "#60A5FA"),
+                accentColor: Color(hex: "#60A5FA"),
+                tracks: Self.sosTracks
+            ),
+            VaultAlbumItem(
+                id: 303,
+                title: "GUTS",
+                artist: "Olivia Rodrigo",
+                symbolOrInitial: "OR",
+                releaseYear: "2023",
+                genre: "Alt-Pop / Rock",
+                trackCount: "12 tracks",
+                totalDuration: "39 min",
+                gradientColors: [Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+                waxGradient: [Color(hex: "#9333EA"), Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+                labelGradient: [Color(hex: "#C084FC"), Color(hex: "#7E22CE")],
+                labelTextColor: Color.white,
+                glowColor: Color(hex: "#C084FC"),
+                accentColor: Color(hex: "#A78BFA"),
+                tracks: Self.gutsTracks
+            ),
+            VaultAlbumItem(
+                id: 304,
+                title: "SCARING THE HOES",
+                artist: "JPEGMAFIA, Danny Brown",
+                symbolOrInitial: "SH",
+                releaseYear: "2023",
+                genre: "Experimental Hip-Hop",
+                trackCount: "14 tracks",
+                totalDuration: "36 min",
+                gradientColors: [Color(hex: "#991B1B"), Color(hex: "#1E293B")],
+                waxGradient: [Color(hex: "#DC2626"), Color(hex: "#991B1B"), Color(hex: "#2B0B0B")],
+                labelGradient: [Color(hex: "#F87171"), Color(hex: "#B91C1C")],
+                labelTextColor: Color.white,
+                glowColor: Color(hex: "#EF4444"),
+                accentColor: Color(hex: "#FDE68A"),
+                tracks: Self.scaringTracks
+            )
+        ]
+    }
+    
+    /// Prefer albums grouped from synced library; fall back to designer showcase crates.
+    private var vaultAlbums: [VaultAlbumItem] {
+        let palettes: [(grad: [Color], wax: [Color], label: [Color], text: Color, glow: Color, accent: Color)] = [
+            (
+                [Color(hex: "#2F3136"), Color(hex: "#141518")],
+                [Color(hex: "#4B5563"), Color(hex: "#1F2937"), Color(hex: "#111827")],
+                [Color(hex: "#EFE3D3"), Color(hex: "#D1D5DB")],
+                Color(hex: "#0E0F12"),
+                Color(hex: "#EFE3D3"),
+                Color(hex: "#EFE3D3")
+            ),
+            (
+                [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+                [Color(hex: "#2563EB"), Color(hex: "#1D4ED8"), Color(hex: "#0F172A")],
+                [Color(hex: "#60A5FA"), Color(hex: "#2563EB")],
+                .white,
+                Color(hex: "#60A5FA"),
+                Color(hex: "#60A5FA")
+            ),
+            (
+                [Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+                [Color(hex: "#9333EA"), Color(hex: "#6B21A8"), Color(hex: "#2E1065")],
+                [Color(hex: "#C084FC"), Color(hex: "#7E22CE")],
+                .white,
+                Color(hex: "#C084FC"),
+                Color(hex: "#A78BFA")
+            ),
+            (
+                [Color(hex: "#991B1B"), Color(hex: "#1E293B")],
+                [Color(hex: "#DC2626"), Color(hex: "#991B1B"), Color(hex: "#2B0B0B")],
+                [Color(hex: "#F87171"), Color(hex: "#B91C1C")],
+                .white,
+                Color(hex: "#EF4444"),
+                Color(hex: "#FDE68A")
+            )
+        ]
+        
+        var grouped: [String: [UniversalTrack]] = [:]
+        for track in coordinator.allTracks {
+            let key = (track.album?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? track.title
+            grouped[key, default: []].append(track)
+        }
+        
+        let albums = grouped
+            .filter { $0.value.count >= 2 }
+            .sorted { $0.value.count > $1.value.count }
+            .prefix(4)
+        
+        if albums.isEmpty {
+            return showcaseVaultAlbums
+        }
+        
+        return albums.enumerated().map { idx, entry in
+            let (title, tracks) = entry
+            let palette = palettes[idx % palettes.count]
+            let artist = tracks.first?.primaryArtist ?? "Unknown"
+            let initial = String(artist.prefix(1)).uppercased()
+            let totalMs = tracks.reduce(0) { $0 + $1.durationMs }
+            let minutes = max(1, totalMs / 60000)
+            return VaultAlbumItem(
+                id: 500 + idx,
+                title: title,
+                artist: artist,
+                symbolOrInitial: initial.isEmpty ? "♪" : initial,
+                releaseYear: tracks.first.flatMap { $0.releaseYear.map(String.init) } ?? "Synced",
+                genre: "From your library",
+                trackCount: "\(tracks.count) tracks",
+                totalDuration: "\(minutes) min",
+                gradientColors: palette.grad,
+                waxGradient: palette.wax,
+                labelGradient: palette.label,
+                labelTextColor: palette.text,
+                glowColor: palette.glow,
+                accentColor: palette.accent,
+                tracks: tracks
+            )
+        }
+    }
+    
+    private static let artistGradients: [[Color]] = [
+        [Color(hex: "#1E1B4B"), Color(hex: "#0F0E2A")],
+        [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
+        [Color(hex: "#4A0E17"), Color(hex: "#1A0508")],
+        [Color(hex: "#78350F"), Color(hex: "#292524")],
+        [Color(hex: "#BE185D"), Color(hex: "#500724")]
     ]
     
-    private let topArtistPasses: [VIPArtistPassItem] = [
-        VIPArtistPassItem(
-            id: 401,
-            rank: "#1",
-            name: "Travis Scott",
-            photoGradient: [Color(hex: "#1E1B4B"), Color(hex: "#0F0E2A")],
-            streamsText: "342M streams",
-            affinityText: "99% match",
-            leadTrack: UniversalTrack(title: "MY EYES", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 251000, spotifyId: "art_401")
-        ),
-        VIPArtistPassItem(
-            id: 402,
-            rank: "#2",
-            name: "SZA",
-            photoGradient: [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")],
-            streamsText: "285M streams",
-            affinityText: "98% match",
-            leadTrack: UniversalTrack(title: "Snooze", artists: ["SZA"], album: "SOS", durationMs: 201000, spotifyId: "art_402")
-        ),
-        VIPArtistPassItem(
-            id: 403,
-            rank: "#3",
-            name: "Playboi Carti",
-            photoGradient: [Color(hex: "#4A0E17"), Color(hex: "#1A0508")],
-            streamsText: "210M streams",
-            affinityText: "96% match",
-            leadTrack: UniversalTrack(title: "2024", artists: ["Playboi Carti"], album: "MUSIC", durationMs: 165000, spotifyId: "art_403")
-        ),
-        VIPArtistPassItem(
-            id: 404,
-            rank: "#4",
-            name: "Kendrick Lamar",
-            photoGradient: [Color(hex: "#78350F"), Color(hex: "#292524")],
-            streamsText: "194M streams",
-            affinityText: "95% match",
-            leadTrack: UniversalTrack(title: "Not Like Us", artists: ["Kendrick Lamar"], album: "GNX", durationMs: 274000, spotifyId: "art_404")
-        ),
-        VIPArtistPassItem(
-            id: 405,
-            rank: "#5",
-            name: "Дора",
-            photoGradient: [Color(hex: "#BE185D"), Color(hex: "#500724")],
-            streamsText: "140M streams",
-            affinityText: "94% match",
-            leadTrack: UniversalTrack(title: "Втюрилась", artists: ["Дора"], album: "Боже, храни кьют-рок", durationMs: 148000, spotifyId: "art_405")
-        )
+    private static let releaseGradients: [[Color]] = [
+        [Color(hex: "#7F1D1D"), Color(hex: "#1C0505")],
+        [Color(hex: "#14532D"), Color(hex: "#052E16")],
+        [Color(hex: "#65A30D"), Color(hex: "#1A2E05")],
+        [Color(hex: "#1E3A8A"), Color(hex: "#0F172A")]
     ]
     
-    private let soundStripReleases: [SoundStripReleaseItem] = [
-        SoundStripReleaseItem(
-            id: 501,
-            title: "Ruby Rosary",
-            artists: "A$AP Rocky, J. Cole",
-            badgeText: "TODAY",
-            tagText: "SINGLE",
-            coverGradient: [Color(hex: "#7F1D1D"), Color(hex: "#1C0505")],
-            symbolIcon: "sparkles",
-            leadTrack: UniversalTrack(title: "Ruby Rosary", artists: ["A$AP Rocky", "J. Cole"], album: "Don't Be Dumb", durationMs: 215000, spotifyId: "rel_501")
-        ),
-        SoundStripReleaseItem(
-            id: 502,
-            title: "CHROMAKOPIA",
-            artists: "Tyler, The Creator",
-            badgeText: "2D AGO",
-            tagText: "ALBUM • 14 TRACKS",
-            coverGradient: [Color(hex: "#14532D"), Color(hex: "#052E16")],
-            symbolIcon: "theatermasks.fill",
-            leadTrack: UniversalTrack(title: "St. Chroma", artists: ["Tyler, The Creator", "Daniel Caesar"], album: "CHROMAKOPIA", durationMs: 197000, spotifyId: "rel_502")
-        ),
-        SoundStripReleaseItem(
-            id: 503,
-            title: "Brat (Remix)",
-            artists: "Charli xcx, Billie Eilish",
-            badgeText: "THIS WEEK",
-            tagText: "DELUXE",
-            coverGradient: [Color(hex: "#65A30D"), Color(hex: "#1A2E05")],
-            symbolIcon: "bolt.fill",
-            leadTrack: UniversalTrack(title: "Guess feat. Billie Eilish", artists: ["Charli xcx", "Billie Eilish"], album: "Brat and it's completely different", durationMs: 178000, spotifyId: "rel_503")
-        )
+    private static let vibeAuras: [Color] = [
+        Color(hex: "#4338CA"),
+        Color(hex: "#DC2626"),
+        Color(hex: "#F59E0B"),
+        Color(hex: "#059669")
     ]
     
-    private let smokedGlassVibes: [SmokedGlassVibeItem] = [
-        SmokedGlassVibeItem(
-            id: 601,
-            title: "Midnight Velocity",
-            subtitle: "Dark Synthwave & Heavy 808",
-            moodBadge: "LATE NIGHT 432Hz",
-            countsText: "32 tracks • 1 hr 54m",
-            auraColor: Color(hex: "#4338CA"),
-            leadTrack: UniversalTrack(title: "Night Drive Pulse", artists: ["Kavinsky", "HOME"], album: "Midnight Velocity", durationMs: 230000, spotifyId: "vibe_601")
-        ),
-        SmokedGlassVibeItem(
-            id: 602,
-            title: "Sub-Bass Coliseum",
-            subtitle: "Travis Scott, Carti, Metro",
-            moodBadge: "HEAVY BASS 808",
-            countsText: "28 tracks • 1 hr 35m",
-            auraColor: Color(hex: "#DC2626"),
-            leadTrack: UniversalTrack(title: "FE!N", artists: ["Travis Scott", "Playboi Carti"], album: "Sub-Bass Coliseum", durationMs: 191000, spotifyId: "vibe_602")
-        ),
-        SmokedGlassVibeItem(
-            id: 603,
-            title: "Morning Warm Wax",
-            subtitle: "Rhodes, Warm Vinyl, Soul",
-            moodBadge: "ANALOG WARMTH",
-            countsText: "26 tracks • 1 hr 22m",
-            auraColor: Color(hex: "#F59E0B"),
-            leadTrack: UniversalTrack(title: "Morning Warm Wax", artists: ["Nujabes", "Saib"], album: "Analog Coffee", durationMs: 210000, spotifyId: "vibe_603")
-        )
-    ]
+    private var showcaseTopArtistPasses: [VIPArtistPassItem] {
+        [
+            VIPArtistPassItem(
+                id: 401, rank: "#1", name: "Travis Scott",
+                photoGradient: Self.artistGradients[0],
+                streamsText: "Showcase", affinityText: "Connect to sync",
+                leadTrack: UniversalTrack(title: "MY EYES", artists: ["Travis Scott"], album: "UTOPIA", durationMs: 251000, spotifyId: "art_401")
+            ),
+            VIPArtistPassItem(
+                id: 402, rank: "#2", name: "SZA",
+                photoGradient: Self.artistGradients[1],
+                streamsText: "Showcase", affinityText: "Connect to sync",
+                leadTrack: UniversalTrack(title: "Snooze", artists: ["SZA"], album: "SOS", durationMs: 201000, spotifyId: "art_402")
+            ),
+            VIPArtistPassItem(
+                id: 403, rank: "#3", name: "Kendrick Lamar",
+                photoGradient: Self.artistGradients[3],
+                streamsText: "Showcase", affinityText: "Connect to sync",
+                leadTrack: UniversalTrack(title: "Not Like Us", artists: ["Kendrick Lamar"], album: "GNX", durationMs: 274000, spotifyId: "art_404")
+            )
+        ]
+    }
     
-    private let newMusicFridayItems: [AlbumCardItem] = [
-        AlbumCardItem(
-            id: 101,
-            title: "New Music Friday",
-            subtitle: "Dominic Fike, LISA, Anderson .Paak, John...",
-            badgeText: "NEW MUSIC\nFRIDAY",
-            gradientColors: [Color(hex: "#1E1E1E"), Color(hex: "#000000")],
-            systemImage: "waveform.circle.fill",
-            accentColor: Color(hex: "#1ED760")
-        ),
-        AlbumCardItem(
-            id: 102,
-            title: "Release Radar",
-            subtitle: "Все новинки от артистов, на которых вы подписаны",
-            badgeText: "Release Radar",
-            gradientColors: [Color(hex: "#0F2027"), Color(hex: "#203A43")],
-            systemImage: "sparkles",
-            accentColor: Color(hex: "#A78BFA")
-        ),
-        AlbumCardItem(
-            id: 103,
-            title: "Pop Rising",
-            subtitle: "Olivia Rodrigo, Billie Eilish, Sabrina Carpenter...",
-            badgeText: "Pop Rising",
-            gradientColors: [Color(hex: "#E11D74"), Color(hex: "#8C67AB")],
-            systemImage: "music.note",
-            accentColor: Color.white
-        ),
-        AlbumCardItem(
-            id: 104,
-            title: "RapCaviar",
-            subtitle: "Kendrick Lamar, Metro Boomin, Future...",
-            badgeText: "RapCaviar",
-            gradientColors: [Color(hex: "#11998E"), Color(hex: "#38EF7D")],
-            systemImage: "bolt.fill",
-            accentColor: Color(hex: "#38EF7D")
-        )
-    ]
+    /// Top artists from synced library frequency; showcase only when empty.
+    private var topArtistPasses: [VIPArtistPassItem] {
+        var counts: [String: (count: Int, sample: UniversalTrack)] = [:]
+        for track in coordinator.allTracks {
+            let name = track.primaryArtist
+            guard !name.isEmpty else { continue }
+            if let existing = counts[name] {
+                counts[name] = (existing.count + 1, existing.sample)
+            } else {
+                counts[name] = (1, track)
+            }
+        }
+        let ranked = counts.sorted { lhs, rhs in
+            if lhs.value.count == rhs.value.count { return lhs.key < rhs.key }
+            return lhs.value.count > rhs.value.count
+        }
+        .prefix(5)
+        
+        guard !ranked.isEmpty else { return showcaseTopArtistPasses }
+        
+        return ranked.enumerated().map { idx, entry in
+            let (name, payload) = entry
+            return VIPArtistPassItem(
+                id: 700 + idx,
+                rank: "#\(idx + 1)",
+                name: name,
+                photoGradient: Self.artistGradients[idx % Self.artistGradients.count],
+                streamsText: "\(payload.count) tracks in library",
+                affinityText: "From sync",
+                leadTrack: payload.sample
+            )
+        }
+    }
     
-    private let pickedForYouItems: [AlbumCardItem] = [
-        AlbumCardItem(
-            id: 201,
-            title: "Club Mix",
-            subtitle: "Electronic Energy & Peak Driving",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#FF007F"), Color(hex: "#7928CA")],
-            systemImage: "globe.europe.africa.fill",
-            accentColor: Color.white
-        ),
-        AlbumCardItem(
-            id: 202,
-            title: "Electronic Surge",
-            subtitle: "138+ BPM High Voltage Beats",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#006450"), Color(hex: "#0D72EA")],
-            systemImage: "bolt.fill",
-            accentColor: Color.white
-        ),
-        AlbumCardItem(
-            id: 203,
-            title: "Night Drive Pulse",
-            subtitle: "Dark Synthwave & Atmospheric Bass",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#BA5D07"), Color(hex: "#121212")],
-            systemImage: "waveform",
-            accentColor: Color.white
-        ),
-        AlbumCardItem(
-            id: 204,
-            title: "Silk Lo-Fi Flow",
-            subtitle: "Chill Beats to Relax & Focus",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#4B6CB7"), Color(hex: "#182848")],
-            systemImage: "moon.stars.fill",
-            accentColor: Color.white
-        )
-    ]
+    private var showcaseSoundStripReleases: [SoundStripReleaseItem] {
+        [
+            SoundStripReleaseItem(
+                id: 501, title: "Ruby Rosary", artists: "A$AP Rocky, J. Cole",
+                badgeText: "SHOWCASE", tagText: "SINGLE",
+                coverGradient: Self.releaseGradients[0], symbolIcon: "sparkles",
+                leadTrack: UniversalTrack(title: "Ruby Rosary", artists: ["A$AP Rocky", "J. Cole"], album: "Don't Be Dumb", durationMs: 215000, spotifyId: "rel_501")
+            ),
+            SoundStripReleaseItem(
+                id: 502, title: "CHROMAKOPIA", artists: "Tyler, The Creator",
+                badgeText: "SHOWCASE", tagText: "ALBUM",
+                coverGradient: Self.releaseGradients[1], symbolIcon: "theatermasks.fill",
+                leadTrack: UniversalTrack(title: "St. Chroma", artists: ["Tyler, The Creator"], album: "CHROMAKOPIA", durationMs: 197000, spotifyId: "rel_502")
+            )
+        ]
+    }
     
-    private let topAlbumsItems: [AlbumCardItem] = [
-        AlbumCardItem(
-            id: 301,
-            title: "UTOPIA",
-            subtitle: "Travis Scott • 19 треков",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#3A3D40"), Color(hex: "#181719")],
-            systemImage: "opticaldisc.fill",
-            accentColor: Color(hex: "#EFE3D3")
-        ),
-        AlbumCardItem(
-            id: 302,
-            title: "SOS",
-            subtitle: "SZA • 23 трека",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#1F4068"), Color(hex: "#162447")],
-            systemImage: "opticaldisc.fill",
-            accentColor: Color(hex: "#60A5FA")
-        ),
-        AlbumCardItem(
-            id: 303,
-            title: "GUTS",
-            subtitle: "Olivia Rodrigo • 12 треков",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#795290"), Color(hex: "#341E39")],
-            systemImage: "opticaldisc.fill",
-            accentColor: Color(hex: "#A78BFA")
-        ),
-        AlbumCardItem(
-            id: 304,
-            title: "SCARING THE HOES",
-            subtitle: "JPEGMAFIA, Danny Brown • 14 треков",
-            badgeText: nil,
-            gradientColors: [Color(hex: "#C0392B"), Color(hex: "#2C3E50")],
-            systemImage: "opticaldisc.fill",
-            accentColor: Color(hex: "#FDE68A")
-        )
-    ]
+    /// Recent synced tracks as "fresh" shelf.
+    private var soundStripReleases: [SoundStripReleaseItem] {
+        let recent = Array(coordinator.allTracks.sorted { $0.addedAt > $1.addedAt }.prefix(4))
+        guard !recent.isEmpty else { return showcaseSoundStripReleases }
+        let badges = ["SYNCED", "RECENT", "LIBRARY", "NEW"]
+        let icons = ["sparkles", "opticaldisc.fill", "bolt.fill", "music.note"]
+        return recent.enumerated().map { idx, track in
+            SoundStripReleaseItem(
+                id: 800 + idx,
+                title: track.title,
+                artists: track.primaryArtist,
+                badgeText: badges[idx % badges.count],
+                tagText: track.album ?? "Track",
+                coverGradient: Self.releaseGradients[idx % Self.releaseGradients.count],
+                symbolIcon: icons[idx % icons.count],
+                leadTrack: track
+            )
+        }
+    }
+    
+    private var showcaseSmokedGlassVibes: [SmokedGlassVibeItem] {
+        [
+            SmokedGlassVibeItem(
+                id: 601, title: "Midnight Velocity", subtitle: "Dark Synthwave & Heavy 808",
+                moodBadge: "SHOWCASE", countsText: "Connect to fill",
+                auraColor: Self.vibeAuras[0],
+                leadTrack: UniversalTrack(title: "Night Drive Pulse", artists: ["Kavinsky"], album: "Midnight Velocity", durationMs: 230000, spotifyId: "vibe_601")
+            ),
+            SmokedGlassVibeItem(
+                id: 602, title: "Morning Warm Wax", subtitle: "Rhodes, Warm Vinyl, Soul",
+                moodBadge: "SHOWCASE", countsText: "Connect to fill",
+                auraColor: Self.vibeAuras[2],
+                leadTrack: UniversalTrack(title: "Morning Warm Wax", artists: ["Nujabes"], album: "Analog Coffee", durationMs: 210000, spotifyId: "vibe_603")
+            )
+        ]
+    }
+    
+    /// Playlist-backed vibe tiles from synced library.
+    private var smokedGlassVibes: [SmokedGlassVibeItem] {
+        let playlists = Array(coordinator.allPlaylists.prefix(3))
+        if !playlists.isEmpty {
+            return playlists.enumerated().map { idx, pl in
+                let lead = pl.tracks.first ?? coordinator.allTracks.first ?? UniversalTrack(
+                    title: pl.title, artists: [pl.providerType.displayName], durationMs: 180000
+                )
+                return SmokedGlassVibeItem(
+                    id: 900 + idx,
+                    title: pl.title,
+                    subtitle: pl.description ?? pl.providerType.displayName,
+                    moodBadge: "PLAYLIST",
+                    countsText: "\(pl.trackCount) tracks",
+                    auraColor: Self.vibeAuras[idx % Self.vibeAuras.count],
+                    leadTrack: lead
+                )
+            }
+        }
+        
+        // No playlists — chunk library into vibe-sized mixes
+        let tracks = coordinator.allTracks
+        guard tracks.count >= 3 else { return showcaseSmokedGlassVibes }
+        let chunk = max(3, tracks.count / 3)
+        return (0..<3).compactMap { idx -> SmokedGlassVibeItem? in
+            let start = idx * chunk
+            guard start < tracks.count else { return nil }
+            let slice = Array(tracks[start..<min(start + chunk, tracks.count)])
+            guard let lead = slice.first else { return nil }
+            return SmokedGlassVibeItem(
+                id: 910 + idx,
+                title: ["Focus Mix", "Drive Mix", "Late Mix"][idx],
+                subtitle: "Built from your synced tracks",
+                moodBadge: "FROM LIBRARY",
+                countsText: "\(slice.count) tracks",
+                auraColor: Self.vibeAuras[idx % Self.vibeAuras.count],
+                leadTrack: lead
+            )
+        }
+    }
     
     // Filtered shortcuts when searching
     private var filteredShortcuts: [RecentShortcut] {
@@ -536,29 +629,43 @@ public struct SpotifyHomeFeedView: View {
                         topHeaderBar
                             .padding(.top, 10)
                         
-                        // 2. ЦВЕТНОЙ КОЛЛЕКЦИОННЫЙ ВИНИЛ & АНИМИРОВАННЫЙ ПРОИГРЫВАТЕЛЬ
-                        VinylTurntableHorizonView()
+                        if HomeFeedFilterLogic.showsPodcastsEmptyState(selectedFilter) {
+                            podcastsEmptyState
+                                .padding(.top, 8)
+                        }
                         
-                        // 3. ПОИСКОВАЯ СТРОКА ПОСЕРЕДИНЕ (Sticky Search Bar)
-                        prominentSearchBar
-                        
-                        // 4. HERO RELEASE SLEEVE (Vinyl Disc Initially Protruding + Rotating)
-                        heroVinylSleeveSection
-                        
-                        // 5. AUTHENTIC COMPACT CASSETTES (Picked for You - Authentic Philips Tape Decks)
-                        cassetteTapesSection
-                        
-                        // 6. TOP VAULT ALBUMS (Vinyl Crate Shelf with Peeking Discs)
-                        topAlbumsCrateSection
-                        
-                        // 7. TOP ARTISTS (VIP Backstage Pass Lanyards)
-                        topArtistsLanyardSection
-                        
-                        // 8. FRESH RELEASES (Interactive SoundStrip Samplers)
-                        freshReleasesSoundStripsSection
-                        
-                        // 9. CURATED MIXES (Smoked Glass Vibe Tiles)
-                        curatedMixesVibeTilesSection
+                        if HomeFeedFilterLogic.showsMusicContent(selectedFilter) {
+                            // 2. Spotify-style recent shortcuts (synced library when available)
+                            recentShortcutsSection
+                            
+                            // 3. ЦВЕТНОЙ КОЛЛЕКЦИОННЫЙ ВИНИЛ & АНИМИРОВАННЫЙ ПРОИГРЫВАТЕЛЬ
+                            VinylTurntableHorizonView()
+                            
+                            // 3. ПОИСКОВАЯ СТРОКА ПОСЕРЕДИНЕ (Sticky Search Bar)
+                            prominentSearchBar
+                            
+                            // 4. HERO RELEASE SLEEVE (Vinyl Disc Initially Protruding + Rotating)
+                            heroVinylSleeveSection
+                            
+                            if coordinator.allTracks.isEmpty {
+                                showcaseSyncCallout
+                            }
+                            
+                            // 5. AUTHENTIC COMPACT CASSETTES (Picked for You - Authentic Philips Tape Decks)
+                            cassetteTapesSection
+                            
+                            // 6. TOP VAULT ALBUMS (Vinyl Crate Shelf with Peeking Discs)
+                            topAlbumsCrateSection
+                            
+                            // 7. TOP ARTISTS (VIP Backstage Pass Lanyards)
+                            topArtistsLanyardSection
+                            
+                            // 8. FRESH RELEASES (Interactive SoundStrip Samplers)
+                            freshReleasesSoundStripsSection
+                            
+                            // 9. CURATED MIXES (Smoked Glass Vibe Tiles)
+                            curatedMixesVibeTilesSection
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 120) // Full clearance for Floating Mini Player
@@ -566,11 +673,17 @@ public struct SpotifyHomeFeedView: View {
                 
                 // TOP-DOWN ALBUM VAULT (SLIDES DOWN FROM TOP OF PHONE SCREEN)
                 if let album = selectedVaultAlbum {
-                    VaultAlbumTopDownView(album: album) {
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
-                            selectedVaultAlbum = nil
+                    VaultAlbumTopDownView(
+                        album: album,
+                        onDismiss: {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.85)) {
+                                selectedVaultAlbum = nil
+                            }
+                        },
+                        onOpenDetailSheet: {
+                            detailVaultAlbum = album
                         }
-                    }
+                    )
                     .transition(.asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity),
                         removal: .move(edge: .top).combined(with: .opacity)
@@ -597,6 +710,9 @@ public struct SpotifyHomeFeedView: View {
             #endif
             .sheet(isPresented: $showingProfileSheet) {
                 UserProfileSheet()
+            }
+            .sheet(item: $detailVaultAlbum) { album in
+                VaultAlbumDetailSheet(album: album)
             }
         }
     }
@@ -633,24 +749,48 @@ public struct SpotifyHomeFeedView: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Filter Pills (All, Music, Podcasts)
-            filterPill(title: "All")
-            filterPill(title: "Music")
-            filterPill(title: "Podcasts")
+            // Filter Pills (All, Music, Podcasts) — wired via HomeFeedFilterLogic
+            ForEach(HomeFeedFilter.allCases) { filter in
+                filterPill(filter)
+            }
             
             Spacer(minLength: 0)
+            
+            Button {
+                HapticManager.lightImpact()
+                navCoordinator.navigateToConnect()
+            } label: {
+                Image(systemName: "link.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(PastelTheme.pastelOat)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Connect services")
+            .accessibilityIdentifier("home.connect")
+            
+            Button {
+                HapticManager.lightImpact()
+                navCoordinator.navigateToTaste()
+            } label: {
+                Image(systemName: "waveform.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(PastelTheme.pastelOat)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Taste profile")
+            .accessibilityIdentifier("home.taste")
         }
     }
     
-    private func filterPill(title: String) -> some View {
-        let isSelected = selectedFilter == title
+    private func filterPill(_ filter: HomeFeedFilter) -> some View {
+        let isSelected = selectedFilter == filter
         return Button {
             HapticManager.lightImpact()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                selectedFilter = title
+                selectedFilter = filter
             }
         } label: {
-            Text(title)
+            Text(filter.rawValue)
                 .font(.system(size: 13, weight: isSelected ? .bold : .medium))
                 .foregroundColor(isSelected ? PastelTheme.textOnOat : .white)
                 .padding(.horizontal, 16)
@@ -663,6 +803,44 @@ public struct SpotifyHomeFeedView: View {
                 )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("Home filter \(filter.rawValue)")
+        .accessibilityIdentifier("home.filter.\(filter.rawValue.lowercased())")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+    
+    private var podcastsEmptyState: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Podcasts aren’t in SoundShift yet")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(PastelTheme.textPrimary)
+            Text("This app migrates music libraries (Spotify ↔ Apple Music). Switch to Music or All to browse your synced tracks.")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(PastelTheme.textSecondary)
+            Button {
+                HapticManager.lightImpact()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    selectedFilter = .music
+                }
+            } label: {
+                Text("Show Music")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.textOnOat)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(PastelTheme.pastelOat)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityIdentifier("home.filter.showMusic")
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
     }
     
     // MARK: - 2. Сетка из недавних сверху (2x4 Recent Shortcuts Grid)
@@ -775,18 +953,21 @@ public struct SpotifyHomeFeedView: View {
                 .foregroundColor(Color(hex: "#121212"))
                 .tint(Color(hex: "#121212"))
                 .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onSubmit { submitHomeSearch() }
             
             if !searchText.isEmpty {
                 Button {
                     HapticManager.lightImpact()
-                    searchText = ""
+                    submitHomeSearch()
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "#727272"))
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(Color(hex: "#121212").opacity(0.75))
                         .padding(.trailing, 12)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Search library")
             } else {
                 Spacer()
                     .frame(width: 8)
@@ -796,17 +977,26 @@ public struct SpotifyHomeFeedView: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .shadow(color: Color.black.opacity(0.35), radius: 6, y: 2)
+        .accessibilityElement(children: .contain)
+    }
+    
+    private func submitHomeSearch() {
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return }
+        HapticManager.lightImpact()
+        navCoordinator.navigateToSearch(query: q)
     }
     
     // MARK: - 4. Hero Release Sleeve (Vinyl Disc Initially Protruding)
     private var isHeroPlaying: Bool {
-        player.isPlaying && player.currentTrack?.isrc == "DROP-NMF-2024"
+        guard let current = player.currentTrack else { return false }
+        return player.isPlaying && current.id == coordinator.allTracks.first?.id
     }
     
     private var heroVinylSleeveSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("HERO DROP OF THE WEEK")
+                Text(coordinator.allTracks.isEmpty ? "HERO DROP · SHOWCASE" : "HERO DROP OF THE WEEK")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
@@ -941,11 +1131,55 @@ public struct SpotifyHomeFeedView: View {
         }
     }
     
+    /// High-visibility empty-library honesty — not a faint footnote.
+    private var showcaseSyncCallout: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "sparkles.rectangle.stack")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(PastelTheme.amberWarning)
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Showcase mode")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.textPrimary)
+                Text("Shelves below are design fixtures. Connect & Sync to play your real library.")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundColor(PastelTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer(minLength: 4)
+            
+            Button {
+                HapticManager.lightImpact()
+                navCoordinator.navigateToConnect()
+            } label: {
+                Text("Connect")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(PastelTheme.textOnOat)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(PastelTheme.pastelOat)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Connect services")
+        }
+        .padding(12)
+        .background(PastelTheme.amberWarning.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(PastelTheme.amberWarning.opacity(0.35), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+    }
+    
     // MARK: - 5. Authentic Compact Cassettes (Picked For You)
     private var cassetteTapesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("FRIDAY DROPS")
+                Text(HomeCassetteBuilder.sectionTitle(for: cassetteDescriptors))
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
@@ -977,7 +1211,7 @@ public struct SpotifyHomeFeedView: View {
     private var topAlbumsCrateSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("TOP ALBUMS")
+                Text(coordinator.allTracks.isEmpty ? "TOP ALBUMS · SHOWCASE" : "TOP ALBUMS")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
@@ -1009,7 +1243,7 @@ public struct SpotifyHomeFeedView: View {
     private var topArtistsLanyardSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("TOP ARTISTS")
+                Text(coordinator.allTracks.isEmpty ? "TOP ARTISTS · SHOWCASE" : "TOP ARTISTS")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
@@ -1026,7 +1260,7 @@ public struct SpotifyHomeFeedView: View {
                             isPlaying: isPlaying,
                             onPlay: {
                                 HapticManager.lightImpact()
-                                player.play(track: pass.leadTrack)
+                                playShowcaseOrLibrary(title: pass.leadTrack.title, artist: pass.name, preferred: pass.leadTrack)
                             }
                         )
                     }
@@ -1039,7 +1273,7 @@ public struct SpotifyHomeFeedView: View {
     private var freshReleasesSoundStripsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("FRESH RELEASES")
+                Text(coordinator.allTracks.isEmpty ? "FRESH RELEASES · SHOWCASE" : "FRESH RELEASES")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
@@ -1056,7 +1290,7 @@ public struct SpotifyHomeFeedView: View {
                             isPlaying: isPlaying,
                             onPlay: {
                                 HapticManager.lightImpact()
-                                player.play(track: release.leadTrack)
+                                playShowcaseOrLibrary(title: release.title, artist: release.artists, preferred: release.leadTrack)
                             }
                         )
                     }
@@ -1069,7 +1303,7 @@ public struct SpotifyHomeFeedView: View {
     private var curatedMixesVibeTilesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("CURATED MIXES")
+                Text(coordinator.allTracks.isEmpty ? "CURATED MIXES · SHOWCASE" : "CURATED MIXES")
                     .font(.system(size: 11, weight: .heavy))
                     .tracking(0.8)
                     .foregroundColor(Color(hex: "#9CA3AF"))
@@ -1086,7 +1320,7 @@ public struct SpotifyHomeFeedView: View {
                             isPlaying: isPlaying,
                             onPlay: {
                                 HapticManager.lightImpact()
-                                player.play(track: vibe.leadTrack)
+                                playShowcaseOrLibrary(title: vibe.leadTrack.title, artist: vibe.leadTrack.primaryArtist, preferred: vibe.leadTrack)
                             }
                         )
                     }
@@ -1099,61 +1333,74 @@ public struct SpotifyHomeFeedView: View {
     private func toggleHeroPlayback() {
         if isHeroPlaying {
             player.togglePlayPause()
+            return
+        }
+        // Never invent a NMF fixture track — play synced library or send to Connect
+        if let first = coordinator.allTracks.first {
+            player.play(track: first, in: coordinator.allTracks)
         } else {
-            let track = UniversalTrack(
-                isrc: "DROP-NMF-2024",
-                title: "New Music Friday",
-                artists: ["Dominic Fike", "LISA", "Anderson .Paak"],
-                album: "Friday Vault Drop",
-                durationMs: 204000,
-                spotifyId: "hero_nmf_2024"
-            )
-            player.play(track: track)
+            navCoordinator.navigateToConnect()
         }
     }
     
-    private func toggleCassettePlayback(_ item: CassetteItem) {
-        if player.isPlaying && player.currentTrack?.isrc == item.trackIsrc {
-            player.togglePlayPause()
-        } else {
-            let track = UniversalTrack(
-                isrc: item.trackIsrc,
-                title: item.title,
-                artists: ["Cassette Vault Masters"],
-                album: item.title,
-                durationMs: 198000,
-                spotifyId: "tape_\(item.id)"
-            )
-            player.play(track: track)
+    /// Showcase shelves keep designer art, but playback only uses synced library tracks.
+    private func playShowcaseOrLibrary(title: String, artist: String, preferred: UniversalTrack? = nil) {
+        if coordinator.allTracks.isEmpty {
+            navCoordinator.navigateToConnect()
+            return
         }
-    }
-    
-    private func toggleVaultAlbumPlayback(_ album: VaultAlbumItem) {
-        if player.isPlaying && player.currentTrack?.title == album.title {
-            player.togglePlayPause()
-        } else {
-            let track = UniversalTrack(
-                isrc: "VAULT-\(album.id)",
-                title: album.title,
-                artists: [album.artist],
-                album: album.title,
-                durationMs: 215000,
-                spotifyId: "vault_\(album.id)"
-            )
-            player.play(track: track)
+        
+        if let preferred,
+           let exact = coordinator.allTracks.first(where: { $0.id == preferred.id }) {
+            player.play(track: exact, in: coordinator.allTracks)
+            return
         }
+        
+        if let match = coordinator.allTracks.first(where: {
+            $0.title.localizedCaseInsensitiveContains(title)
+                || title.localizedCaseInsensitiveContains($0.title)
+                || $0.primaryArtist.localizedCaseInsensitiveContains(artist)
+                || artist.localizedCaseInsensitiveContains($0.primaryArtist)
+        }) {
+            player.play(track: match, in: coordinator.allTracks)
+            return
+        }
+        
+        navCoordinator.openPersonalLibrary()
     }
     
     private func playMockShortcut(_ item: RecentShortcut) {
-        let track = UniversalTrack(
-            isrc: "SP-\(item.id)",
-            title: item.title,
-            artists: [item.artist],
-            album: item.isLikedSongs ? "Favorites" : "Universal Vault",
-            durationMs: 185000,
-            spotifyId: "sp_\(item.id)"
-        )
-        player.play(track: track)
+        if let trackId = item.trackId,
+           let track = coordinator.allTracks.first(where: { $0.id == trackId }) {
+            player.play(track: track, in: coordinator.allTracks)
+            return
+        }
+        
+        if item.isArtist {
+            let artistTracks = coordinator.allTracks.filter {
+                $0.primaryArtist.localizedCaseInsensitiveContains(item.title)
+            }
+            if let first = artistTracks.first {
+                player.play(track: first, in: artistTracks)
+                return
+            }
+        }
+        
+        if let playlist = coordinator.allPlaylists.first(where: { $0.title == item.title }),
+           let first = playlist.tracks.first {
+            player.play(track: first, in: playlist.tracks.isEmpty ? coordinator.allTracks : playlist.tracks)
+            return
+        }
+        
+        if let match = coordinator.allTracks.first(where: {
+            $0.title.localizedCaseInsensitiveContains(item.title)
+        }) {
+            player.play(track: match, in: coordinator.allTracks)
+            return
+        }
+        
+        // Empty library — open collection instead of fabricating a demo track
+        navCoordinator.openPersonalLibrary()
     }
 }
 

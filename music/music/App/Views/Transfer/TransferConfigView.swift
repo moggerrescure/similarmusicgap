@@ -32,13 +32,6 @@ public enum ExportFormatOption: String, CaseIterable, Identifiable {
     }
 }
 
-public enum TransferPreset: String, CaseIterable, Identifiable {
-    case full = "Full Vault"
-    case favorites = "Favorites Only"
-    case delta = "Delta (New Only)"
-    public var id: String { rawValue }
-}
-
 public enum MatchingSensitivity: String, CaseIterable, Identifiable {
     case strict = "Strict ISRC"
     case flexible = "Flexible Acoustic"
@@ -59,9 +52,8 @@ public struct TransferConfigView: View {
     @State private var destinationProvider: MusicProviderType = .appleMusic
     @State private var scope = TransferScope()
     @State private var conflictPolicy: ConflictPolicy = .skip
-    @State private var selectedPreset: TransferPreset = .favorites
+    @State private var selectedPreset: TransferPresetKind = .favorites
     @State private var matchingSensitivity: MatchingSensitivity = .strict
-    @State private var autoSyncEnabled: Bool = false
     
     // Source Archive Track Selection State
     @State private var selectedTrackIds: Set<UUID> = []
@@ -92,6 +84,9 @@ public struct TransferConfigView: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
+                    // 0. Live readiness (P0 gates)
+                    transferReadinessBanner
+                    
                     // 1. Top Mode Selector (Cloud Sync vs File Download)
                     modeSelectorSection
                     
@@ -183,8 +178,9 @@ public struct TransferConfigView: View {
             }
         }
         .onAppear {
+            transferManager.applyMatchingSensitivity(matchingSensitivity)
             if selectedTrackIds.isEmpty {
-                selectedTrackIds = Set(coordinator.tracks(for: sourceProvider).map(\.id))
+                applyPreset(selectedPreset)
             }
         }
     }
@@ -280,20 +276,24 @@ public struct TransferConfigView: View {
             .padding(.horizontal, 4)
             
             VStack(spacing: 8) {
-                ForEach(MusicProviderType.allCases) { opt in
+                ForEach(MusicProviderType.availableConnectors) { opt in
                     let isSelected = sourceProvider == opt
                     let isAuthed = isProviderAuthenticated(opt)
                     let trackCount = tracksAvailable(for: opt)
                     
                     Button {
                         HapticManager.lightImpact()
+                        if !isAuthed {
+                            Task { await ensureAuthenticated(opt) }
+                            return
+                        }
                         sourceProvider = opt
                         selectedTrackIds = Set(coordinator.tracks(for: opt).map(\.id))
                         trackSearchText = ""
                         if destinationProvider == opt {
-                            destinationProvider = MusicProviderType.allCases.first { $0 != opt } ?? .appleMusic
+                            destinationProvider = MusicProviderType.availableConnectors.first { $0 != opt } ?? .appleMusic
                         }
-                        transferManager.lastDryRun = nil
+                        transferManager.invalidateDryRunPreview()
                     } label: {
                         HStack(spacing: 12) {
                             PlatformBrandBadgeView(type: opt, size: 36)
@@ -364,7 +364,7 @@ public struct TransferConfigView: View {
                         destinationProvider = temp
                         selectedTrackIds = Set(coordinator.tracks(for: sourceProvider).map(\.id))
                         trackSearchText = ""
-                        transferManager.lastDryRun = nil
+                        transferManager.invalidateDryRunPreview()
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -386,14 +386,18 @@ public struct TransferConfigView: View {
             .padding(.horizontal, 4)
             
             VStack(spacing: 8) {
-                ForEach(MusicProviderType.allCases.filter { $0 != sourceProvider }) { opt in
+                ForEach(MusicProviderType.availableConnectors.filter { $0 != sourceProvider }) { opt in
                     let isSelected = destinationProvider == opt
                     let isAuthed = isProviderAuthenticated(opt)
                     
                     Button {
                         HapticManager.lightImpact()
+                        if !isAuthed {
+                            Task { await ensureAuthenticated(opt) }
+                            return
+                        }
                         destinationProvider = opt
-                        transferManager.lastDryRun = nil
+                        transferManager.invalidateDryRunPreview()
                     } label: {
                         HStack(spacing: 12) {
                             PlatformBrandBadgeView(type: opt, size: 36)
@@ -518,19 +522,20 @@ public struct TransferConfigView: View {
     private var presetsSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(TransferPreset.allCases) { preset in
+                ForEach(TransferPresetKind.allCases) { preset in
                     let isSelected = selectedPreset == preset
                     Button {
                         HapticManager.lightImpact()
                         selectedPreset = preset
-                        transferManager.lastDryRun = nil
+                        applyPreset(preset)
+                        transferManager.invalidateDryRunPreview()
                     } label: {
                         HStack(spacing: 6) {
                             if isSelected {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 10, weight: .bold))
                             }
-                            Text(preset.rawValue)
+                            Text(preset.displayName)
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                         }
                         .padding(.horizontal, 14)
@@ -752,14 +757,14 @@ public struct TransferConfigView: View {
         if let dryRun = transferManager.lastDryRun {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("ПРЕДВАРИТЕЛЬНЫЙ АНАЛИЗ СОВМЕСТИМОСТИ")
+                    Text("DRY-RUN MATCH PREVIEW")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(0.6)
                         .foregroundColor(PastelTheme.textTertiary)
                     
                     Spacer()
                     
-                    Text("\(String(format: "%.1f", dryRun.matchRatePercentage))% совпадений")
+                    Text("\(String(format: "%.1f", dryRun.matchRatePercentage))% placeable")
                         .font(.system(size: 15, weight: .heavy, design: .rounded))
                         .foregroundColor(PastelTheme.emeraldSuccess)
                         .monospacedDigit()
@@ -781,23 +786,27 @@ public struct TransferConfigView: View {
                 .frame(height: 6)
                 
                 HStack {
-                    Label("\(dryRun.exactMatchesCount) Точно", systemImage: "checkmark.circle.fill")
+                    Label("\(dryRun.exactMatchesCount) Strong", systemImage: "checkmark.circle.fill")
                         .foregroundColor(PastelTheme.emeraldSuccess)
                     Spacer()
-                    Label("\(dryRun.alternateMatchesCount) Замены", systemImage: "arrow.triangle.swap")
+                    Label("\(dryRun.alternateMatchesCount) Alternates", systemImage: "arrow.triangle.swap")
                         .foregroundColor(PastelTheme.amberWarning)
                     Spacer()
-                    Label("\(dryRun.missingCount) Нет в базе", systemImage: "xmark.circle")
+                    Label("\(dryRun.missingCount) Missing", systemImage: "xmark.circle")
                         .foregroundColor(PastelTheme.textTertiary)
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
+                
+                Text("Strong = ISRC or high-confidence title/artist — not a guarantee of the same master.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(PastelTheme.textTertiary)
                 
                 if !transferManager.rematchQueue.isEmpty {
                     Button {
                         showingRematchInbox = true
                     } label: {
                         HStack {
-                            Text("Проверить \(transferManager.rematchQueue.count) альтернативных замен")
+                            Text("Review \(transferManager.rematchQueue.count) alternate matches")
                                 .font(.system(size: 13, weight: .semibold))
                             Spacer()
                             Image(systemName: "chevron.right")
@@ -840,6 +849,19 @@ public struct TransferConfigView: View {
             }
             .padding(.horizontal, 4)
             
+            if !transferManager.statusMessage.isEmpty {
+                Text(transferManager.statusMessage)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundColor(PastelTheme.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let err = transferManager.lastErrorMessage {
+                Text(err)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color.red.opacity(0.9))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            
             // Primary Big CTA Button
             if mainMode == .serviceTransfer {
                 VStack(spacing: 12) {
@@ -879,7 +901,7 @@ public struct TransferConfigView: View {
                                 } else {
                                     Image(systemName: "slider.horizontal.2.square")
                                         .font(.system(size: 13, weight: .semibold))
-                                    Text("Проверить совместимость")
+                                    Text("Dry-run match preview")
                                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 }
                             }
@@ -898,7 +920,7 @@ public struct TransferConfigView: View {
                         
                         Button {
                             HapticManager.lightImpact()
-                            showingBridgeFlow = true
+                            startLiveMigration(preferBridge: true)
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: "waveform.path.ecg")
@@ -1001,11 +1023,15 @@ public struct TransferConfigView: View {
                             .foregroundColor(PastelTheme.textSecondary)
                         
                         Picker("Conflict Policy", selection: $conflictPolicy) {
-                            ForEach(ConflictPolicy.allCases) { policy in
+                            ForEach(ConflictPolicy.implementedCases) { policy in
                                 Text(policy.rawValue).tag(policy)
                             }
                         }
                         .pickerStyle(.segmented)
+                        
+                        Text(conflictPolicy.description)
+                            .font(.system(size: 11))
+                            .foregroundColor(PastelTheme.textTertiary)
                     }
                     
                     Divider().background(PastelTheme.cardBorder)
@@ -1021,21 +1047,28 @@ public struct TransferConfigView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                        .onChange(of: matchingSensitivity) { _, newValue in
+                            transferManager.applyMatchingSensitivity(newValue)
+                            transferManager.invalidateDryRunPreview()
+                        }
                     }
                     
                     Divider().background(PastelTheme.cardBorder)
                     
-                    Toggle(isOn: $autoSyncEnabled) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "moon.zzz")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(PastelTheme.textTertiary)
+                            .padding(.top, 2)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Автоматическая синхронизация")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(PastelTheme.textPrimary)
-                            Text("Проверять новые треки каждую ночь в 03:00")
+                            Text("Фоновый nightly sync ещё не подключён — используйте Sync now на Library.")
                                 .font(.system(size: 12))
                                 .foregroundColor(PastelTheme.textSecondary)
                         }
                     }
-                    .tint(PastelTheme.emeraldSuccess)
                 }
                 .padding(16)
                 .background(PastelTheme.cardSubtle)
@@ -1047,8 +1080,139 @@ public struct TransferConfigView: View {
     
     // MARK: - Logic Helpers
     
-    private var sourceTracks: [UniversalTrack] {
+    private var sourceIsLive: Bool {
+        coordinator.provider(for: sourceProvider).isLiveSession
+    }
+    
+    private var destinationIsLive: Bool {
+        coordinator.provider(for: destinationProvider).isLiveSession
+    }
+    
+    private var transferBlockingReason: String? {
+        if sourceProvider == .spotify || destinationProvider == .spotify {
+            if !SpotifyConfig.isConfigured {
+                return "Add Spotify Client ID in Connect → Spotify setup (Redirect URI: soundshift://spotify-callback)."
+            }
+        }
+        if !isProviderAuthenticated(sourceProvider) || !isProviderAuthenticated(destinationProvider) {
+            return "Connect both source and destination with live accounts."
+        }
+        if coordinator.spotify.isUsingDemoData && (sourceProvider == .spotify || destinationProvider == .spotify) {
+            return "Spotify is in Demo Mode — disconnect and reconnect with a real Client ID. Demo cannot migrate."
+        }
+        if !sourceIsLive {
+            return "\(sourceProvider.displayName) is not a live session."
+        }
+        if !destinationIsLive {
+            return "\(destinationProvider.displayName) is not live. On Simulator, Apple Music library is often empty — use a physical iPhone."
+        }
+        if sourceTracks.isEmpty {
+            return "No synced tracks for \(sourceProvider.displayName). Tap Sync on Connect, then return here."
+        }
+        return nil
+    }
+    
+    private var transferReadinessBanner: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("LIVE TRANSFER CHECKLIST")
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .tracking(0.6)
+                .foregroundColor(PastelTheme.textTertiary)
+            
+            readinessRow(
+                ok: SpotifyConfig.isConfigured || (sourceProvider != .spotify && destinationProvider != .spotify),
+                text: SpotifyConfig.isConfigured ? "Spotify Client ID configured" : "Spotify Client ID required for Spotify hops"
+            )
+            readinessRow(
+                ok: isProviderAuthenticated(sourceProvider) && sourceIsLive,
+                text: "Source \(sourceProvider.displayName): \(sourceIsLive ? "LIVE" : (isProviderAuthenticated(sourceProvider) ? "Demo / not live" : "Not connected"))"
+            )
+            readinessRow(
+                ok: isProviderAuthenticated(destinationProvider) && destinationIsLive,
+                text: "Destination \(destinationProvider.displayName): \(destinationIsLive ? "LIVE" : (isProviderAuthenticated(destinationProvider) ? "Not live" : "Not connected"))"
+            )
+            readinessRow(
+                ok: !sourceTracks.isEmpty,
+                text: sourceTracks.isEmpty ? "Sync library first (0 tracks)" : "\(sourceTracks.count) synced source tracks"
+            )
+            
+            if let reason = transferBlockingReason {
+                Text(reason)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(PastelTheme.amberWarning)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Ready — dry-run then migrate. Favorites also save Liked Songs on destination.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(PastelTheme.emeraldSuccess)
+            }
+            
+            HStack(spacing: 10) {
+                Button {
+                    NavigationCoordinator.shared.navigateToConnect()
+                } label: {
+                    Text("Open Connect")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(PastelTheme.textOnOat)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(PastelTheme.pastelOat)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                Button {
+                    Task { await coordinator.syncAll() }
+                } label: {
+                    Text(coordinator.isSyncing ? "Syncing…" : "Sync now")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(PastelTheme.pastelOat)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(PastelTheme.cardSubtle)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(coordinator.isSyncing)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PastelTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
+    }
+    
+    private func readinessRow(ok: Bool, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(ok ? PastelTheme.emeraldSuccess : PastelTheme.amberWarning)
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(PastelTheme.textSecondary)
+            Spacer(minLength: 0)
+        }
+    }
+    
+    private var likedSourceTracks: [UniversalTrack] {
         coordinator.tracks(for: sourceProvider)
+    }
+    
+    private var sourcePlaylists: [UniversalPlaylist] {
+        coordinator.allPlaylists.filter { $0.providerType == sourceProvider }
+    }
+    
+    /// Archive rows for the active preset (Favorites ≠ Full Vault).
+    private var sourceTracks: [UniversalTrack] {
+        TransferPresetResolver.tracks(
+            preset: selectedPreset,
+            likedTracks: likedSourceTracks,
+            playlists: sourcePlaylists
+        )
     }
     
     private var filteredSourceTracks: [UniversalTrack] {
@@ -1070,6 +1234,7 @@ public struct TransferConfigView: View {
         } else {
             selectedTrackIds = Set(sourceTracks.map(\.id))
         }
+        transferManager.invalidateDryRunPreview()
     }
     
     private func toggleTrackSelection(id: UUID) {
@@ -1079,6 +1244,7 @@ public struct TransferConfigView: View {
         } else {
             selectedTrackIds.insert(id)
         }
+        transferManager.invalidateDryRunPreview()
     }
     
     private func formatDuration(_ ms: Int) -> String {
@@ -1096,12 +1262,53 @@ public struct TransferConfigView: View {
         coordinator.tracks(for: type).count
     }
     
+    private func ensureAuthenticated(_ type: MusicProviderType) async {
+        if type == .spotify && !SpotifyConfig.isConfigured {
+            showingSpotifySetup = true
+            return
+        }
+        await coordinator.authenticate(type: type)
+        if type == sourceProvider {
+            selectedTrackIds = Set(coordinator.tracks(for: type).map(\.id))
+        }
+    }
+    
+    private func applyPreset(_ preset: TransferPresetKind) {
+        let selection = TransferPresetResolver.resolve(
+            preset: preset,
+            likedTracks: likedSourceTracks,
+            playlists: sourcePlaylists
+        )
+        scope.transferFavorites = selection.transferFavorites
+        scope.selectedPlaylistIds = selection.playlistIds
+        selectedTrackIds = selection.trackIds
+    }
+    
     private func runDryRun() {
+        if let reason = transferBlockingReason {
+            if !SpotifyConfig.isConfigured && (sourceProvider == .spotify || destinationProvider == .spotify) {
+                showingSpotifySetup = true
+            }
+            transferManager.lastErrorMessage = reason
+            transferManager.statusMessage = "Blocked"
+            return
+        }
         guard !selectedTrackIds.isEmpty else { return }
         isAnalyzingDryRun = true
+        transferManager.applyMatchingSensitivity(matchingSensitivity)
+        transferManager.clearRematchDecisions()
         var dryRunScope = scope
         dryRunScope.selectedTrackIds = selectedTrackIds
         Task {
+            if sourceTracks.isEmpty {
+                await coordinator.syncAll()
+                selectedTrackIds = Set(coordinator.tracks(for: sourceProvider).map(\.id))
+            }
+            if let reason = transferBlockingReason {
+                transferManager.lastErrorMessage = reason
+                isAnalyzingDryRun = false
+                return
+            }
             _ = await transferManager.executeDryRun(
                 sourceType: sourceProvider,
                 destinationType: destinationProvider,
@@ -1111,12 +1318,35 @@ public struct TransferConfigView: View {
         }
     }
     
-    private func startLiveMigration() {
+    private func startLiveMigration(preferBridge: Bool = false) {
+        if let reason = transferBlockingReason {
+            if !SpotifyConfig.isConfigured && (sourceProvider == .spotify || destinationProvider == .spotify) {
+                showingSpotifySetup = true
+            }
+            transferManager.lastErrorMessage = reason
+            transferManager.statusMessage = "Blocked"
+            return
+        }
         guard !selectedTrackIds.isEmpty else { return }
-        showingLiveMigration = true
+        transferManager.applyMatchingSensitivity(matchingSensitivity)
         var migrationScope = scope
         migrationScope.selectedTrackIds = selectedTrackIds
+        migrationScope.transferFavorites = scope.transferFavorites || selectedPreset == .favorites
         Task {
+            if sourceTracks.isEmpty {
+                await coordinator.syncAll()
+                selectedTrackIds = Set(coordinator.tracks(for: sourceProvider).map(\.id))
+                migrationScope.selectedTrackIds = selectedTrackIds
+            }
+            if let reason = transferBlockingReason {
+                transferManager.lastErrorMessage = reason
+                return
+            }
+            if preferBridge {
+                showingBridgeFlow = true
+            } else {
+                showingLiveMigration = true
+            }
             let report = await transferManager.startMigration(
                 sourceType: sourceProvider,
                 destinationType: destinationProvider,
@@ -1124,6 +1354,7 @@ public struct TransferConfigView: View {
                 policy: conflictPolicy
             )
             showingLiveMigration = false
+            showingBridgeFlow = false
             completedReport = report
         }
     }

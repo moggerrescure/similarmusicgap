@@ -29,9 +29,10 @@ public final class DuplicatesEngine {
     public static let shared = DuplicatesEngine()
     private let matchingEngine = MatchingEngine()
     
-    private init() {}
+    public init() {}
     
-    /// Scans a library and detects songs present in multiple services
+    /// Cross-service duplicates only (Spotify ∩ Apple [∩ YM when enabled]).
+    /// Same-service copies are ignored — TrackDeduper already merges on sync.
     public func findDuplicates(in tracks: [UniversalTrack]) -> [DuplicateGroup] {
         var groups: [String: [UniversalTrack]] = [:]
         
@@ -52,28 +53,26 @@ public final class DuplicatesEngine {
         for (key, groupedTracks) in groups {
             var distinctServices: Set<MusicProviderType> = []
             for t in groupedTracks {
-                if t.yandexId != nil { distinctServices.insert(.yandexMusic) }
                 if t.spotifyId != nil { distinctServices.insert(.spotify) }
                 if t.appleMusicId != nil { distinctServices.insert(.appleMusic) }
-            }
-            
-            // If track is in 2 or more distinct services, or multiple entries exist
-            if distinctServices.count >= 2 || groupedTracks.count >= 2 {
-                if let first = groupedTracks.first {
-                    duplicateGroups.append(
-                        DuplicateGroup(
-                            normalizedKey: key,
-                            canonicalTitle: first.title,
-                            canonicalArtist: first.primaryArtist,
-                            services: Array(distinctServices),
-                            tracks: groupedTracks
-                        )
-                    )
+                if YandexMusicProvider.isConnectorEnabled, t.yandexId != nil {
+                    distinctServices.insert(.yandexMusic)
                 }
             }
+            
+            guard distinctServices.count >= 2, let first = groupedTracks.first else { continue }
+            
+            duplicateGroups.append(
+                DuplicateGroup(
+                    normalizedKey: key,
+                    canonicalTitle: first.title,
+                    canonicalArtist: first.primaryArtist,
+                    services: Array(distinctServices).sorted { $0.rawValue < $1.rawValue },
+                    tracks: groupedTracks
+                )
+            )
         }
         
         return duplicateGroups.sorted(by: { $0.canonicalTitle < $1.canonicalTitle })
     }
 }
-

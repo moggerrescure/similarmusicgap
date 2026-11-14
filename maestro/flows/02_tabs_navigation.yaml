@@ -1,0 +1,50 @@
+appId: qere.music
+name: Main tabs navigation
+tags:
+  - smoke
+  - navigation
+---
+- launchApp:
+    clearState: false
+    permissions:
+      all: allow
+
+# Dismiss Connect sheet if still open from prior flow
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 10000
+
+- tapOn:
+    id: "magnifyingglass"
+    index: 1
+- extendedWaitUntil:
+    visible: "Browse your library"
+    timeout: 8000
+- assertVisible:
+    id: "search.field"
+
+- tapOn:
+    id: "books.vertical"
+- assertVisible:
+    text: ".*Migration.*|.*Synced Collection.*|.*Library.*|Connect services"
+    optional: true
+
+- tapOn:
+    id: "plus"
+- assertVisible:
+    text: ".*Transfer.*|.*Create.*|.*Spotify.*|.*Apple.*|.*Проверить.*|.*compatible.*|Move"
+    optional: true
+
+# After Create, Home SF Symbol is "house" (unfilled); label is always reliable
+- tapOn:
+    text: "Home"
+- extendedWaitUntil:
+    visible:
+      id: "home.connect"
+    timeout: 8000

@@ -1,0 +1,40 @@
+appId: qere.music
+name: Home All/Music/Podcasts filters
+tags:
+  - home
+  - filters
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "house.fill"
+- extendedWaitUntil:
+    visible:
+      id: "home.connect"
+    timeout: 8000
+
+# Podcasts → honest empty state (no music shelves)
+- tapOn:
+    id: "home.filter.podcasts"
+- assertVisible: "Podcasts aren’t in SoundShift yet"
+- assertNotVisible:
+    text: "Liked Songs"
+    optional: true
+
+- tapOn:
+    id: "home.filter.showMusic"
+- assertVisible:
+    id: "home.filter.music"
+
+# All restores music chrome
+- tapOn:
+    id: "home.filter.all"
+- assertVisible:
+    text: ".*Liked Songs.*|.*Connect to sync.*|Home"

@@ -148,7 +148,7 @@ public struct SpotifySetupSheet: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "play.square")
                                         .font(.system(size: 13, weight: .semibold))
-                                    Text("Continue in Demo Mode (Mock Data)")
+                                    Text("Demo Mode (browse only — cannot migrate)")
                                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 }
                                 .foregroundColor(PastelTheme.textSecondary)
@@ -161,6 +161,11 @@ public struct SpotifySetupSheet: View {
                                         .stroke(PastelTheme.cardBorder, lineWidth: 1)
                                 )
                             }
+                            
+                            Text("Demo unlocks the Connect UI only — Sync stays empty and migration stays blocked. Dry-run/live need a real Client ID.")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(PastelTheme.amberWarning)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(.top, 8)
                     }

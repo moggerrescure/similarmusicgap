@@ -11,6 +11,7 @@ public struct VaultAlbumDetailSheet: View {
     public let album: SpotifyHomeFeedView.VaultAlbumItem
     
     @ObservedObject private var player = AudioPlayerManager.shared
+    @ObservedObject private var coordinator = ServicesCoordinator.shared
     @Environment(\.dismiss) private var dismiss
     
     @State private var toastMessage: String? = nil
@@ -18,6 +19,13 @@ public struct VaultAlbumDetailSheet: View {
     
     public init(album: SpotifyHomeFeedView.VaultAlbumItem) {
         self.album = album
+    }
+    
+    /// True when album rows resolve to synced library ids (not designer fixtures).
+    private var usesSyncedLibrary: Bool {
+        album.tracks.contains { track in
+            coordinator.allTracks.contains(where: { $0.id == track.id })
+        }
     }
     
     private var isAlbumPlaying: Bool {
@@ -44,6 +52,23 @@ public struct VaultAlbumDetailSheet: View {
                             // 2. Action Controls (Play All & Shuffle)
                             actionButtonsView
                                 .padding(.horizontal, 20)
+                            
+                            if !usesSyncedLibrary {
+                                HStack(alignment: .top, spacing: 10) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(PastelTheme.amberWarning)
+                                    Text("Connect & Sync to play real previews — showcase titles won’t invent audio.")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(PastelTheme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(PastelTheme.amberWarning.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .padding(.horizontal, 16)
+                            }
                             
                             // 3. Tracklist Section
                             tracklistSection
@@ -184,9 +209,13 @@ public struct VaultAlbumDetailSheet: View {
                 playAllTracks()
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: isAlbumPlaying ? "pause.fill" : "play.fill")
+                    Image(systemName: isAlbumPlaying ? "pause.fill" : (usesSyncedLibrary ? "play.fill" : "link"))
                         .font(.system(size: 13, weight: .bold))
-                    Text(isAlbumPlaying ? "Pause Album" : "Play All")
+                    Text(
+                        isAlbumPlaying
+                        ? "Pause Album"
+                        : (usesSyncedLibrary ? "Play All" : "Connect to Play")
+                    )
                         .font(.system(size: 14, weight: .bold))
                 }
                 .foregroundColor(PastelTheme.textOnOat)
@@ -197,6 +226,7 @@ public struct VaultAlbumDetailSheet: View {
                 .shadow(color: PastelTheme.pastelOat.opacity(0.22), radius: 8, y: 3)
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(usesSyncedLibrary ? "Play album" : "Connect to play album")
             
             // Shuffle Button
             Button {
@@ -204,9 +234,9 @@ public struct VaultAlbumDetailSheet: View {
                 shufflePlayTracks()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "shuffle")
+                    Image(systemName: usesSyncedLibrary ? "shuffle" : "link")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Shuffle")
+                    Text(usesSyncedLibrary ? "Shuffle" : "Connect")
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundColor(.white)
@@ -220,6 +250,7 @@ public struct VaultAlbumDetailSheet: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(usesSyncedLibrary ? "Shuffle album" : "Connect to shuffle")
         }
     }
     
@@ -275,7 +306,7 @@ public struct VaultAlbumDetailSheet: View {
                 if isCurrent {
                     player.togglePlayPause()
                 } else {
-                    player.play(track: track, in: album.tracks)
+                    playSyncedOrPrompt(track)
                 }
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
@@ -298,49 +329,56 @@ public struct VaultAlbumDetailSheet: View {
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundColor(Color(hex: "#9CA3AF"))
             
-            // "Add to Queue" Quick Button (Поставить в очередь)
             Button {
+                guard usesSyncedLibrary else {
+                    showQueueToastFeedback(trackTitle: "Connect & Sync to queue real tracks")
+                    return
+                }
                 player.addToQueue(track: track)
                 showQueueToastFeedback(trackTitle: track.title)
             } label: {
                 Image(systemName: "text.badge.plus")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(PastelTheme.pastelOat)
+                    .foregroundColor(usesSyncedLibrary ? PastelTheme.pastelOat : PastelTheme.textTertiary)
                     .padding(8)
                     .background(Color.white.opacity(0.06))
                     .clipShape(Circle())
             }
             .buttonStyle(BorderlessButtonStyle())
+            .disabled(!usesSyncedLibrary)
+            .accessibilityLabel(usesSyncedLibrary ? "Add to queue" : "Connect to queue tracks")
             
             // Ellipsis Context Menu
             Menu {
                 Button {
-                    player.play(track: track, in: album.tracks)
+                    playSyncedOrPrompt(track)
                 } label: {
-                    Label("Play Now", systemImage: "play.fill")
+                    Label(usesSyncedLibrary ? "Play Now" : "Connect to play", systemImage: "play.fill")
                 }
                 
-                Button {
-                    player.addToQueueNext(track: track)
-                    showQueueToastFeedback(trackTitle: track.title)
-                } label: {
-                    Label("Play Next", systemImage: "text.insert")
-                }
-                
-                Button {
-                    player.addToQueue(track: track)
-                    showQueueToastFeedback(trackTitle: track.title)
-                } label: {
-                    Label("Add to Queue", systemImage: "text.badge.plus")
-                }
-                
-                Button {
-                    player.toggleFavorite(track: track)
-                } label: {
-                    Label(
-                        player.isFavorite(track: track) ? "Remove from Favorites" : "Add to Favorites",
-                        systemImage: player.isFavorite(track: track) ? "heart.slash" : "heart"
-                    )
+                if usesSyncedLibrary {
+                    Button {
+                        player.addToQueueNext(track: track)
+                        showQueueToastFeedback(trackTitle: track.title)
+                    } label: {
+                        Label("Play Next", systemImage: "text.insert")
+                    }
+                    
+                    Button {
+                        player.addToQueue(track: track)
+                        showQueueToastFeedback(trackTitle: track.title)
+                    } label: {
+                        Label("Add to Queue", systemImage: "text.badge.plus")
+                    }
+                    
+                    Button {
+                        player.toggleFavorite(track: track)
+                    } label: {
+                        Label(
+                            player.isFavorite(track: track) ? "Remove from Favorites" : "Add to Favorites",
+                            systemImage: player.isFavorite(track: track) ? "heart.slash" : "heart"
+                        )
+                    }
                 }
             } label: {
                 Image(systemName: "ellipsis")
@@ -382,23 +420,45 @@ public struct VaultAlbumDetailSheet: View {
     }
     
     // MARK: - Actions
+    private func playSyncedOrPrompt(_ track: UniversalTrack) {
+        guard usesSyncedLibrary else {
+            dismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        let queue = album.tracks.compactMap { row in
+            coordinator.allTracks.first(where: { $0.id == row.id })
+        }
+        let playable = coordinator.allTracks.first(where: { $0.id == track.id }) ?? track
+        player.play(track: playable, in: queue.isEmpty ? [playable] : queue)
+    }
+    
     private func playAllTracks() {
-        guard !album.tracks.isEmpty else { return }
         if isAlbumPlaying {
             player.togglePlayPause()
-        } else {
-            player.play(track: album.tracks[0], in: album.tracks)
+            return
         }
+        guard usesSyncedLibrary, let first = album.tracks.first else {
+            dismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        playSyncedOrPrompt(first)
     }
     
     private func shufflePlayTracks() {
-        guard !album.tracks.isEmpty else { return }
-        let shuffled = album.tracks.shuffled()
-        player.play(track: shuffled[0], in: shuffled)
+        guard usesSyncedLibrary, let randomTrack = album.tracks.randomElement() else {
+            dismiss()
+            NavigationCoordinator.shared.navigateToConnect()
+            return
+        }
+        playSyncedOrPrompt(randomTrack)
     }
     
     private func showQueueToastFeedback(trackTitle: String) {
-        toastMessage = "Added to Queue • \(trackTitle)"
+        toastMessage = usesSyncedLibrary
+            ? "Added to Queue • \(trackTitle)"
+            : trackTitle
         showToast = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             withAnimation {

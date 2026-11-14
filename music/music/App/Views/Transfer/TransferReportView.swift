@@ -10,6 +10,8 @@ public struct TransferReportView: View {
         self.report = report
     }
     
+    private var isFailure: Bool { !report.didSucceed }
+    
     public var body: some View {
         NavigationStack {
             ZStack {
@@ -18,23 +20,25 @@ public struct TransferReportView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Success Badge
                         Circle()
                             .fill(PastelTheme.card)
                             .frame(width: 90, height: 90)
                             .overlay(
-                                Image(systemName: "checkmark.seal.fill")
+                                Image(systemName: isFailure ? "xmark.octagon.fill" : "checkmark.seal.fill")
                                     .font(.system(size: 48))
-                                    .foregroundColor(PastelTheme.emeraldSuccess)
+                                    .foregroundColor(isFailure ? Color.red.opacity(0.9) : PastelTheme.emeraldSuccess)
                             )
                             .overlay(
                                 Circle()
-                                    .stroke(PastelTheme.emeraldSuccess.opacity(0.4), lineWidth: 1)
+                                    .stroke(
+                                        (isFailure ? Color.red : PastelTheme.emeraldSuccess).opacity(0.4),
+                                        lineWidth: 1
+                                    )
                             )
                             .padding(.top, 24)
                         
                         VStack(spacing: 6) {
-                            Text("Migration Complete")
+                            Text(isFailure ? "Migration Failed" : "Migration Complete")
                                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                                 .foregroundColor(PastelTheme.textPrimary)
                             
@@ -43,7 +47,14 @@ public struct TransferReportView: View {
                                 .foregroundColor(PastelTheme.pastelOat)
                         }
                         
-                        // HUD Metric Trio
+                        if let error = report.errorMessage {
+                            Text(error)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(Color.red.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
+                        
                         HStack(spacing: 12) {
                             ReportMetricCell(
                                 title: "TRANSFERRED",
@@ -51,8 +62,10 @@ public struct TransferReportView: View {
                                 color: PastelTheme.emeraldSuccess
                             )
                             ReportMetricCell(
-                                title: "REMATCHED",
-                                value: "\(report.alternatesAccepted)",
+                                title: report.skippedExisting > 0 ? "ALREADY THERE" : "REMATCHED",
+                                value: report.skippedExisting > 0
+                                    ? "\(report.skippedExisting)"
+                                    : "\(report.alternatesAccepted)",
                                 color: PastelTheme.amberWarning
                             )
                             ReportMetricCell(
@@ -62,17 +75,44 @@ public struct TransferReportView: View {
                             )
                         }
                         
-                        // Summary Narrative
                         VStack(alignment: .leading, spacing: 10) {
                             Text("EXECUTION SUMMARY")
                                 .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .tracking(1.0)
                                 .foregroundColor(PastelTheme.textTertiary)
                             
-                            Text("Successfully transferred \(report.successfullyTransferred) songs with 100% track order fidelity in \(String(format: "%.1f", report.durationSeconds)) seconds. Target playlist created and ready for offline listening.")
+                            if isFailure {
+                                Text(report.errorMessage ?? "Transfer did not complete. Check Connect auth and try again.")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(PastelTheme.textSecondary)
+                                    .lineSpacing(3)
+                            } else if report.isNothingNewSuccess {
+                                Text(
+                                    """
+                                    Nothing new to write — \(report.skippedExisting) matched track\(report.skippedExisting == 1 ? "" : "s") \
+                                    already on \(report.destinationProvider.displayName). \
+                                    No playlist was created.
+                                    \(report.missingTracks.isEmpty ? "" : "\(report.missingTracks.count) still unresolved.")
+                                    """
+                                )
                                 .font(.system(size: 14))
                                 .foregroundColor(PastelTheme.textSecondary)
                                 .lineSpacing(3)
+                            } else {
+                                Text(
+                                    """
+                                    Wrote \(report.successfullyTransferred) of \(report.totalTracks) tracks \
+                                    (\(String(format: "%.0f", report.matchRate))% covered) in \
+                                    \(String(format: "%.1f", report.durationSeconds))s.
+                                    \(report.skippedExisting > 0 ? "Skipped \(report.skippedExisting) already on destination. " : "")\
+                                    \(report.createdPlaylistName.map { "Playlist: \($0)." } ?? "")
+                                    \(report.missingTracks.isEmpty ? "" : "\(report.missingTracks.count) tracks still missing.")
+                                    """
+                                )
+                                .font(.system(size: 14))
+                                .foregroundColor(PastelTheme.textSecondary)
+                                .lineSpacing(3)
+                            }
                         }
                         .padding(18)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -83,9 +123,25 @@ public struct TransferReportView: View {
                                 .stroke(PastelTheme.cardBorder, lineWidth: 1)
                         )
                         
-                        // Actions
+                        if !report.missingTracks.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("MISSING TRACKS")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .tracking(1.0)
+                                    .foregroundColor(PastelTheme.textTertiary)
+                                ForEach(report.missingTracks.prefix(20)) { track in
+                                    Text("\(track.primaryArtist) — \(track.title)")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(PastelTheme.textSecondary)
+                                }
+                            }
+                            .padding(18)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(PastelTheme.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        
                         VStack(spacing: 12) {
-                            // Share Report Button (T13)
                             Button {
                                 HapticManager.lightImpact()
                                 showingShareSheet = true
@@ -99,34 +155,28 @@ public struct TransferReportView: View {
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
                                 .background(PastelTheme.card)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(PastelTheme.cardBorder, lineWidth: 1)
-                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
-                            .buttonStyle(TouchFeedbackButtonStyle())
                             
-                            // Done Button
                             Button {
-                                HapticManager.lightImpact()
                                 dismiss()
                             } label: {
-                                Text("Return to Library")
-                                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                                Text("Done")
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
                                     .foregroundColor(PastelTheme.textOnOat)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 54)
+                                    .frame(height: 52)
                                     .background(PastelTheme.pastelOat)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             .buttonStyle(TouchFeedbackButtonStyle())
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     .padding(.bottom, 32)
                 }
             }
+            .navigationTitle("Transfer Report")
             .inlineNavigationBarTitle()
             .sheet(isPresented: $showingShareSheet) {
                 ShareTextSheet(text: report.shareableText)
@@ -135,30 +185,26 @@ public struct TransferReportView: View {
     }
 }
 
-// MARK: - Mini Metric Cell
 private struct ReportMetricCell: View {
     let title: String
     let value: String
     let color: Color
     
     var body: some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundColor(PastelTheme.textTertiary)
-            
+        VStack(spacing: 6) {
             Text(value)
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
                 .foregroundColor(color)
+                .monospacedDigit()
+            Text(title)
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .tracking(0.5)
+                .foregroundColor(PastelTheme.textTertiary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
         .background(PastelTheme.card)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(PastelTheme.cardBorder, lineWidth: 1)
-        )
     }
 }
 
@@ -176,4 +222,3 @@ private struct ShareTextSheet: View {
     var body: some View { Text(text) }
 }
 #endif
-

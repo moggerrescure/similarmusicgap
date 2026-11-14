@@ -1,0 +1,45 @@
+appId: qere.music
+name: Services hub Demo cannot migrate
+tags:
+  - connect
+  - honesty
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "house.fill"
+- extendedWaitUntil:
+    visible:
+      id: "home.connect"
+    timeout: 8000
+
+- tapOn:
+    id: "home.connect"
+- extendedWaitUntil:
+    visible: "Done"
+    timeout: 8000
+
+- assertVisible:
+    text: ".*Spotify.*"
+- assertVisible:
+    text: ".*Apple Music.*"
+- assertVisible:
+    text: ".*Demo Mode cannot migrate.*|.*Live Spotify.*"
+
+- assertVisible:
+    text: ".*SIM.*|.*DEMO.*|.*LIVE.*|.*Apple Music.*"
+    optional: true
+
+- scroll
+- assertVisible:
+    text: ".*SECURITY.*|.*Move library.*|.*Spotify.*"
+    optional: true
+
+- tapOn: "Done"

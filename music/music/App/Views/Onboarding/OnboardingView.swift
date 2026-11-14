@@ -11,7 +11,11 @@ public struct OnboardingView: View {
     
     public var body: some View {
         ZStack {
-            // MARK: - Layer 1: Seamless Looping Video Background
+            // MARK: - Layer 0: Atmospheric fallback (videos are optional in the bundle)
+            AmbientWashBackgroundView(tab: .home)
+                .ignoresSafeArea()
+            
+            // MARK: - Layer 1: Seamless Looping Video Background (no-op if mp4 missing)
             LooperVideoPlayerView(videoName: slides[currentSlideIndex].videoResourceName)
                 .id(slides[currentSlideIndex].videoResourceName)
                 .ignoresSafeArea()
@@ -192,13 +196,15 @@ public struct OnboardingView: View {
                 currentSlideIndex += 1
             }
         } else {
-            // Final Start Action
+            // Final Start Action → Main tabs, then open Connect
             HapticManager.successNotification()
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 isCompleted = true
                 hasCompletedOnboarding = true
             }
-            print("[Onboarding] Completed. Transitioning to Service Connect Hub...")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                NavigationCoordinator.shared.navigateToConnect()
+            }
         }
     }
 }

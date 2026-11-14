@@ -1,0 +1,37 @@
+appId: qere.music
+name: Move tab via Create + soundshift://move
+tags:
+  - deep-link
+  - move
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Cancel"
+
+- tapOn:
+    id: "plus"
+
+- extendedWaitUntil:
+    visible: ".*LIVE TRANSFER CHECKLIST.*|.*Transfer & Export.*|.*Перенос.*"
+    timeout: 10000
+
+- openLink: soundshift://move
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Cancel"
+
+- assertVisible:
+    text: ".*LIVE TRANSFER CHECKLIST.*|.*Transfer & Export.*|.*Перенос.*"

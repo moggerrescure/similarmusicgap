@@ -1,0 +1,26 @@
+appId: qere.music
+name: Search genre card empty-library honesty
+tags:
+  - search
+  - honesty
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "magnifyingglass"
+    index: 1
+- extendedWaitUntil:
+    visible: "Browse your library"
+    timeout: 10000
+
+# Keyword tile — empty library must show honesty notice, not fake radio
+- tapOn: "Pop"
+- assertVisible:
+    text: ".*Library empty.*|.*Connect.*Sync.*|.*No synced tracks match.*|.*local only.*"

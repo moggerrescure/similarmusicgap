@@ -43,6 +43,13 @@ public final class AudioPlayerManager: ObservableObject {
     // Favorites registry
     @Published public private(set) var favoriteTrackIds: Set<UUID> = []
     
+    /// True when current audio is a real preview_url (not a stand-in stream)
+    @Published public private(set) var isPreviewPlayback: Bool = false
+    /// False when the selected track has no playable preview URL
+    @Published public private(set) var hasPlayablePreview: Bool = true
+    /// Short honesty toast after remote ♥ sync (e.g. Apple unlike unavailable).
+    @Published public private(set) var favoriteSyncNotice: String?
+    
     // MARK: - Formatted Time Strings (Apple HUD Standard)
     public var formattedCurrentTime: String {
         formatSeconds(currentTime)
@@ -74,16 +81,35 @@ public final class AudioPlayerManager: ObservableObject {
     private var prebufferedTrack: UniversalTrack?
     
     private var displayLinkTimer: Timer?
+    private var endObserver: NSObjectProtocol?
     private var playlistQueue: [UniversalTrack] = []
     private var currentIndex: Int = 0
     
-    // Royalty-free preview stream for seamless testing
-    private let defaultPreviewStreamURL = URL(string: "https://commondatastorage.googleapis.com/codeskulptor-demos/riceracer_assets/music/race.ogg")
-        ?? URL(fileURLWithPath: "/dev/null")
+    private static let favoritesDefaultsKey = "soundshift_favorite_track_ids"
     
     private init() {
+        loadPersistedFavorites()
         setupAudioSession()
         setupRemoteCommands()
+    }
+    
+    private func loadPersistedFavorites() {
+        let raw = UserDefaults.standard.stringArray(forKey: Self.favoritesDefaultsKey) ?? []
+        favoriteTrackIds = Set(raw.compactMap(UUID.init(uuidString:)))
+    }
+    
+    private func persistFavorites() {
+        UserDefaults.standard.set(
+            favoriteTrackIds.map(\.uuidString).sorted(),
+            forKey: Self.favoritesDefaultsKey
+        )
+    }
+    
+    private static func playbackURL(for track: UniversalTrack) -> URL? {
+        guard let preview = track.previewURL, let url = URL(string: preview) else {
+            return nil
+        }
+        return url
     }
     
     // MARK: - Audio Session Configuration
@@ -173,24 +199,44 @@ public final class AudioPlayerManager: ObservableObject {
             self.currentIndex = 0
         }
         
+        self.currentTrack = track
+        // Preview streams are ~30s — don't use full track durationMs until AVPlayer reports real length.
+        self.duration = min(30.0, max(1.0, Double(track.durationMs) / 1000.0))
+        self.currentTime = 0.0
+        self.progress = 0.0
+        self.isCrossfading = false
+        secondaryPlayer?.pause()
+        self.secondaryPlayer = nil
+        self.prebufferedTrack = nil
+        clearEndObserver()
+        
+        // Honest playback: never substitute an unrelated stand-in stream for missing previews
+        guard let streamURL = Self.playbackURL(for: track) else {
+            primaryPlayer?.pause()
+            primaryPlayer = nil
+            isPlaying = false
+            isPreviewPlayback = false
+            hasPlayablePreview = false
+            stopTimer()
+            updateNowPlayingInfo()
+            HapticManager.lightImpact()
+            return
+        }
+        
+        hasPlayablePreview = true
+        isPreviewPlayback = true
+        
         let previousPlayer = primaryPlayer
         let wasPlaying = isPlaying
         
-        // Prepare new primary deck
-        let playerItem = AVPlayerItem(url: defaultPreviewStreamURL)
+        let playerItem = AVPlayerItem(url: streamURL)
         let newPlayer = AVPlayer(playerItem: playerItem)
         newPlayer.volume = wasPlaying ? 0.0 : 1.0
         newPlayer.play()
         
         self.primaryPlayer = newPlayer
-        self.currentTrack = track
-        self.duration = Double(track.durationMs) / 1000.0
-        self.currentTime = 0.0
-        self.progress = 0.0
         self.isPlaying = true
-        self.isCrossfading = false
-        self.secondaryPlayer = nil
-        self.prebufferedTrack = nil
+        observeItemEnd(playerItem)
         
         // Equal-Power 350ms micro-fade if transitioning from another track
         if let oldPlayer = previousPlayer, wasPlaying {
@@ -235,6 +281,13 @@ public final class AudioPlayerManager: ObservableObject {
     
     public func resume() {
         guard currentTrack != nil else { return }
+        // No preview / no AVPlayer — never fake-play with a running timer
+        guard primaryPlayer != nil, hasPlayablePreview else {
+            isPlaying = false
+            stopTimer()
+            updateNowPlayingInfo()
+            return
+        }
         primaryPlayer?.play()
         if isCrossfading {
             secondaryPlayer?.play()
@@ -354,11 +407,47 @@ public final class AudioPlayerManager: ObservableObject {
     
     public func toggleFavorite(track: UniversalTrack) {
         HapticManager.lightImpact()
+        let nowFavorite: Bool
         if favoriteTrackIds.contains(track.id) {
             favoriteTrackIds.remove(track.id)
+            nowFavorite = false
         } else {
             favoriteTrackIds.insert(track.id)
+            nowFavorite = true
         }
+        persistFavorites()
+        Task { await syncFavoriteToLiveServices(track: track, favorited: nowFavorite) }
+    }
+    
+    /// Push local ♥ to live Spotify Liked Songs (and Apple add when favoriting).
+    private func syncFavoriteToLiveServices(track: UniversalTrack, favorited: Bool) async {
+        let coordinator = ServicesCoordinator.shared
+        let providers: [any MusicProviderProtocol] = [coordinator.spotify, coordinator.appleMusic]
+        var notices: [String] = []
+        for provider in providers where provider.isLiveSession {
+            do {
+                if favorited {
+                    _ = try await provider.saveTracksToLibrary([track])
+                } else {
+                    _ = try await provider.removeTracksFromLibrary([track])
+                }
+            } catch {
+                // Local heart already updated — surface honest remote limits to the user.
+                notices.append(error.localizedDescription)
+                print("[AudioPlayer] Favorite sync failed for \(provider.providerType.displayName): \(error.localizedDescription)")
+            }
+        }
+        if let first = notices.first {
+            favoriteSyncNotice = first
+            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            if favoriteSyncNotice == first {
+                favoriteSyncNotice = nil
+            }
+        }
+    }
+    
+    public func dismissFavoriteSyncNotice() {
+        favoriteSyncNotice = nil
     }
     
     // MARK: - 50ms High-Precision Crossfade & Gapless Automix Engine
@@ -368,7 +457,20 @@ public final class AudioPlayerManager: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self = self, self.isPlaying else { return }
                 
-                self.currentTime += 0.05
+                // Drive UI from AVPlayer clock / item duration (preview ≈ 30s), not full track length.
+                if let player = self.primaryPlayer, let item = player.currentItem {
+                    let t = CMTimeGetSeconds(player.currentTime())
+                    let d = CMTimeGetSeconds(item.duration)
+                    if t.isFinite, t >= 0 {
+                        self.currentTime = t
+                    }
+                    if d.isFinite, d > 0 {
+                        self.duration = d
+                    }
+                } else {
+                    self.currentTime += 0.05
+                }
+                
                 if self.duration > 0 {
                     self.progress = min(1.0, self.currentTime / self.duration)
                 }
@@ -386,10 +488,30 @@ public final class AudioPlayerManager: ObservableObject {
                 }
                 
                 // 3. Finalize transition when track reaches completion
-                if self.currentTime >= self.duration {
+                if self.duration > 0, self.currentTime >= self.duration - 0.05 {
                     self.finalizeTrackTransition()
                 }
             }
+        }
+    }
+    
+    private func observeItemEnd(_ item: AVPlayerItem) {
+        clearEndObserver()
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.finalizeTrackTransition()
+            }
+        }
+    }
+    
+    private func clearEndObserver() {
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+            self.endObserver = nil
         }
     }
     
@@ -407,7 +529,11 @@ public final class AudioPlayerManager: ObservableObject {
         let nextTrack = playlistQueue[nextIndex]
         self.prebufferedTrack = nextTrack
         
-        let playerItem = AVPlayerItem(url: defaultPreviewStreamURL)
+        guard let preview = nextTrack.previewURL, let url = URL(string: preview) else {
+            // No real preview for next track — skip fake stand-in crossfade
+            return
+        }
+        let playerItem = AVPlayerItem(url: url)
         let deckB = AVPlayer(playerItem: playerItem)
         deckB.volume = 0.0
         self.secondaryPlayer = deckB

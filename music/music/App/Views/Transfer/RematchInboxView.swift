@@ -14,21 +14,7 @@ public struct RematchInboxView: View {
                     .ignoresSafeArea()
                 
                 if transferManager.rematchQueue.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 56, weight: .semibold))
-                            .foregroundColor(PastelTheme.emeraldSuccess)
-                        
-                        Text("Inbox Zero")
-                            .font(.system(size: 24, weight: .heavy, design: .rounded))
-                            .foregroundColor(PastelTheme.textPrimary)
-                        
-                        Text("All tracks matched with high confidence. No manual disambiguation required.")
-                            .font(.system(size: 15))
-                            .foregroundColor(PastelTheme.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 32)
-                    }
+                    rematchEmptyState
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
@@ -56,6 +42,43 @@ public struct RematchInboxView: View {
                 }
             }
         }
+    }
+    
+    @ViewBuilder
+    private var rematchEmptyState: some View {
+        let dryRun = transferManager.lastDryRun
+        let report = transferManager.lastReport
+        let allStrong = (dryRun?.alternateMatchesCount ?? -1) == 0
+            && (dryRun?.totalTracks ?? 0) > 0
+        
+        VStack(spacing: 16) {
+            Image(systemName: allStrong ? "checkmark.circle.fill" : "tray")
+                .font(.system(size: 56, weight: .semibold))
+                .foregroundColor(allStrong ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
+            
+            Text(allStrong ? "Inbox Zero" : "Nothing to rematch")
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .foregroundColor(PastelTheme.textPrimary)
+            
+            Text(emptyCopy(allStrong: allStrong, report: report, dryRun: dryRun))
+                .font(.system(size: 15))
+                .foregroundColor(PastelTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+    }
+    
+    private func emptyCopy(allStrong: Bool, report: TransferExecutionReport?, dryRun: DryRunSummary?) -> String {
+        if allStrong {
+            return "All tracks matched with high confidence. No manual disambiguation required."
+        }
+        if let report, report.didSucceed, !report.missingTracks.isEmpty {
+            return "No alternates left to review. Open the last transfer report for \(report.missingTracks.count) missing track\(report.missingTracks.count == 1 ? "" : "s")."
+        }
+        if dryRun == nil {
+            return "Run a dry-run first — alternate matches that need a choice will appear here."
+        }
+        return "No alternate matches need a decision right now."
     }
 }
 

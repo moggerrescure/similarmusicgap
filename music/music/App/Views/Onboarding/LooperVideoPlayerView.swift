@@ -25,7 +25,8 @@ public final class PlayerUIView: UIView {
     }
 }
 
-/// Seamless gapless looping video player using AVQueuePlayer & AVPlayerLooper
+/// Seamless gapless looping video player using AVQueuePlayer & AVPlayerLooper.
+/// Falls back silently when the mp4 is missing from the bundle.
 public struct LooperVideoPlayerView: UIViewRepresentable {
     public let videoName: String
     
@@ -56,14 +57,14 @@ public struct LooperVideoPlayerView: UIViewRepresentable {
         
         func setupPlayer(for view: PlayerUIView, videoName: String) {
             currentVideoName = videoName
+            queuePlayer?.pause()
+            queuePlayer = nil
+            playerLooper = nil
+            view.playerLayer.player = nil
             
-            // Look up in main bundle or App Resources folder
-            let url = Bundle.main.url(forResource: videoName, withExtension: "mp4")
-                ?? Bundle.main.url(forResource: "Resources/Videos/\(videoName)", withExtension: "mp4")
-                ?? URL(fileURLWithPath: "App/Resources/Videos/\(videoName).mp4")
-            
-            guard FileManager.default.fileExists(atPath: url.path) else {
-                print("[LooperVideoPlayerView] Video not found at path: \(url.path)")
+            guard let url = Bundle.main.url(forResource: videoName, withExtension: "mp4"),
+                  FileManager.default.fileExists(atPath: url.path) else {
+                // Videos are optional — OnboardingView paints AmbientWash behind this layer.
                 return
             }
             
@@ -85,16 +86,13 @@ public struct LooperVideoPlayerView: UIViewRepresentable {
     }
 }
 #else
-// macOS Fallback for SwiftUI preview & testing
 import AppKit
 
 public struct LooperVideoPlayerView: View {
     public let videoName: String
     public init(videoName: String) { self.videoName = videoName }
     public var body: some View {
-        Color.black
-            .overlay(Text("Video: \(videoName)").foregroundColor(.white))
+        Color.clear
     }
 }
 #endif
-

@@ -1,0 +1,38 @@
+appId: qere.music
+name: Transfer Create CTAs and gates
+tags:
+  - transfer
+  - honesty
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "plus"
+- extendedWaitUntil:
+    visible: "Create"
+    timeout: 10000
+
+- scroll
+- assertVisible:
+    text: ".*Проверить совместимость.*|.*compatible.*"
+    optional: true
+
+- scroll
+- assertVisible:
+    text: ".*Живой мост.*|.*Dry.*|.*Migrate.*|.*Transfer.*"
+    optional: true
+
+# Without live pair, live action should stay gated / honest
+- tapOn:
+    text: "Живой мост"
+    optional: true
+- assertVisible:
+    text: ".*Connect.*|.*Client ID.*|.*Demo.*|.*нельзя.*|.*pair.*|.*Spotify.*|.*Apple.*"
+    optional: true

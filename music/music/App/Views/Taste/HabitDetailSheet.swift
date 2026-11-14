@@ -11,16 +11,9 @@ public struct HabitDetailSheet: View {
         self.cluster = cluster
     }
     
-    // Tracks belonging to this cluster vibe
+    // Tracks belonging to this cluster vibe (synced library only — no demo fill)
     private var habitTracks: [UniversalTrack] {
-        if coordinator.allTracks.isEmpty {
-            return [
-                UniversalTrack(isrc: "USUM71703861", title: "Starboy", artists: ["The Weeknd", "Daft Punk"], album: "Starboy", durationMs: 230453),
-                UniversalTrack(isrc: "GBUM71505080", title: "The Less I Know the Better", artists: ["Tame Impala"], album: "Currents", durationMs: 216320),
-                UniversalTrack(isrc: "USWB11200021", title: "Midnight City", artists: ["M83"], album: "Hurry Up, We're Dreaming", durationMs: 243000)
-            ]
-        }
-        return Array(coordinator.allTracks.prefix(4))
+        Array(coordinator.allTracks.prefix(4))
     }
     
     public var body: some View {
@@ -111,44 +104,52 @@ public struct HabitDetailSheet: View {
                                 .foregroundColor(PastelTheme.textTertiary)
                             
                             VStack(spacing: 8) {
-                                ForEach(habitTracks) { track in
-                                    HStack(spacing: 12) {
-                                        Button {
-                                            player.play(track: track, in: habitTracks)
-                                        } label: {
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                    .fill(PastelTheme.cardSubtle)
-                                                    .frame(width: 38, height: 38)
-                                                
-                                                Image(systemName: player.currentTrack == track && player.isPlaying ? "pause.fill" : "play.fill")
-                                                    .font(.system(size: 12, weight: .bold))
-                                                    .foregroundColor(PastelTheme.pastelOat)
+                                if habitTracks.isEmpty {
+                                    Text("Sync your library to populate tracks for this habit.")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(PastelTheme.textTertiary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 6)
+                                } else {
+                                    ForEach(habitTracks) { track in
+                                        HStack(spacing: 12) {
+                                            Button {
+                                                player.play(track: track, in: habitTracks)
+                                            } label: {
+                                                ZStack {
+                                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                        .fill(PastelTheme.cardSubtle)
+                                                        .frame(width: 38, height: 38)
+                                                    
+                                                    Image(systemName: player.currentTrack == track && player.isPlaying ? "pause.fill" : "play.fill")
+                                                        .font(.system(size: 12, weight: .bold))
+                                                        .foregroundColor(PastelTheme.pastelOat)
+                                                }
                                             }
-                                        }
-                                        .buttonStyle(TouchFeedbackButtonStyle())
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(track.title)
-                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                                .foregroundColor(player.currentTrack == track ? PastelTheme.pastelOat : PastelTheme.textPrimary)
-                                                .lineLimit(1)
+                                            .buttonStyle(TouchFeedbackButtonStyle())
                                             
-                                            Text(track.primaryArtist)
-                                                .font(.system(size: 12))
-                                                .foregroundColor(PastelTheme.textSecondary)
-                                                .lineLimit(1)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(track.title)
+                                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                    .foregroundColor(player.currentTrack == track ? PastelTheme.pastelOat : PastelTheme.textPrimary)
+                                                    .lineLimit(1)
+                                                
+                                                Text(track.primaryArtist)
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(PastelTheme.textSecondary)
+                                                    .lineLimit(1)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            Text(track.formattedDuration)
+                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                .foregroundColor(PastelTheme.textTertiary)
                                         }
-                                        
-                                        Spacer()
-                                        
-                                        Text(track.formattedDuration)
-                                            .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                            .foregroundColor(PastelTheme.textTertiary)
+                                        .padding(10)
+                                        .background(PastelTheme.cardSubtle)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     }
-                                    .padding(10)
-                                    .background(PastelTheme.cardSubtle)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 }
                             }
                         }

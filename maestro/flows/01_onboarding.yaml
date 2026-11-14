@@ -1,0 +1,35 @@
+appId: qere.music
+name: Onboarding → Connect
+tags:
+  - smoke
+  - onboarding
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    permissions:
+      all: allow
+
+- assertVisible: "ALL-IN-ONE LIBRARY"
+- assertVisible: "Continue"
+- tapOn: "Continue"
+
+- extendedWaitUntil:
+    visible: "ZERO-EFFORT MIGRATION"
+    timeout: 8000
+- tapOn: "Next"
+
+- extendedWaitUntil:
+    visible: "DEEP TASTE ANALYTICS"
+    timeout: 8000
+- tapOn: "Explore"
+
+- extendedWaitUntil:
+    visible: "CONNECT → TASTE → MOVE"
+    timeout: 8000
+- tapOn: "Connect Your Music"
+
+# Final onboarding opens Connect sheet
+- extendedWaitUntil:
+    visible: ".*Connect.*|.*Spotify.*|.*Apple Music.*|Done"
+    timeout: 12000

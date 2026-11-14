@@ -98,27 +98,33 @@ public struct TasteCardStoryView: View {
                     }
                 }
                 
-                // MARK: - Taste Twin Metric
+                // MARK: - Library shape (honest — not a fabricated twin %)
                 HStack(spacing: 10) {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(PastelTheme.emeraldSuccess)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("ANONYMOUS TASTE TWIN")
+                        Text("LIBRARY SHAPE")
                             .font(.system(size: 9, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textTertiary)
                         
-                        Text("98.4% Match in \(profile.tasteTwin.twinLocationHint)")
+                        Text(profile.tasteTwin.twinLocationHint)
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
+                            .lineLimit(2)
                     }
                     
                     Spacer()
                     
-                    Text("Top 0.04%")
-                        .font(.system(size: 11, weight: .heavy, design: .rounded))
-                        .foregroundColor(PastelTheme.amberWarning)
+                    if !profile.tasteTwin.sharedNicheArtists.isEmpty {
+                        Text(profile.tasteTwin.sharedNicheArtists.prefix(2).joined(separator: " · "))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundColor(PastelTheme.amberWarning)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 100, alignment: .trailing)
+                    }
                 }
                 .padding(12)
                 .background(PastelTheme.cardSubtle)

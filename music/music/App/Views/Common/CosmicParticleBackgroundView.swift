@@ -21,15 +21,20 @@ public struct CosmicParticleBackgroundView: View {
     #endif
     
     public var particleCount: Int = 40
+    /// When false, only stardust layers render (safe to overlay on AmbientWash).
+    public var includeCanvasBase: Bool = true
     
-    public init(particleCount: Int = 40) {
+    public init(particleCount: Int = 40, includeCanvasBase: Bool = true) {
         self.particleCount = particleCount
+        self.includeCanvasBase = includeCanvasBase
     }
     
     public var body: some View {
         ZStack {
             // 1. OLED Cashmere Deep Canvas (#0E0F12)
-            PastelTheme.canvas
+            if includeCanvasBase {
+                PastelTheme.canvas
+            }
             
             // 2. High-Fidelity Multi-Stop Atmospheric Cosmic Nebula
             // Top-Right Deep Slate & Midnight Indigo Nebula

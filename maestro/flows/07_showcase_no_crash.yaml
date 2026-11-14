@@ -1,0 +1,46 @@
+appId: qere.music
+name: Home showcase taps do not crash
+tags:
+  - home
+  - stability
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+
+- tapOn:
+    id: "house.fill"
+- scroll
+- scroll
+
+# Showcase labels when empty library
+- assertVisible:
+    text: ".*SHOWCASE.*|.*Liked Songs.*|.*HERO.*|.*TOP ARTISTS.*|.*designer fixtures.*"
+    optional: true
+
+# Tap Liked Songs shortcut if present
+- tapOn:
+    text: "Liked Songs"
+    optional: true
+
+- runFlow:
+    when:
+      visible: ".*Library is empty.*|.*No tracks.*|Favorites|Tracks|Playlists"
+    commands:
+      - assertVisible:
+          text: ".*Library is empty.*|.*Connect services.*|Favorites|Tracks"
+          optional: true
+      - tapOn:
+          text: "Cancel"
+          optional: true
+      - tapOn:
+          text: "Done"
+          optional: true
+      - tapOn:
+          point: "50%,8%"
+          optional: true

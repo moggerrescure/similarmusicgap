@@ -9,18 +9,16 @@ public struct FloatingMiniPlayerView: View {
     
     public init() {}
     
-    private var activeTrack: UniversalTrack {
-        player.currentTrack ?? UniversalTrack(
-            isrc: "SP-DEMO-01",
-            title: "Ruby Rosary",
-            artists: ["A$AP Rocky", "J. Cole", "The Alchemist"],
-            album: "Single",
-            durationMs: 165000,
-            spotifyId: "demo_ruby"
-        )
+    public var body: some View {
+        Group {
+            if let activeTrack = player.currentTrack {
+                miniPlayerContent(for: activeTrack)
+            }
+        }
     }
     
-    public var body: some View {
+    @ViewBuilder
+    private func miniPlayerContent(for activeTrack: UniversalTrack) -> some View {
         ZStack(alignment: .bottom) {
             // Container: Sleek Oval Capsule with glowing border, glass highlight & frosted charcoal base
             Capsule(style: .continuous)
@@ -147,10 +145,21 @@ public struct FloatingMiniPlayerView: View {
                 }
                 
                 // Track Info in Single Horizontal Flow with Smooth Marquee Ticker
-                MiniMarqueeTrackView(
-                    title: activeTrack.title,
-                    artists: activeTrack.artists.joined(separator: ", ")
-                )
+                VStack(alignment: .leading, spacing: 2) {
+                    MiniMarqueeTrackView(
+                        title: activeTrack.title,
+                        artists: activeTrack.artists.joined(separator: ", ")
+                    )
+                    if player.isPreviewPlayback {
+                        Text("30s preview")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.emeraldSuccess.opacity(0.9))
+                    } else if !player.hasPlayablePreview {
+                        Text("No preview available")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.amberWarning.opacity(0.95))
+                    }
+                }
                 .frame(maxWidth: .infinity)
                 
                 // Right Controls inside Oval
@@ -172,6 +181,7 @@ public struct FloatingMiniPlayerView: View {
                             .frame(width: 26, height: 32)
                     }
                     .buttonStyle(PlayerCleanButtonStyle())
+                    .accessibilityLabel(player.isFavorite(track: activeTrack) ? "Remove from favorites" : "Add to favorites")
                     
                     // Tactile Oat Play/Pause Round Thumb Dish Button
                     Button {
@@ -197,6 +207,7 @@ public struct FloatingMiniPlayerView: View {
                         }
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.90))
+                    .accessibilityLabel(player.isPlaying ? "Pause" : "Play")
                 }
                 .padding(.trailing, 12)
             }
@@ -233,10 +244,25 @@ public struct FloatingMiniPlayerView: View {
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 56) // Cleanly positioned inside screen at bottom above TabBar
+        .accessibilityIdentifier("miniplayer.root")
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(miniPlayerAccessibilityLabel(for: activeTrack))
+        .accessibilityHint("Opens full player")
         .sheet(isPresented: $showingFullPlayer) {
             FullPlayerSheet(track: activeTrack)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+    
+    private func miniPlayerAccessibilityLabel(for track: UniversalTrack) -> String {
+        var parts = ["Now playing", track.title, track.primaryArtist]
+        if player.isPreviewPlayback {
+            parts.append("30 second preview")
+        } else if !player.hasPlayablePreview {
+            parts.append("no preview available")
+        }
+        parts.append(player.isPlaying ? "playing" : "paused")
+        return parts.joined(separator: ", ")
     }
 }
 

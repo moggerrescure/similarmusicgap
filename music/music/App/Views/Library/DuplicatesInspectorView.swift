@@ -23,9 +23,11 @@ public struct DuplicatesInspectorView: View {
                         Text("No Duplicates Found")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textPrimary)
-                        Text("Your library is 100% clean across all streaming services.")
+                        Text("No track appears on more than one connected service. Same-service copies are merged on Sync.")
                             .font(.system(size: 14))
                             .foregroundColor(PastelTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 28)
                     }
                 } else {
                     ScrollView {
