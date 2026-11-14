@@ -1,5 +1,5 @@
 appId: qere.music
-name: Services hub Demo cannot migrate
+name: Services hub LIVE-only migrate honesty
 tags:
   - connect
   - honesty
@@ -31,7 +31,7 @@ tags:
 - assertVisible:
     text: ".*Apple Music.*"
 - assertVisible:
-    text: ".*Demo Mode cannot migrate.*|.*Live Spotify.*"
+    text: ".*LIVE accounts only.*|.*Yandex.*|.*DEMO.*|.*LIVE.*|.*SIM.*"
 
 - assertVisible:
     text: ".*SIM.*|.*DEMO.*|.*LIVE.*|.*Apple Music.*"

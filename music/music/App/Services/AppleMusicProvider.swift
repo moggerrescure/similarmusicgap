@@ -275,6 +275,13 @@ public final class AppleMusicProvider: MusicProviderProtocol, ObservableObject {
             
             // Docs: MusicLibrary.shared.createPlaylist(name:description:authorDisplayName:items:)
             // https://developer.apple.com/documentation/musickit/musiclibrary/createplaylist(name:description:authordisplayname:items:)
+            if resolvedSongs.isEmpty && !tracks.isEmpty {
+                throw NSError(
+                    domain: "AppleMusicProvider",
+                    code: 422,
+                    userInfo: [NSLocalizedDescriptionKey: "Couldn’t resolve any of \(tracks.count) matched tracks in Apple Music catalog — no playlist was created."]
+                )
+            }
             let created: Playlist
             if resolvedSongs.isEmpty {
                 created = try await MusicLibrary.shared.createPlaylist(

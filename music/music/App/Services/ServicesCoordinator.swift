@@ -18,6 +18,10 @@ public final class ServicesCoordinator: ObservableObject {
     @Published public var lastSyncAt: Date?
     @Published public var lastSyncSummary: String = ""
     
+    /// In-app only: throttle automatic refreshes while the user is looking at Library / Connect / Create.
+    private var lastVisibleScreenSyncAt: Date?
+    private let visibleScreenSyncCooldown: TimeInterval = 90
+    
     // MARK: - User Custom Avatar & Personalization
     private static let avatarKey = "soundshift_user_custom_avatar_data"
     private static let particlesKey = "soundshift_particles_enabled"
@@ -122,7 +126,7 @@ public final class ServicesCoordinator: ObservableObject {
         lastErrorMessage = nil
         
         if type == .yandexMusic && !YandexMusicProvider.isConnectorEnabled {
-            lastErrorMessage = "Yandex Music is coming later (TestFlight). Connect Spotify or Apple Music now."
+            lastErrorMessage = "Yandex Music is disabled in this build."
             HapticManager.errorNotification()
             return
         }
@@ -133,7 +137,12 @@ public final class ServicesCoordinator: ObservableObject {
         do {
             let ok = try await provider(for: type).authenticate()
             guard ok else {
-                lastErrorMessage = "\(type.displayName) authorization was not granted."
+                if type == .yandexMusic {
+                    lastErrorMessage = "Sign in to Yandex Music with Device Flow."
+                    NavigationCoordinator.shared.openYandexConnect()
+                } else {
+                    lastErrorMessage = "\(type.displayName) authorization was not granted."
+                }
                 HapticManager.errorNotification()
                 return
             }
@@ -149,16 +158,17 @@ public final class ServicesCoordinator: ObservableObject {
         lastErrorMessage = nil
         do {
             try await provider(for: type).revoke()
-            // Remove tracks that only belonged to the revoked provider
-            allTracks = allTracks.filter { track in
+            // Strip that provider’s IDs from merged rows, then drop orphans.
+            allTracks = allTracks.compactMap { track in
+                var next = track
                 switch type {
-                case .spotify:
-                    return !(track.spotifyId != nil && track.appleMusicId == nil && track.yandexId == nil)
-                case .appleMusic:
-                    return !(track.appleMusicId != nil && track.spotifyId == nil && track.yandexId == nil)
-                case .yandexMusic:
-                    return !(track.yandexId != nil && track.spotifyId == nil && track.appleMusicId == nil)
+                case .spotify: next.spotifyId = nil
+                case .appleMusic: next.appleMusicId = nil
+                case .yandexMusic: next.yandexId = nil
                 }
+                let stillLinked = next.spotifyId != nil || next.appleMusicId != nil
+                    || (YandexMusicProvider.isConnectorEnabled && next.yandexId != nil)
+                return stillLinked ? next : nil
             }
             allPlaylists = allPlaylists.filter { $0.providerType != type }
             persistSnapshot()
@@ -168,6 +178,18 @@ public final class ServicesCoordinator: ObservableObject {
             lastErrorMessage = error.localizedDescription
             print("[ServicesCoordinator] Revoke failed for \(type.displayName): \(error)")
         }
+    }
+    
+    /// Soft refresh when a sync-relevant screen appears. Never runs in background — no nightly / BGTask.
+    public func syncIfNeededWhileVisible(force: Bool = false) async {
+        guard activeProvidersCount > 0 else { return }
+        guard !isSyncing else { return }
+        if !force, let last = lastVisibleScreenSyncAt,
+           Date().timeIntervalSince(last) < visibleScreenSyncCooldown {
+            return
+        }
+        await syncAll()
+        lastVisibleScreenSyncAt = Date()
     }
     
     public func syncAll() async {
@@ -384,7 +406,7 @@ public final class ServicesCoordinator: ObservableObject {
             let playlists: [UniversalPlaylist]
         }
         
-        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : allTracks
+        let exportTracks = Self.resolvedExportTracks(tracks, fallback: allTracks)
         guard !exportTracks.isEmpty else { return nil }
         let exportPlaylists = allPlaylists
         
@@ -407,7 +429,7 @@ public final class ServicesCoordinator: ObservableObject {
     }
     
     public func exportCSV(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_Tracks") -> URL? {
-        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : allTracks
+        let exportTracks = Self.resolvedExportTracks(tracks, fallback: allTracks)
         guard !exportTracks.isEmpty else { return nil }
         var csv = "Title,Artist,Album,Duration,ISRC,Spotify_ID,Apple_ID,Yandex_ID\n"
         for t in exportTracks {
@@ -427,7 +449,7 @@ public final class ServicesCoordinator: ObservableObject {
     }
     
     public func exportPlainText(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_TrackList") -> URL? {
-        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : allTracks
+        let exportTracks = Self.resolvedExportTracks(tracks, fallback: allTracks)
         guard !exportTracks.isEmpty else { return nil }
         var text = "# SoundShift Music Export (\(Date().formatted(date: .abbreviated, time: .shortened)))\n"
         text += "# Total tracks: \(exportTracks.count)\n\n"
@@ -440,7 +462,7 @@ public final class ServicesCoordinator: ObservableObject {
     }
     
     public func exportM3U(for tracks: [UniversalTrack]? = nil, filename: String = "SoundShift_Playlist") -> URL? {
-        let exportTracks = (tracks != nil && !tracks!.isEmpty) ? tracks! : allTracks
+        let exportTracks = Self.resolvedExportTracks(tracks, fallback: allTracks)
         guard !exportTracks.isEmpty else { return nil }
         var m3u = "#EXTM3U\n# SoundShift export — open Spotify/Apple links in the matching app\n"
         for t in exportTracks {
@@ -451,6 +473,15 @@ public final class ServicesCoordinator: ObservableObject {
         let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent("\(filename)_\(Int(Date().timeIntervalSince1970)).m3u")
         try? m3u.data(using: .utf8)?.write(to: tempUrl)
         return tempUrl
+    }
+    
+    /// Prefer explicit selection; empty/nil falls back to the synced library.
+    private static func resolvedExportTracks(
+        _ tracks: [UniversalTrack]?,
+        fallback: [UniversalTrack]
+    ) -> [UniversalTrack] {
+        guard let tracks, !tracks.isEmpty else { return fallback }
+        return tracks
     }
     
     /// Prefer real catalog deep links over fake `.mp3` filenames.

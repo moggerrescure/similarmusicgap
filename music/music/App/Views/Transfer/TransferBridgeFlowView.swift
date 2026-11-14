@@ -38,12 +38,19 @@ public struct TransferBridgeFlowView: View {
                     Spacer()
                     
                     Button {
+                        guard !transferManager.isMigrating else { return }
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(PastelTheme.cardBorder)
+                            .foregroundColor(
+                                transferManager.isMigrating
+                                    ? PastelTheme.cardBorder.opacity(0.35)
+                                    : PastelTheme.cardBorder
+                            )
                     }
+                    .disabled(transferManager.isMigrating)
+                    .accessibilityLabel(transferManager.isMigrating ? "Close unavailable while migrating" : "Close")
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -135,7 +142,9 @@ public struct TransferBridgeFlowView: View {
                                 .lineLimit(1)
                         }
                         
-                        Image(systemName: "checkmark.circle.fill")
+                        Image(systemName: transferManager.migrationPhase == .matching
+                              ? "magnifyingglass"
+                              : (transferManager.migrationPhase == .done ? "checkmark.circle.fill" : "arrow.right.circle.fill"))
                             .font(.system(size: 12))
                             .foregroundColor(PastelTheme.emeraldSuccess)
                     }
@@ -153,7 +162,7 @@ public struct TransferBridgeFlowView: View {
                 VStack(spacing: 12) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("TRANSFERRED")
+                            Text(transferManager.migrationPhase.counterLabel)
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
                                 .foregroundColor(PastelTheme.textTertiary)
                             Text("\(transferManager.processedCount) of \(max(1, transferManager.totalToProcess)) tracks")
@@ -165,14 +174,23 @@ public struct TransferBridgeFlowView: View {
                         Spacer()
                         
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("PRECISION")
+                            Text("PHASE")
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
                                 .foregroundColor(PastelTheme.textTertiary)
-                            Text("ISRC Exact Match")
+                            Text(transferManager.migrationPhase.eyebrow)
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundColor(PastelTheme.emeraldSuccess)
+                                .foregroundColor(
+                                    transferManager.migrationPhase == .failed
+                                        ? Color.red.opacity(0.9)
+                                        : PastelTheme.emeraldSuccess
+                                )
                         }
                     }
+                    
+                    Text(transferManager.migrationPhase.userHint)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     
                     // 3D Liquid Wave Progress Bar
                     LiquidWaveProgressView(
@@ -193,25 +211,35 @@ public struct TransferBridgeFlowView: View {
                 Spacer()
                 
                 // Done / Dismiss Button (Marble Oval)
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Done")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(PastelTheme.textOnOat)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(PastelTheme.pastelOat)
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
-                        )
+                if transferManager.isMigrating {
+                    Text("Stay on this screen — closing is locked until the write finishes.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(PastelTheme.textTertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 16)
+                } else {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text(transferManager.migrationPhase == .failed ? "Close" : "Done")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(PastelTheme.textOnOat)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule().stroke(PastelTheme.marbleWhite.opacity(0.40), lineWidth: 1.5)
+                            )
+                    }
+                    .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
-                .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
             }
         }
+        .interactiveDismissDisabled(transferManager.isMigrating)
         .onAppear {
             startFlowAnimation()
         }

@@ -25,7 +25,7 @@ tags:
     id: "home.filter.podcasts"
 - assertVisible: "Podcasts aren’t in SoundShift yet"
 - assertNotVisible:
-    text: "Liked Songs"
+    text: ".*Synced collection.*|.*Liked Songs.*"
     optional: true
 
 - tapOn:
@@ -37,4 +37,4 @@ tags:
 - tapOn:
     id: "home.filter.all"
 - assertVisible:
-    text: ".*Liked Songs.*|.*Connect to sync.*|Home"
+    text: ".*Synced collection.*|.*Liked Songs.*|.*Connect to sync.*|Home"

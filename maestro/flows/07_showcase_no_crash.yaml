@@ -20,20 +20,19 @@ tags:
 
 # Showcase labels when empty library
 - assertVisible:
-    text: ".*SHOWCASE.*|.*Liked Songs.*|.*HERO.*|.*TOP ARTISTS.*|.*designer fixtures.*"
+    text: ".*SHOWCASE.*|.*Synced collection.*|.*Liked Songs.*|.*HERO.*|.*TOP ARTISTS.*|.*designer fixtures.*"
     optional: true
 
-# Tap Liked Songs shortcut if present
 - tapOn:
-    text: "Liked Songs"
+    text: ".*Synced collection.*|.*Liked Songs.*"
     optional: true
 
 - runFlow:
     when:
-      visible: ".*Library is empty.*|.*No tracks.*|Favorites|Tracks|Playlists"
+      visible: ".*Library is empty.*|.*No tracks.*|Favorites|Saved|Tracks|Playlists|Synced Library"
     commands:
       - assertVisible:
-          text: ".*Library is empty.*|.*Connect services.*|Favorites|Tracks"
+          text: ".*Library is empty.*|.*Connect services.*|Favorites|Saved|Tracks|Synced Library"
           optional: true
       - tapOn:
           text: "Cancel"

@@ -16,7 +16,7 @@ tags:
 - tapOn:
     id: "plus"
 - extendedWaitUntil:
-    visible: "Create"
+    visible: ".*Move.*|.*Create.*|.*перенос.*|.*LIVE TRANSFER.*"
     timeout: 10000
 
 # Readiness / blocking copy should be honest without live pair

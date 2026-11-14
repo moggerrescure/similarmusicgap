@@ -276,6 +276,9 @@ public struct LibraryView: View {
                     )
                 }
             }
+            .task {
+                await coordinator.syncIfNeededWhileVisible()
+            }
         }
     }
     
@@ -395,17 +398,17 @@ public struct LibraryView: View {
             
             Spacer()
             
-            // 1-Tap Bridge to "Liked Songs & Playlists"
+            // 1-Tap Bridge to Synced Library
             Button {
                 HapticManager.lightImpact()
                 navCoordinator.openPersonalLibrary()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "heart.fill")
+                    Image(systemName: "square.stack.3d.up.fill")
                         .font(.system(size: 12))
                         .foregroundColor(PastelTheme.emeraldSuccess)
                     
-                    Text("Liked Songs")
+                    Text(MigratorChrome.syncedCollectionLabel)
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(PastelTheme.textOnOat)
                 }
@@ -734,7 +737,7 @@ public struct LibraryView: View {
             Button {
                 navCoordinator.openPersonalLibrary()
             } label: {
-                Label("Open Liked Songs & Playlists", systemImage: "heart")
+                Label(MigratorChrome.openSyncedLibraryLabel, systemImage: "square.stack.3d.up")
             }
         }
     }

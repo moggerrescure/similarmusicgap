@@ -30,9 +30,9 @@ tags:
     id: "search.field"
 
 - tapOn:
-    id: "books.vertical"
+    text: "Migrations"
 - assertVisible:
-    text: ".*Migration.*|.*Synced Collection.*|.*Library.*|Connect services"
+    text: ".*Migration.*|.*Synced Collection.*|.*Synced collection.*|.*Library.*|Connect services"
     optional: true
 
 - tapOn:
@@ -41,7 +41,7 @@ tags:
     text: ".*Transfer.*|.*Create.*|.*Spotify.*|.*Apple.*|.*Проверить.*|.*compatible.*|Move"
     optional: true
 
-# After Create, Home SF Symbol is "house" (unfilled); label is always reliable
+# After Move, Home SF Symbol is "house" (unfilled); label is always reliable
 - tapOn:
     text: "Home"
 - extendedWaitUntil:

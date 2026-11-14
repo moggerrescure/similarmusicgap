@@ -10,12 +10,15 @@ public final class TransferManager: ObservableObject {
     private let servicesCoordinator = ServicesCoordinator.shared
     
     @Published public var isMigrating: Bool = false
+    @Published public var migrationPhase: MigrationPhase = .idle
     @Published public var progress: Double = 0.0
     @Published public var currentTrackTitle: String = ""
     @Published public var currentTrackArtist: String = ""
     @Published public var processedCount: Int = 0
     @Published public var totalToProcess: Int = 0
     @Published public var statusMessage: String = ""
+    /// Optional custom destination playlist title (empty → SoundShift default).
+    public var destinationPlaylistName: String = ""
     
     @Published public var lastDryRun: DryRunSummary?
     @Published public var rematchQueue: [MatchResult] = []
@@ -267,7 +270,7 @@ public final class TransferManager: ObservableObject {
                     ? "Destination library empty locally — \(exactCount) strong via catalog · \(alternateCount) alternate · \(missingCount) missing. Sync destination for Skip accuracy."
                     : "Destination library empty — \(missingCount) unmatched. Connect & sync destination, then re-run."
             } else {
-                self.statusMessage = "Dry-run: \(exactCount) strong (ISRC/high) · \(alternateCount) alternate · \(missingCount) missing"
+                self.statusMessage = "Preview: \(exactCount) ready · \(alternateCount) need decision · \(missingCount) missing — nothing written"
             }
             return summary
         } catch {
@@ -302,6 +305,7 @@ public final class TransferManager: ObservableObject {
         }
         
         self.isMigrating = true
+        self.migrationPhase = .preparing
         self.progress = 0.0
         self.processedCount = 0
         self.totalToProcess = 0
@@ -314,6 +318,10 @@ public final class TransferManager: ObservableObject {
         let destinationProvider = servicesCoordinator.provider(for: destinationType)
         var missingList: [UniversalTrack] = []
         var rematchSnapshot: [MatchResult] = []
+        let playlistTitle = PlaylistNameBuilder.resolve(
+            custom: destinationPlaylistName,
+            source: sourceType
+        )
         
         do {
             try requireLivePair(sourceType: sourceType, destinationType: destinationType)
@@ -329,6 +337,7 @@ public final class TransferManager: ObservableObject {
                 )
             }
             
+            migrationPhase = .matching
             statusMessage = "Matching against destination…"
             let pool = try await buildCandidatePool(destinationType: destinationType, sourceTracks: sourceTracks)
             
@@ -436,6 +445,7 @@ public final class TransferManager: ObservableObject {
                 )
                 
             case .successNothingNew(let skipped):
+                self.migrationPhase = .done
                 self.progress = 1.0
                 self.processedCount = sourceTracks.count
                 self.statusMessage = missingList.isEmpty
@@ -473,59 +483,62 @@ public final class TransferManager: ObservableObject {
                 break
             }
             
+            migrationPhase = .writingPlaylist
             statusMessage = "Writing playlist to \(destinationType.displayName)…"
             self.progress = 0.75
-            self.currentTrackTitle = "Creating playlist"
+            self.currentTrackTitle = playlistTitle
             self.currentTrackArtist = destinationType.displayName
             
-            let playlistName = "SoundShift · from \(sourceType.displayName)"
             let playlistDescription = "Migrated \(transferable.count) tracks via SoundShift on \(Date().formatted(date: .abbreviated, time: .omitted)). Missing: \(missingList.count). Skipped existing: \(skippedExisting)."
             
             let created = try await destinationProvider.createPlaylist(
-                name: playlistName,
+                name: playlistTitle,
                 description: playlistDescription,
                 tracks: transferable
             )
             
-            var likesSaved = 0
-            var likesWarning: String?
-            if scope.transferFavorites {
-                statusMessage = "Saving Liked Songs on \(destinationType.displayName)…"
-                self.progress = 0.9
-                do {
-                    likesSaved = try await destinationProvider.saveTracksToLibrary(transferable)
-                } catch {
-                    likesWarning = "Playlist saved, but Liked Songs failed: \(error.localizedDescription)"
+            // Honest write accounting — providers may resolve fewer songs than matched.
+            let writeDropSources = Self.sourcesNotWritten(
+                results: results,
+                transferable: transferable,
+                created: created
+            )
+            if !writeDropSources.isEmpty {
+                for src in writeDropSources where !missingList.contains(where: { $0.id == src.id }) {
+                    missingList.append(src)
                 }
             }
+            
+            // Migration writes a new playlist only — never Liked Songs / library hearts on destination.
+            
+            var writeWarning: String?
+            if !writeDropSources.isEmpty {
+                writeWarning = "\(writeDropSources.count) matched track\(writeDropSources.count == 1 ? "" : "s") didn’t land in the playlist after write resolve."
+            }
+            let warningOut: String? = writeWarning
             
             // Refresh local snapshot with the new playlist
             servicesCoordinator.ingestRemotePlaylist(created)
             
+            self.migrationPhase = .done
             self.progress = 1.0
             self.processedCount = sourceTracks.count
-            let likesNote: String
-            if scope.transferFavorites {
-                likesNote = likesWarning == nil ? ", \(likesSaved) liked" : ", likes incomplete"
-            } else {
-                likesNote = ""
-            }
             let skipNote = skippedExisting > 0 ? ", \(skippedExisting) already there" : ""
-            self.statusMessage = "Done — \(created.trackCount) in playlist\(likesNote)\(skipNote), \(missingList.count) missing"
+            self.statusMessage = "Done — \(created.trackCount) in playlist\(skipNote), \(missingList.count) missing"
             
             let duration = durationSoFar()
             let report = TransferExecutionReport(
                 sourceProvider: sourceType,
                 destinationProvider: destinationType,
                 totalTracks: sourceTracks.count,
-                successfullyTransferred: max(created.trackCount, likesSaved),
+                successfullyTransferred: created.trackCount,
                 skippedExisting: skippedExisting,
                 missingTracks: missingList,
                 alternatesAccepted: alternatesAccepted,
                 durationSeconds: duration,
                 errorMessage: nil,
                 createdPlaylistName: created.title,
-                warningMessage: likesWarning
+                warningMessage: warningOut
             )
             
             self.lastReport = report
@@ -542,13 +555,10 @@ public final class TransferManager: ObservableObject {
             self.rematchQueue = rematchSnapshot
             clearRematchDecisions()
             self.isMigrating = false
-            if likesWarning != nil {
-                HapticManager.lightImpact()
-            } else {
-                HapticManager.successNotification()
-            }
+            HapticManager.successNotification()
             return report
         } catch {
+            self.migrationPhase = .failed
             self.lastErrorMessage = error.localizedDescription
             self.statusMessage = "Migration failed"
             self.isMigrating = false
@@ -618,6 +628,13 @@ public final class TransferManager: ObservableObject {
         rematchQueue = []
         lastMatchResults = []
         clearRematchDecisions()
+        // Drop stale block/dry-run errors so the next action starts clean.
+        if !isMigrating {
+            lastErrorMessage = nil
+            if statusMessage.hasPrefix("Preview:") || statusMessage.contains("Demo") || statusMessage.contains("Connect") {
+                statusMessage = ""
+            }
+        }
     }
     
     // MARK: - Helpers
@@ -632,6 +649,33 @@ public final class TransferManager: ObservableObject {
     
     private static func deduplicate(_ tracks: [UniversalTrack]) -> [UniversalTrack] {
         TrackDeduper.merge(tracks)
+    }
+    
+    /// Source tracks whose matched destination IDs never appeared in the created playlist.
+    private static func sourcesNotWritten(
+        results: [MatchResult],
+        transferable: [UniversalTrack],
+        created: UniversalPlaylist
+    ) -> [UniversalTrack] {
+        let transferableKeys = Set(transferable.compactMap(platformKey))
+        guard !transferableKeys.isEmpty else { return [] }
+        let writtenKeys = Set(created.tracks.compactMap(platformKey))
+        var drops: [UniversalTrack] = []
+        for result in results {
+            guard let matched = result.matchedTrack,
+                  let key = platformKey(matched),
+                  transferableKeys.contains(key),
+                  !writtenKeys.contains(key) else { continue }
+            drops.append(result.sourceTrack)
+        }
+        return drops
+    }
+    
+    private static func platformKey(_ track: UniversalTrack) -> String? {
+        if let sp = track.spotifyId, !sp.isEmpty { return "sp:\(sp)" }
+        if let am = track.appleMusicId, !am.isEmpty { return "am:\(am)" }
+        if let yd = track.yandexId, !yd.isEmpty { return "ym:\(yd)" }
+        return nil
     }
     
     private static func isAlreadyInLibrary(

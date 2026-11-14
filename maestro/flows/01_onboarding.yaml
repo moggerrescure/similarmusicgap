@@ -10,26 +10,26 @@ tags:
     permissions:
       all: allow
 
-- assertVisible: "ALL-IN-ONE LIBRARY"
+- assertVisible: "MUSIC MIGRATOR"
 - assertVisible: "Continue"
 - tapOn: "Continue"
 
 - extendedWaitUntil:
-    visible: "ZERO-EFFORT MIGRATION"
+    visible: "ISRC MATCHING"
     timeout: 8000
 - tapOn: "Next"
 
 - extendedWaitUntil:
-    visible: "DEEP TASTE ANALYTICS"
+    visible: "ON-DEVICE TASTE"
     timeout: 8000
 - tapOn: "Explore"
 
 - extendedWaitUntil:
-    visible: "CONNECT → TASTE → MOVE"
+    visible: "CONNECT → SYNC → MOVE"
     timeout: 8000
 - tapOn: "Connect Your Music"
 
 # Final onboarding opens Connect sheet
 - extendedWaitUntil:
-    visible: ".*Connect.*|.*Spotify.*|.*Apple Music.*|Done"
+    visible: ".*Connect.*|.*Spotify.*|.*Apple Music.*|Done|STREAMING"
     timeout: 12000

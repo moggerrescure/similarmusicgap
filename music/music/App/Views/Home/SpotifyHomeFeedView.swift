@@ -123,18 +123,18 @@ public struct SpotifyHomeFeedView: View {
         "#EBCB8B", "#3B4252", "#BF616A", "#5E81AC"
     ]
     
-    /// Prefer synced library; otherwise a single Liked Songs CTA (no demo catalog).
+    /// Prefer synced library; otherwise a single Synced collection CTA (no demo catalog).
     private var shortcuts: [RecentShortcut] {
         var items: [RecentShortcut] = [
             RecentShortcut(
                 id: 0,
-                title: "Liked Songs",
+                title: MigratorChrome.syncedCollectionLabel,
                 artist: coordinator.allTracks.isEmpty ? "Connect to sync" : "\(coordinator.allTracks.count) tracks",
                 isArtist: false,
                 isPlayingNow: false,
                 isLikedSongs: true,
                 coverHex: "#450AF5",
-                initialOrSymbol: "heart.fill"
+                initialOrSymbol: "square.stack.3d.up.fill"
             )
         ]
         
@@ -1139,10 +1139,10 @@ public struct SpotifyHomeFeedView: View {
                 .foregroundColor(PastelTheme.amberWarning)
             
             VStack(alignment: .leading, spacing: 3) {
-                Text("Showcase mode")
+                Text("Showcase only — not your library")
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(PastelTheme.textPrimary)
-                Text("Shelves below are design fixtures. Connect & Sync to play your real library.")
+                Text("Fixtures for layout. Connect → Sync → Move to migrate real tracks.")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundColor(PastelTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

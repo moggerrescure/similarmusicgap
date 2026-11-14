@@ -375,7 +375,9 @@ public struct VaultAlbumDetailSheet: View {
                         player.toggleFavorite(track: track)
                     } label: {
                         Label(
-                            player.isFavorite(track: track) ? "Remove from Favorites" : "Add to Favorites",
+                            player.isFavorite(track: track)
+                                ? "Remove \(MigratorChrome.localSavedAccessibility)"
+                                : MigratorChrome.localSavedAccessibility,
                             systemImage: player.isFavorite(track: track) ? "heart.slash" : "heart"
                         )
                     }

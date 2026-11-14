@@ -185,6 +185,23 @@ struct CoreBrokenFixesTestsMain {
             "EmptyTransferPlanner: empty → failureNoMatches"
         )
         
+        // --- PlaylistNameBuilder / MissingTracksExport / MigrationPhase ---
+        expect(
+            PlaylistNameBuilder.resolve(custom: "  My Move  ", source: .spotify) == "My Move",
+            "PlaylistNameBuilder: custom trimmed"
+        )
+        expect(
+            PlaylistNameBuilder.resolve(custom: "  ", source: .appleMusic) == "SoundShift · from Apple Music",
+            "PlaylistNameBuilder: blank → default"
+        )
+        expect(MigrationPhase.matching.counterLabel == "CHECKED", "MigrationPhase: matching = CHECKED not TRANSFERRED")
+        expect(MigrationPhase.writingPlaylist.eyebrow.contains("WRITING"), "MigrationPhase: writing eyebrow")
+        let missText = MissingTracksExport.plainText([
+            UniversalTrack(title: "A", artists: ["X"], durationMs: 1, spotifyId: "m1"),
+            UniversalTrack(title: "B", artists: ["Y"], durationMs: 1, spotifyId: "m2")
+        ])
+        expect(missText.contains("X — A") && missText.contains("Y — B"), "MissingTracksExport: artist — title lines")
+        
         // didSucceed: skip-all with skippedExisting counts as success
         let skipReport = TransferExecutionReport(
             sourceProvider: .spotify,
@@ -244,12 +261,41 @@ struct CoreBrokenFixesTestsMain {
         let ymGhost = [
             UniversalTrack(isrc: "USYM1", title: "Ghost", artists: ["G"], durationMs: 1000, yandexId: "yd_g", spotifyId: "sp_g")
         ]
-        expect(dupEngine.findDuplicates(in: ymGhost).isEmpty, "DuplicatesEngine: YM-off single Spotify+yandexId → not cross-dupe")
+        if YandexMusicProvider.isConnectorEnabled {
+            expect(
+                dupEngine.findDuplicates(in: ymGhost).count == 1,
+                "DuplicatesEngine: YM-on Spotify+Yandex IDs → 1 cross-dupe group"
+            )
+        } else {
+            expect(
+                dupEngine.findDuplicates(in: ymGhost).isEmpty,
+                "DuplicatesEngine: YM-off single Spotify+yandexId → not cross-dupe"
+            )
+        }
         
         // --- ConflictPolicy honesty ---
         expect(ConflictPolicy.implementedCases == [.skip, .merge], "ConflictPolicy: picker hides Overwrite until real")
         expect(ConflictPolicy.skip.description.lowercased().contains("skip"), "ConflictPolicy: Skip copy mentions skip")
         expect(ConflictPolicy.merge.description.lowercased().contains("new playlist"), "ConflictPolicy: Merge copy says new playlist")
+        
+        // --- TransferRematchGate (Strict + pending rematch blocks migrate & bridge) ---
+        expect(
+            TransferRematchGate.blocksMigrate(pendingRematchCount: 2, isStrict: true),
+            "RematchGate: strict + pending → block"
+        )
+        expect(
+            !TransferRematchGate.blocksMigrate(pendingRematchCount: 2, isStrict: false),
+            "RematchGate: balanced + pending → allow"
+        )
+        expect(
+            !TransferRematchGate.blocksMigrate(pendingRematchCount: 0, isStrict: true),
+            "RematchGate: strict + empty queue → allow"
+        )
+        
+        // --- Migrator IA chrome ---
+        expect(MigratorChrome.migrationsTabTitle == "Migrations", "MigratorChrome: Migrations tab")
+        expect(MigratorChrome.moveTabTitle == "Move", "MigratorChrome: Move tab")
+        expect(MigratorChrome.syncedLibraryTitle == "Synced Library", "MigratorChrome: Synced Library sheet")
         
         // --- SkipPolicy library vs match-pool ---
         let destLib = [UniversalTrack(isrc: "USLIB1", title: "In Lib", artists: ["L"], durationMs: 1000, appleMusicId: "am_lib")]
@@ -322,8 +368,34 @@ struct CoreBrokenFixesTestsMain {
         expect(AppDeepLinkRouter.parse(URL(string: "soundshift://search?q=pop")!) == .search(query: "pop"), "DeepLink: search?q=")
         expect(AppDeepLinkRouter.parse(URL(string: "soundshift://nope")!) == nil, "DeepLink: unknown host → nil")
         
-        // --- availableConnectors hides YM when flagged off ---
-        expect(!MusicProviderType.availableConnectors.contains(.yandexMusic), "YM flagged off → not in availableConnectors")
+        // --- availableConnectors includes YM when flagged on ---
+        expect(
+            MusicProviderType.availableConnectors.contains(.yandexMusic) == YandexMusicProvider.isConnectorEnabled,
+            "YM availableConnectors matches isConnectorEnabled"
+        )
+        
+        // --- YandexMusicMapper ---
+        let ymTrackJSON = """
+        {"id":"7019818","title":"Ничего на земле","durationMs":240000,"artists":[{"name":"Oxxxymiron"}],"albums":[{"title":"Горгород","year":2015}]}
+        """.data(using: .utf8)!
+        let ymTrack = try! JSONDecoder().decode(YandexTrack.self, from: ymTrackJSON)
+        let mappedYM = YandexMusicMapper.mapTrack(ymTrack)
+        expect(mappedYM?.yandexId == "7019818", "YandexMusicMapper: yandexId")
+        expect(mappedYM?.title == "Ничего на земле", "YandexMusicMapper: title")
+        expect(mappedYM?.primaryArtist == "Oxxxymiron", "YandexMusicMapper: artist")
+        expect(
+            YandexMusicMapper.shouldRefuseEmptyWrite(requestedCount: 5, resolvedCount: 0),
+            "YandexMusicMapper: refuse empty write"
+        )
+        expect(
+            !YandexMusicMapper.shouldRefuseEmptyWrite(requestedCount: 0, resolvedCount: 0),
+            "YandexMusicMapper: allow intentionally empty create"
+        )
+        expect(
+            YandexMusicMapper.splitPlaylistId("541320800:1003")?.kind == 1003,
+            "YandexMusicMapper: split playlist id"
+        )
+        expect(YandexMusicProvider.isConnectorEnabled, "YM connector enabled")
         
         if failures > 0 {
             print("\n\(failures) failure(s)")

@@ -58,7 +58,7 @@ public struct RematchInboxView: View {
                 .font(.system(size: 56, weight: .semibold))
                 .foregroundColor(allStrong ? PastelTheme.emeraldSuccess : PastelTheme.textTertiary)
             
-            Text(allStrong ? "Inbox Zero" : "Nothing to rematch")
+            Text(allStrong ? "All clear" : "Nothing to decide")
                 .font(.system(size: 24, weight: .heavy, design: .rounded))
                 .foregroundColor(PastelTheme.textPrimary)
             
@@ -72,15 +72,15 @@ public struct RematchInboxView: View {
     
     private func emptyCopy(allStrong: Bool, report: TransferExecutionReport?, dryRun: DryRunSummary?) -> String {
         if allStrong {
-            return "All tracks matched with high confidence. No manual disambiguation required."
+            return "Every track matched confidently. You can start the transfer — no manual choices needed."
         }
         if let report, report.didSucceed, !report.missingTracks.isEmpty {
-            return "No alternates left to review. Open the last transfer report for \(report.missingTracks.count) missing track\(report.missingTracks.count == 1 ? "" : "s")."
+            return "No close matches left to pick. Open the transfer report for \(report.missingTracks.count) missing track\(report.missingTracks.count == 1 ? "" : "s")."
         }
         if dryRun == nil {
-            return "Run a dry-run first — alternate matches that need a choice will appear here."
+            return "Run Preview first. Songs with several possible matches will show up here for you to choose."
         }
-        return "No alternate matches need a decision right now."
+        return "No songs need a decision right now."
     }
 }
 
@@ -150,7 +150,7 @@ private struct RematchCard: View {
                 Button {
                     onDecision(false)
                 } label: {
-                    Text("Skip Track")
+                    Text("Skip — don’t transfer")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(Color.red.opacity(0.85))
                         .frame(maxWidth: .infinity)
@@ -165,7 +165,7 @@ private struct RematchCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
-                        Text("Accept Match")
+                        Text("Use this match")
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                     }
                     .foregroundColor(PastelTheme.textOnOat)

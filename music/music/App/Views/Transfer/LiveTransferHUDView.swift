@@ -7,6 +7,11 @@ public struct LiveTransferHUDView: View {
     
     public init() {}
     
+    private var phase: MigrationPhase {
+        // Trust the manager phase — never flash FAILED from a stale dry-run/block error.
+        transferManager.migrationPhase
+    }
+    
     public var body: some View {
         ZStack {
             PastelTheme.canvas
@@ -24,9 +29,9 @@ public struct LiveTransferHUDView: View {
                         .trim(from: 0.0, to: CGFloat(transferManager.progress))
                         .stroke(
                             AngularGradient(
-                                colors: transferManager.lastErrorMessage == nil
-                                    ? [PastelTheme.emeraldSuccess, PastelTheme.pastelOat]
-                                    : [Color.red.opacity(0.8), PastelTheme.amberWarning],
+                                colors: phase == .failed
+                                    ? [Color.red.opacity(0.8), PastelTheme.amberWarning]
+                                    : [PastelTheme.emeraldSuccess, PastelTheme.pastelOat],
                                 center: .center,
                                 startAngle: .degrees(-90),
                                 endAngle: .degrees(270)
@@ -44,21 +49,21 @@ public struct LiveTransferHUDView: View {
                             .monospacedDigit()
                             .contentTransition(.numericText())
                         
-                        Text("\(transferManager.processedCount) of \(transferManager.totalToProcess)")
+                        Text("\(transferManager.processedCount) of \(transferManager.totalToProcess) \(phase.counterLabel.lowercased())")
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundColor(PastelTheme.textSecondary)
                     }
                 }
                 
                 VStack(spacing: 8) {
-                    Text(transferManager.lastErrorMessage == nil ? "NOW TRANSFERRING" : "TRANSFER FAILED")
+                    Text(phase.eyebrow)
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(1.2)
-                        .foregroundColor(transferManager.lastErrorMessage == nil ? PastelTheme.emeraldSuccess : Color.red.opacity(0.9))
+                        .foregroundColor(phase == .failed ? Color.red.opacity(0.9) : PastelTheme.emeraldSuccess)
                     
                     Text(
                         transferManager.currentTrackTitle.isEmpty
-                            ? (transferManager.statusMessage.isEmpty ? "Preparing…" : transferManager.statusMessage)
+                            ? (transferManager.statusMessage.isEmpty ? phase.userHint : transferManager.statusMessage)
                             : transferManager.currentTrackTitle
                     )
                         .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -67,9 +72,11 @@ public struct LiveTransferHUDView: View {
                         .lineLimit(2)
                         .padding(.horizontal, 24)
                     
-                    Text(transferManager.currentTrackArtist)
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(PastelTheme.textSecondary)
+                    if !transferManager.currentTrackArtist.isEmpty {
+                        Text(transferManager.currentTrackArtist)
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(PastelTheme.textSecondary)
+                    }
                     
                     if let err = transferManager.lastErrorMessage {
                         Text(err)
@@ -78,8 +85,8 @@ public struct LiveTransferHUDView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
                             .padding(.top, 4)
-                    } else if !transferManager.statusMessage.isEmpty {
-                        Text(transferManager.statusMessage)
+                    } else {
+                        Text(phase.userHint)
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(PastelTheme.textTertiary)
                             .multilineTextAlignment(.center)
@@ -100,9 +107,12 @@ public struct LiveTransferHUDView: View {
                 
                 if !transferManager.isMigrating {
                     Button {
+                        if phase == .done || phase == .failed {
+                            transferManager.migrationPhase = .idle
+                        }
                         dismiss()
                     } label: {
-                        Text(transferManager.lastErrorMessage == nil ? "Continue" : "Close")
+                        Text(phase == .failed ? "Close" : (phase == .done ? "Done" : "Continue"))
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundColor(PastelTheme.textOnOat)
                             .frame(maxWidth: .infinity)
@@ -113,9 +123,11 @@ public struct LiveTransferHUDView: View {
                     .padding(.horizontal, 24)
                     .padding(.bottom, 20)
                 } else {
-                    Text("Writing to destination…")
+                    Text(phase.userHint)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(PastelTheme.textTertiary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 28)
                         .padding(.bottom, 20)
                 }
             }

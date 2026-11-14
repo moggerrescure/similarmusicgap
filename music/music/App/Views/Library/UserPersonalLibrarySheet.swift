@@ -4,13 +4,13 @@ import SwiftUI
 public enum LibrarySegment: String, CaseIterable, Identifiable {
     case tracks = "Tracks"
     case playlists = "Playlists"
-    case favorites = "Favorites"
+    case favorites = "Saved"
     case duplicates = "Duplicates"
     
     public var id: String { rawValue }
 }
 
-/// Screen: User Personal Library & Collection (Accessed via "Liked Songs" / "Любимые треки")
+/// Synced Library sheet — tracks/playlists from LIVE services + local SoundShift bookmarks.
 /// Contains all personal tracks, playlists, favorites, duplicates, and custom orderings.
 public struct UserPersonalLibrarySheet: View {
     @ObservedObject private var coordinator = ServicesCoordinator.shared
@@ -18,7 +18,7 @@ public struct UserPersonalLibrarySheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var searchText: String = ""
-    // Liked Songs shortcut opens synced tracks (not local ♥ which may be empty).
+    // Synced collection shortcut opens synced tracks (local ♥ bookmarks may be empty).
     @State private var selectedSegment: LibrarySegment = .tracks
     @State private var selectedProviderFilter: MusicProviderType? = nil
     
@@ -126,7 +126,7 @@ public struct UserPersonalLibrarySheet: View {
                     }
                 }
             }
-            .navigationTitle("Liked Songs & Library")
+            .navigationTitle(MigratorChrome.syncedLibraryTitle)
             .inlineNavigationBarTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -469,7 +469,7 @@ public struct UserPersonalLibrarySheet: View {
                     coordinator.allTracks.isEmpty
                         ? "Library is empty"
                         : (selectedSegment == .favorites
-                           ? "No local hearts yet — synced Liked Songs are under Tracks"
+                           ? "No SoundShift bookmarks yet — synced service tracks are under Tracks"
                            : "No tracks match filters")
                 )
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -699,7 +699,10 @@ private struct PersonalLibraryTrackRow: View {
                             Button {
                                 onFavoriteTap()
                             } label: {
-                                Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
+                                Label(
+                                    isFavorite ? "Remove \(MigratorChrome.localSavedAccessibility)" : MigratorChrome.localSavedAccessibility,
+                                    systemImage: isFavorite ? "heart.slash" : "heart"
+                                )
                             }
                             Button {
                                 onPlayTap()

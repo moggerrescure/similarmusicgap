@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 /// Transfer Completion & Discrepancy Report View (P0 - T8, T13)
 public struct TransferReportView: View {
@@ -150,14 +153,34 @@ public struct TransferReportView: View {
                         
                         if !report.missingTracks.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("MISSING TRACKS")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .tracking(1.0)
+                                HStack {
+                                    Text("MISSING TRACKS")
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                                        .tracking(1.0)
+                                        .foregroundColor(PastelTheme.textTertiary)
+                                    Spacer()
+                                    Button("Copy list") {
+                                        HapticManager.lightImpact()
+                                        #if os(iOS)
+                                        UIPasteboard.general.string = MissingTracksExport.plainText(report.missingTracks)
+                                        #endif
+                                    }
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                    .foregroundColor(PastelTheme.pastelOat)
+                                    .accessibilityIdentifier("report.copy_missing")
+                                }
+                                Text("These weren’t written — search them manually or re-run after Sync.")
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(PastelTheme.textTertiary)
                                 ForEach(report.missingTracks.prefix(20)) { track in
                                     Text("\(track.primaryArtist) — \(track.title)")
                                         .font(.system(size: 13))
                                         .foregroundColor(PastelTheme.textSecondary)
+                                }
+                                if report.missingTracks.count > 20 {
+                                    Text("…and \(report.missingTracks.count - 20) more (use Copy list)")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(PastelTheme.textTertiary)
                                 }
                             }
                             .padding(18)
@@ -173,7 +196,7 @@ public struct TransferReportView: View {
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: "square.and.arrow.up")
-                                    Text("Share Migration Summary")
+                                    Text("Share summary")
                                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 }
                                 .foregroundColor(PastelTheme.textPrimary)

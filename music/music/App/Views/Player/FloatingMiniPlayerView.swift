@@ -181,7 +181,11 @@ public struct FloatingMiniPlayerView: View {
                             .frame(width: 26, height: 32)
                     }
                     .buttonStyle(PlayerCleanButtonStyle())
-                    .accessibilityLabel(player.isFavorite(track: activeTrack) ? "Remove from favorites" : "Add to favorites")
+                    .accessibilityLabel(
+                        player.isFavorite(track: activeTrack)
+                        ? "Remove \(MigratorChrome.localSavedAccessibility)"
+                        : MigratorChrome.localSavedAccessibility
+                    )
                     
                     // Tactile Oat Play/Pause Round Thumb Dish Button
                     Button {

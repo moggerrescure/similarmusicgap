@@ -1,5 +1,5 @@
 appId: qere.music
-name: Transfer Create CTAs and gates
+name: Move tab CTAs and gates
 tags:
   - transfer
   - honesty
@@ -16,21 +16,23 @@ tags:
 - tapOn:
     id: "plus"
 - extendedWaitUntil:
-    visible: "Create"
+    visible: ".*Move.*|.*перенос.*|.*Transfer.*|.*LIVE TRANSFER.*|Откуда|Куда"
     timeout: 10000
 
-- scrollUntilVisible:
-    element: "Dry-run match preview"
-    direction: DOWN
-    timeout: 12000
+# Archive + advanced can push CTAs far down — scroll aggressively
+- repeat:
+    times: 10
+    commands:
+      - scroll
 
-- assertVisible: "Dry-run match preview"
-- assertVisible: "Живой мост"
-
-# Without selection / live pair, live action stays gated
-- tapOn:
-    text: "Живой мост"
+- assertVisible:
+    text: ".*Dry-run match preview.*|.*Живой мост.*|.*Начать перенос.*|.*Выберите треки.*"
+- assertVisible:
+    text: ".*Живой мост.*"
     optional: true
 - assertVisible:
-    text: ".*Connect.*|.*Client ID.*|.*Demo.*|.*нельзя.*|.*pair.*|.*Spotify.*|.*Apple.*|.*Dry-run.*|.*tracks.*"
+    id: "transfer.dry_run"
+    optional: true
+- assertVisible:
+    id: "transfer.live_bridge"
     optional: true

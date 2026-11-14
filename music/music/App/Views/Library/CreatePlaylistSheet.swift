@@ -24,7 +24,8 @@ public struct CreatePlaylistSheet: View {
     ]
     
     private var availableDestinations: [MusicProviderType] {
-        MusicProviderType.availableConnectors.filter { coordinator.provider(for: $0).isAuthenticated }
+        // Demo / non-live sessions must not look like a valid save target.
+        MusicProviderType.availableConnectors.filter { coordinator.provider(for: $0).isLiveSession }
     }
     
     private var availableTracks: [UniversalTrack] {
@@ -68,7 +69,7 @@ public struct CreatePlaylistSheet: View {
                                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(PastelTheme.cardBorderFocused, lineWidth: 1)
                                 )
-                                .shadow(color: themes[selectedThemeIndex].colors.first!.opacity(0.35), radius: 16, y: 6)
+                                .shadow(color: (themes[selectedThemeIndex].colors.first ?? PastelTheme.pastelOat).opacity(0.35), radius: 16, y: 6)
                             
                             VStack(spacing: 6) {
                                 Image(systemName: "music.note.list")
@@ -109,10 +110,10 @@ public struct CreatePlaylistSheet: View {
                             .padding(.horizontal, 16)
                         } else {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Connect a service first")
+                                Text("Need a LIVE account")
                                     .font(.system(size: 14, weight: .bold, design: .rounded))
                                     .foregroundColor(PastelTheme.textPrimary)
-                                Text("Playlists save to Spotify or Apple Music — local-only stubs are disabled so nothing looks “saved” when it isn’t.")
+                                Text("Demo / Simulator sessions can’t create playlists. Connect a real Spotify or Apple Music account first.")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundColor(PastelTheme.amberWarning)
                                 Button {
@@ -168,6 +169,11 @@ public struct CreatePlaylistSheet: View {
                         
                         // MARK: - Playlist Metadata Inputs
                         VStack(spacing: 12) {
+                            Text("Name is required. Tracks below are optional — empty playlists are fine.")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
                             TextField("Playlist Name", text: $title)
                                 .font(.system(size: 17, weight: .semibold, design: .rounded))
                                 .foregroundColor(PastelTheme.textPrimary)

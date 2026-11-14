@@ -16,22 +16,36 @@ tags:
 - tapOn:
     id: "plus"
 - extendedWaitUntil:
-    visible: ".*Transfer.*|.*Create.*|.*LIVE TRANSFER.*|Move|Тонкие|Dry-run"
+    visible: ".*Transfer.*|.*Create.*|.*LIVE TRANSFER.*|Move|Тонкие|Dry-run|перенос"
     timeout: 10000
 
-- scrollUntilVisible:
-    element: "Тонкие настройки (для опытных)"
-    direction: DOWN
-    timeout: 15000
+# Kick the accordion into view (long Transfer form).
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          direction: UP
+          duration: 350
 
-- tapOn: "Тонкие настройки (для опытных)"
+- scrollUntilVisible:
+    element: ".*Тонкие настройки.*"
+    direction: DOWN
+    timeout: 20000
+    speed: 60
+    visibilityPercentage: 40
+
+- tapOn: ".*Тонкие настройки.*"
 - waitForAnimationToEnd
-- swipe:
-    direction: UP
-    duration: 400
+
+- repeat:
+    times: 3
+    commands:
+      - swipe:
+          direction: UP
+          duration: 300
 
 - extendedWaitUntil:
     visible: "Skip Existing"
-    timeout: 10000
+    timeout: 12000
 - assertVisible: "Skip Existing"
 - assertVisible: "Merge"

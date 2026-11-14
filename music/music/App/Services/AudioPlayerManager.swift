@@ -47,8 +47,6 @@ public final class AudioPlayerManager: ObservableObject {
     @Published public private(set) var isPreviewPlayback: Bool = false
     /// False when the selected track has no playable preview URL
     @Published public private(set) var hasPlayablePreview: Bool = true
-    /// Short honesty toast after remote ♥ sync (e.g. Apple unlike unavailable).
-    @Published public private(set) var favoriteSyncNotice: String?
     
     // MARK: - Formatted Time Strings (Apple HUD Standard)
     public var formattedCurrentTime: String {
@@ -405,49 +403,15 @@ public final class AudioPlayerManager: ObservableObject {
         favoriteTrackIds.contains(track.id)
     }
     
+    /// Local SoundShift bookmark only — never writes Liked Songs on Spotify / Apple / Yandex.
     public func toggleFavorite(track: UniversalTrack) {
         HapticManager.lightImpact()
-        let nowFavorite: Bool
         if favoriteTrackIds.contains(track.id) {
             favoriteTrackIds.remove(track.id)
-            nowFavorite = false
         } else {
             favoriteTrackIds.insert(track.id)
-            nowFavorite = true
         }
         persistFavorites()
-        Task { await syncFavoriteToLiveServices(track: track, favorited: nowFavorite) }
-    }
-    
-    /// Push local ♥ to live Spotify Liked Songs (and Apple add when favoriting).
-    private func syncFavoriteToLiveServices(track: UniversalTrack, favorited: Bool) async {
-        let coordinator = ServicesCoordinator.shared
-        let providers: [any MusicProviderProtocol] = [coordinator.spotify, coordinator.appleMusic]
-        var notices: [String] = []
-        for provider in providers where provider.isLiveSession {
-            do {
-                if favorited {
-                    _ = try await provider.saveTracksToLibrary([track])
-                } else {
-                    _ = try await provider.removeTracksFromLibrary([track])
-                }
-            } catch {
-                // Local heart already updated — surface honest remote limits to the user.
-                notices.append(error.localizedDescription)
-                print("[AudioPlayer] Favorite sync failed for \(provider.providerType.displayName): \(error.localizedDescription)")
-            }
-        }
-        if let first = notices.first {
-            favoriteSyncNotice = first
-            try? await Task.sleep(nanoseconds: 4_500_000_000)
-            if favoriteSyncNotice == first {
-                favoriteSyncNotice = nil
-            }
-        }
-    }
-    
-    public func dismissFavoriteSyncNotice() {
-        favoriteSyncNotice = nil
     }
     
     // MARK: - 50ms High-Precision Crossfade & Gapless Automix Engine
@@ -572,7 +536,13 @@ public final class AudioPlayerManager: ObservableObject {
                 self.currentIndex = idx
             }
             self.currentTrack = nextTrack
-            self.duration = Double(nextTrack.durationMs) / 1000.0
+            // Preview streams are ~30s — don't advertise full catalog duration after crossfade.
+            if let itemDuration = primaryPlayer?.currentItem?.duration,
+               itemDuration.isNumeric, itemDuration.seconds.isFinite, itemDuration.seconds > 0 {
+                self.duration = itemDuration.seconds
+            } else {
+                self.duration = min(30.0, max(1.0, Double(nextTrack.durationMs) / 1000.0))
+            }
             self.currentTime = 0.0
             self.progress = 0.0
             self.prebufferedTrack = nil

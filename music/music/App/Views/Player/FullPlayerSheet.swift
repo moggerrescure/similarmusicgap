@@ -169,7 +169,11 @@ public struct FullPlayerSheet: View {
                             .frame(width: 44, height: 44)
                     }
                     .buttonStyle(PlayerCleanButtonStyle(scale: 0.88))
-                    .accessibilityLabel(player.isFavorite(track: activeTrack) ? "Remove from favorites" : "Add to favorites")
+                    .accessibilityLabel(
+                        player.isFavorite(track: activeTrack)
+                        ? "Remove \(MigratorChrome.localSavedAccessibility)"
+                        : MigratorChrome.localSavedAccessibility
+                    )
                 }
                 .padding(.horizontal, 28)
                 
@@ -295,10 +299,10 @@ public struct FullPlayerSheet: View {
                 
                 Spacer()
                 
-                // Service deep link chip (Marble White Capsule)
+                // Service deep link chip (Marble White Capsule) — follow queue head
                 HStack(spacing: 8) {
-                    if YandexMusicProvider.isConnectorEnabled, track.yandexId != nil {
-                        Button { DeepLinkManager.openTrack(track: track, in: .yandexMusic) } label: {
+                    if YandexMusicProvider.isConnectorEnabled, activeTrack.yandexId != nil {
+                        Button { DeepLinkManager.openTrack(track: activeTrack, in: .yandexMusic) } label: {
                             Label("Yandex", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .foregroundColor(PastelTheme.textSecondary)
@@ -310,8 +314,8 @@ public struct FullPlayerSheet: View {
                         }
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
-                    if track.spotifyId != nil {
-                        Button { DeepLinkManager.openTrack(track: track, in: .spotify) } label: {
+                    if activeTrack.spotifyId != nil {
+                        Button { DeepLinkManager.openTrack(track: activeTrack, in: .spotify) } label: {
                             Label("Spotify", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .foregroundColor(PastelTheme.textSecondary)
@@ -323,8 +327,8 @@ public struct FullPlayerSheet: View {
                         }
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.0))
                     }
-                    if track.appleMusicId != nil {
-                        Button { DeepLinkManager.openTrack(track: track, in: .appleMusic) } label: {
+                    if activeTrack.appleMusicId != nil {
+                        Button { DeepLinkManager.openTrack(track: activeTrack, in: .appleMusic) } label: {
                             Label("Apple Music", systemImage: "arrow.up.right")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .foregroundColor(PastelTheme.textSecondary)

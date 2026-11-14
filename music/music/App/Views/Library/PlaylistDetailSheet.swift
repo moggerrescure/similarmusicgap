@@ -238,7 +238,10 @@ private struct PlaylistTrackRow: View {
                     Button {
                         onFavoriteTap()
                     } label: {
-                        Label(isFavorite ? "Remove from Favorites" : "Add to Favorites", systemImage: isFavorite ? "heart.slash" : "heart")
+                        Label(
+                            isFavorite ? "Remove \(MigratorChrome.localSavedAccessibility)" : MigratorChrome.localSavedAccessibility,
+                            systemImage: isFavorite ? "heart.slash" : "heart"
+                        )
                     }
                     Button {
                         onPlayTap()

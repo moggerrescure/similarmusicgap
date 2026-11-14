@@ -95,7 +95,7 @@ public struct VinylTurntableHorizonView: View {
             var items: [ColoredVinylItem] = [
                 ColoredVinylItem(
                     id: 1,
-                    title: "Liked Songs",
+                    title: MigratorChrome.syncedCollectionLabel,
                     artist: "\(coordinator.allTracks.count) synced",
                     symbolOrInitial: "heart.fill",
                     waxGradient: Self.waxPalettes[0].wax,
@@ -137,7 +137,7 @@ public struct VinylTurntableHorizonView: View {
         return [
             ColoredVinylItem(
                 id: 1,
-                title: "Liked Songs",
+                title: MigratorChrome.syncedCollectionLabel,
                 artist: "Connect to sync",
                 symbolOrInitial: "heart.fill",
                 waxGradient: Self.waxPalettes[0].wax,

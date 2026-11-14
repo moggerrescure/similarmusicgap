@@ -279,6 +279,12 @@ public final class SpotifyProvider: MusicProviderProtocol, ObservableObject {
             }
         }
         
+        if resolvedIds.isEmpty && !tracks.isEmpty {
+            throw SpotifyProviderError.networkError(
+                "Couldn’t resolve any of \(tracks.count) matched tracks on Spotify — no playlist was created."
+            )
+        }
+        
         let created = try await SpotifyWebAPIClient.shared.createPlaylist(
             token: token,
             userId: userId,

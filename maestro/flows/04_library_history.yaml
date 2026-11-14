@@ -14,13 +14,13 @@ tags:
       - tapOn: "Done"
 
 - tapOn:
-    id: "books.vertical"
+    text: "Migrations"
 - extendedWaitUntil:
-    visible: ".*Synced Collection.*|.*Migration History.*|.*Connect services.*|Your Library"
+    visible: ".*Synced Collection.*|.*Synced collection.*|.*Migration History.*|.*Connect services.*|Migrations"
     timeout: 10000
 
 - assertVisible:
-    text: ".*No transfers yet.*|.*Migration History.*|.*Synced Collection.*"
+    text: ".*No transfers yet.*|.*Migration History.*|.*Synced Collection.*|.*Synced collection.*"
     optional: true
 
 - tapOn:

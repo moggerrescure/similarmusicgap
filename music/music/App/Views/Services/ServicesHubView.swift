@@ -30,7 +30,7 @@ public struct ServicesHubView: View {
                             )
                             HUDMetricBox(
                                 title: "CONNECTED",
-                                value: "\(coordinator.activeProvidersCount) of 2",
+                                value: "\(coordinator.activeProvidersCount) of \(MusicProviderType.availableConnectors.count)",
                                 color: coordinator.activeProvidersCount > 0 ? PastelTheme.emeraldSuccess : PastelTheme.textSecondary,
                                 onTap: nil
                             )
@@ -78,10 +78,16 @@ public struct ServicesHubView: View {
                                 .foregroundColor(PastelTheme.textTertiary)
                                 .padding(.horizontal, 4)
                             
+                            Text("LIVE = real account (migrate OK). DEMO / SIM = practice only — Sync & migrate stay blocked.")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(PastelTheme.textTertiary)
+                                .padding(.horizontal, 4)
+                            
                             VStack(spacing: 12) {
                                 ServiceCardView(
                                     type: .spotify,
                                     isAuthenticated: coordinator.spotify.isAuthenticated,
+                                    isLiveSession: coordinator.spotify.isLiveSession,
                                     userDisplayName: coordinator.spotify.userDisplayName,
                                     trackCount: max(coordinator.spotify.trackCount, coordinator.tracks(for: .spotify).count),
                                     onConnect: {
@@ -97,12 +103,22 @@ public struct ServicesHubView: View {
                                     onConfigure: {
                                         showingSpotifySetup = true
                                     },
-                                    statusHint: coordinator.spotify.isUsingDemoData ? "Demo data" : nil
+                                    statusHint: {
+                                        if coordinator.spotify.isUsingDemoData { return "Demo data" }
+                                        if coordinator.spotify.isAuthenticated && !SpotifyConfig.isConfigured {
+                                            return "Client ID required"
+                                        }
+                                        if coordinator.spotify.isAuthenticated && !coordinator.spotify.isLiveSession {
+                                            return "Not a live session"
+                                        }
+                                        return nil
+                                    }()
                                 )
                                 
                                 ServiceCardView(
                                     type: .appleMusic,
                                     isAuthenticated: coordinator.appleMusic.isAuthenticated,
+                                    isLiveSession: coordinator.appleMusic.isLiveSession,
                                     userDisplayName: coordinator.appleMusic.userDisplayName,
                                     trackCount: max(coordinator.appleMusic.trackCount, coordinator.tracks(for: .appleMusic).count),
                                     onConnect: {
@@ -115,7 +131,13 @@ public struct ServicesHubView: View {
                                         #if targetEnvironment(simulator)
                                         "Use a physical iPhone — Simulator library is often empty"
                                         #else
-                                        nil
+                                        if coordinator.appleMusic.isAuthenticated && !coordinator.appleMusic.isLiveSession {
+                                            return "Not a live session"
+                                        }
+                                        if coordinator.appleMusic.isLiveSession {
+                                            return "Syncs full Music library (not only Loved)"
+                                        }
+                                        return nil
                                         #endif
                                     }()
                                 )
@@ -123,13 +145,19 @@ public struct ServicesHubView: View {
                                 if YandexMusicProvider.isConnectorEnabled {
                                     ServiceCardView(
                                         type: .yandexMusic,
-                                        isAuthenticated: false,
-                                        userDisplayName: nil,
-                                        trackCount: 0,
-                                        onConnect: {},
-                                        onRevoke: {},
-                                        isAvailable: false,
-                                        unavailableReason: "Coming in TestFlight — Spotify & Apple Music first"
+                                        isAuthenticated: coordinator.yandexMusic.isAuthenticated,
+                                        isLiveSession: coordinator.yandexMusic.isLiveSession,
+                                        userDisplayName: coordinator.yandexMusic.userDisplayName,
+                                        trackCount: max(
+                                            coordinator.yandexMusic.trackCount,
+                                            coordinator.tracks(for: .yandexMusic).count
+                                        ),
+                                        onConnect: {
+                                            NavigationCoordinator.shared.openYandexConnect()
+                                        },
+                                        onRevoke: {
+                                            Task { await coordinator.revoke(type: .yandexMusic) }
+                                        }
                                     )
                                 }
                             }
@@ -147,7 +175,7 @@ public struct ServicesHubView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Move library between services")
                                         .font(.system(size: 15, weight: .bold, design: .rounded))
-                                    Text("Live Spotify ↔ Apple Music — Demo Mode cannot migrate")
+                                    Text("Spotify · Apple Music · Yandex — LIVE accounts only")
                                         .font(.system(size: 12, weight: .medium))
                                         .opacity(0.85)
                                 }
@@ -251,6 +279,9 @@ public struct ServicesHubView: View {
             .sheet(isPresented: $showingSpotifySetup) {
                 SpotifySetupSheet()
             }
+            .task {
+                await coordinator.syncIfNeededWhileVisible()
+            }
         }
     }
 }
@@ -307,6 +338,7 @@ private struct HUDMetricBox: View {
 private struct ServiceCardView: View {
     let type: MusicProviderType
     let isAuthenticated: Bool
+    let isLiveSession: Bool
     let userDisplayName: String?
     let trackCount: Int
     let onConnect: () -> Void
@@ -331,6 +363,7 @@ private struct ServiceCardView: View {
         if isAuthenticated {
             let base = "\(trackCount) tracks • \(userDisplayName ?? "Connected")"
             if let statusHint { return "\(base) • \(statusHint)" }
+            if !isLiveSession { return "\(base) • Not live" }
             return base
         }
         if onConfigure != nil && !SpotifyConfig.isConfigured {
@@ -339,15 +372,18 @@ private struct ServiceCardView: View {
         return "Tap Connect to sync library"
     }
     
-    /// DEMO / SIM / LIVE — never show LIVE when statusHint marks a non-live session.
+    /// DEMO / SIM / LIVE — LIVE only when `isLiveSession` is true (never trust auth alone).
     private var connectionBadge: (title: String, color: Color) {
+        if isLiveSession {
+            return ("LIVE", PastelTheme.emeraldSuccess)
+        }
         if statusHint == "Demo data" {
             return ("DEMO", PastelTheme.amberWarning)
         }
-        if let statusHint, !statusHint.isEmpty {
-            return ("SIM", PastelTheme.amberWarning)
+        if statusHint == "Client ID required" {
+            return ("SETUP", PastelTheme.amberWarning)
         }
-        return ("LIVE", PastelTheme.emeraldSuccess)
+        return ("SIM", PastelTheme.amberWarning)
     }
     
     var body: some View {
@@ -403,6 +439,12 @@ private struct ServiceCardView: View {
                             .background(badge.color.opacity(0.16))
                             .clipShape(Capsule())
                             .accessibilityIdentifier("services.badge.\(badge.title.lowercased())")
+                            .accessibilityLabel("\(badge.title) connection")
+                            .accessibilityHint(
+                                badge.title == "LIVE"
+                                ? "Real account. Sync and migrate are allowed."
+                                : "Not a live session. Sync and migrate stay blocked until you connect for real."
+                            )
                         } else if !isAvailable {
                             Text("SOON")
                                 .font(.system(size: 8, weight: .heavy, design: .rounded))

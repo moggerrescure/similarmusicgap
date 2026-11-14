@@ -12,7 +12,7 @@ public enum TransferPresetKind: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .full: return "Full Vault"
         case .favorites: return "Favorites Only"
-        case .delta: return "Delta (New Only)"
+        case .delta: return "Recent likes (30d)"
         }
     }
 }
@@ -31,7 +31,7 @@ public struct TransferPresetSelection: Equatable, Sendable {
 
 /// Resolves which liked tracks + playlists a Create-tab preset should select.
 public enum TransferPresetResolver {
-    /// Days window for Delta (New Only).
+    /// Days window for Recent likes (30d) — source liked-date, not vs destination.
     public static let deltaWindowDays: Int = 30
     
     public static func resolve(

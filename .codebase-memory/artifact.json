@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "ce58d70795608fa5421ef8bd6a6a9795675cbce6",
+    "indexed_at": "2026-11-14T17:27:42Z",
+    "project": "similarmusicgap",
+    "nodes": 1991,
+    "edges": 5437,
+    "original_size": 3014656,
+    "compressed_size": 280931,
+    "compression_level": 9
+}

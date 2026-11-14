@@ -25,7 +25,7 @@ tags:
     commands:
       - tapOn: ".*Rematch.*|.*alternate.*"
       - extendedWaitUntil:
-          visible: ".*Inbox Zero.*|.*Nothing to rematch.*|.*dry-run.*|.*Rematch Inbox.*"
+          visible: ".*Inbox Zero.*|.*Nothing to rematch.*|.*All clear.*|.*Nothing to decide.*|.*Preview.*|.*dry-run.*|.*Rematch Inbox.*"
           timeout: 8000
       - tapOn:
           text: "Done"

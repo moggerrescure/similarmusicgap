@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-/// App Tab Identifiers (Matching Spotify Production 4-Tab Standard — designer)
+/// App tabs — migrator chrome (Home / Search / Migrations / Move).
 public enum AppTab: Int, CaseIterable, Identifiable {
     case home = 0
     case search = 1
@@ -18,10 +18,10 @@ public enum AppTab: Int, CaseIterable, Identifiable {
     
     public var title: String {
         switch self {
-        case .home: return "Home"
-        case .search: return "Search"
-        case .library: return "Your Library"
-        case .create: return "Create"
+        case .home: return MigratorChrome.homeTabTitle
+        case .search: return MigratorChrome.searchTabTitle
+        case .library: return MigratorChrome.migrationsTabTitle
+        case .create: return MigratorChrome.moveTabTitle
         }
     }
 }
@@ -35,6 +35,8 @@ public final class NavigationCoordinator: ObservableObject {
     @Published public var showingPersonalLibrarySheet: Bool = false
     @Published public var showingConnectSheet: Bool = false
     @Published public var showingTasteSheet: Bool = false
+    /// Global Yandex Device Flow sheet (Move / Connect / coordinator).
+    @Published public var showingYandexConnectSheet: Bool = false
     /// Consumed by Search tab when jumping from Home search.
     @Published public var pendingSearchQuery: String?
     
@@ -43,6 +45,11 @@ public final class NavigationCoordinator: ObservableObject {
     public func openPersonalLibrary() {
         HapticManager.lightImpact()
         showingPersonalLibrarySheet = true
+    }
+    
+    public func openYandexConnect() {
+        HapticManager.lightImpact()
+        showingYandexConnectSheet = true
     }
     
     public func navigateTo(tab: AppTab) {

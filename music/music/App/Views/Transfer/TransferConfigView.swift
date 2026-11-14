@@ -33,9 +33,18 @@ public enum ExportFormatOption: String, CaseIterable, Identifiable {
 }
 
 public enum MatchingSensitivity: String, CaseIterable, Identifiable {
-    case strict = "Strict ISRC"
-    case flexible = "Flexible Acoustic"
+    case strict = "Strict"
+    case flexible = "Flexible"
     public var id: String { rawValue }
+    
+    public var helpText: String {
+        switch self {
+        case .strict:
+            return "Only auto-accepts exact codes (ISRC) or very high-confidence matches. Ambiguous songs go to Rematch Inbox — safer for large libraries."
+        case .flexible:
+            return "Also auto-accepts close title/artist matches. Faster, but open the report afterward in case a wrong song slipped through."
+        }
+    }
 }
 
 /// Intuitive Apple HIG HUD Transfer & Direct Download/Export Master View
@@ -54,6 +63,7 @@ public struct TransferConfigView: View {
     @State private var conflictPolicy: ConflictPolicy = .skip
     @State private var selectedPreset: TransferPresetKind = .favorites
     @State private var matchingSensitivity: MatchingSensitivity = .strict
+    @State private var customPlaylistName: String = ""
     
     // Source Archive Track Selection State
     @State private var selectedTrackIds: Set<UUID> = []
@@ -121,7 +131,7 @@ public struct TransferConfigView: View {
                 .padding(.vertical, 16)
             }
         }
-        .navigationTitle("Transfer & Export")
+        .navigationTitle(MigratorChrome.moveTabTitle)
         .inlineNavigationBarTitle()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -182,6 +192,9 @@ public struct TransferConfigView: View {
             if selectedTrackIds.isEmpty {
                 applyPreset(selectedPreset)
             }
+        }
+        .task {
+            await coordinator.syncIfNeededWhileVisible()
         }
     }
     
@@ -757,14 +770,14 @@ public struct TransferConfigView: View {
         if let dryRun = transferManager.lastDryRun {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("DRY-RUN MATCH PREVIEW")
+                    Text("PREVIEW — NOTHING WRITTEN YET")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(0.6)
                         .foregroundColor(PastelTheme.textTertiary)
                     
                     Spacer()
                     
-                    Text("\(String(format: "%.1f", dryRun.matchRatePercentage))% placeable")
+                    Text("\(dryRun.exactMatchesCount)/\(dryRun.totalTracks) ready")
                         .font(.system(size: 15, weight: .heavy, design: .rounded))
                         .foregroundColor(PastelTheme.emeraldSuccess)
                         .monospacedDigit()
@@ -786,10 +799,10 @@ public struct TransferConfigView: View {
                 .frame(height: 6)
                 
                 HStack {
-                    Label("\(dryRun.exactMatchesCount) Strong", systemImage: "checkmark.circle.fill")
+                    Label("\(dryRun.exactMatchesCount) Ready", systemImage: "checkmark.circle.fill")
                         .foregroundColor(PastelTheme.emeraldSuccess)
                     Spacer()
-                    Label("\(dryRun.alternateMatchesCount) Alternates", systemImage: "arrow.triangle.swap")
+                    Label("\(dryRun.alternateMatchesCount) Decide", systemImage: "arrow.triangle.swap")
                         .foregroundColor(PastelTheme.amberWarning)
                     Spacer()
                     Label("\(dryRun.missingCount) Missing", systemImage: "xmark.circle")
@@ -797,7 +810,7 @@ public struct TransferConfigView: View {
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 
-                Text("Strong = ISRC or high-confidence title/artist — not a guarantee of the same master.")
+                Text("Ready = safe auto-match. Decide = open Rematch Inbox. Missing = not found on destination yet.")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(PastelTheme.textTertiary)
                 
@@ -865,29 +878,74 @@ public struct TransferConfigView: View {
             // Primary Big CTA Button
             if mainMode == .serviceTransfer {
                 VStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Playlist name on \(destinationProvider.displayName)")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(PastelTheme.textTertiary)
+                        TextField(
+                            PlaylistNameBuilder.resolve(custom: nil, source: sourceProvider),
+                            text: $customPlaylistName
+                        )
+                        .textFieldStyle(.plain)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(PastelTheme.card)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                        )
+                        .accessibilityIdentifier("transfer.playlist_name")
+                        Text("Leave empty for “SoundShift · from \(sourceProvider.displayName)”.")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(PastelTheme.textTertiary)
+                    }
+                    
+                    let rematchBlocking = TransferRematchGate.blocksMigrate(
+                        pendingRematchCount: transferManager.rematchQueue.count,
+                        isStrict: matchingSensitivity == .strict
+                    )
+                    if rematchBlocking {
+                        Button {
+                            showingRematchInbox = true
+                        } label: {
+                            Text("Resolve \(transferManager.rematchQueue.count) Rematch decision\(transferManager.rematchQueue.count == 1 ? "" : "s") first")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundColor(PastelTheme.amberWarning)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .accessibilityIdentifier("transfer.rematch_gate")
+                    }
+                    
                     Button {
-                        guard hasSelection else { return }
+                        guard hasSelection, !rematchBlocking else { return }
                         HapticManager.successNotification()
                         startLiveMigration()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.right.circle.fill")
                                 .font(.system(size: 18, weight: .bold))
-                            Text(hasSelection ? "Начать перенос треков (\(trackCount) шт)" : "Выберите треки для переноса")
+                            Text(
+                                rematchBlocking
+                                ? "Open Rematch Inbox first"
+                                : (hasSelection ? "Начать перенос треков (\(trackCount) шт)" : "Выберите треки для переноса")
+                            )
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                         }
-                        .foregroundColor(hasSelection ? PastelTheme.textOnOat : PastelTheme.textTertiary)
+                        .foregroundColor(hasSelection && !rematchBlocking ? PastelTheme.textOnOat : PastelTheme.textTertiary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(hasSelection ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
+                        .background(hasSelection && !rematchBlocking ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(hasSelection ? PastelTheme.marbleWhite.opacity(0.40) : PastelTheme.cardBorder, lineWidth: 1.5)
+                                .stroke(hasSelection && !rematchBlocking ? PastelTheme.marbleWhite.opacity(0.40) : PastelTheme.cardBorder, lineWidth: 1.5)
                         )
                     }
-                    .disabled(!hasSelection)
+                    .disabled(!hasSelection || rematchBlocking)
                     .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.5))
+                    .accessibilityIdentifier("transfer.start_migrate")
                     
                     HStack(spacing: 10) {
                         Button {
@@ -917,8 +975,13 @@ public struct TransferConfigView: View {
                         }
                         .disabled(!hasSelection)
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.2))
+                        .accessibilityIdentifier("transfer.dry_run")
                         
                         Button {
+                            guard hasSelection, !rematchBlocking else {
+                                if rematchBlocking { showingRematchInbox = true }
+                                return
+                            }
                             HapticManager.lightImpact()
                             startLiveMigration(preferBridge: true)
                         } label: {
@@ -928,7 +991,11 @@ public struct TransferConfigView: View {
                                 Text("Живой мост")
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                             }
-                            .foregroundColor(hasSelection && !transferManager.isMigrating ? PastelTheme.pastelOat : PastelTheme.textTertiary)
+                            .foregroundColor(
+                                hasSelection && !rematchBlocking && !transferManager.isMigrating
+                                ? PastelTheme.pastelOat
+                                : PastelTheme.textTertiary
+                            )
                             .frame(width: 130)
                             .frame(height: 44)
                             .background(PastelTheme.cardSubtle)
@@ -936,15 +1003,16 @@ public struct TransferConfigView: View {
                             .overlay(
                                 Capsule()
                                     .stroke(
-                                        hasSelection && !transferManager.isMigrating
+                                        hasSelection && !rematchBlocking && !transferManager.isMigrating
                                             ? PastelTheme.marbleBorder
                                             : PastelTheme.cardBorder.opacity(0.4),
                                         lineWidth: 1.2
                                     )
                             )
                         }
-                        .disabled(!hasSelection || transferManager.isMigrating)
+                        .disabled(!hasSelection || rematchBlocking || transferManager.isMigrating)
                         .buttonStyle(MarbleCapsuleButtonStyle(strokeWidth: 1.2))
+                        .accessibilityIdentifier("transfer.live_bridge")
                     }
                 }
             } else {
@@ -1009,20 +1077,6 @@ public struct TransferConfigView: View {
             
             if showAdvancedSettings {
                 VStack(spacing: 16) {
-                    Toggle(isOn: $scope.transferFavorites) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Избранные треки (Любимые песни)")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(PastelTheme.textPrimary)
-                            Text("Сохранять порядок добавления и даты")
-                                .font(.system(size: 12))
-                                .foregroundColor(PastelTheme.textSecondary)
-                        }
-                    }
-                    .tint(PastelTheme.emeraldSuccess)
-                    
-                    Divider().background(PastelTheme.cardBorder)
-                    
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Если трек уже есть в целевой библиотеке:")
                             .font(.system(size: 13, weight: .medium))
@@ -1043,7 +1097,7 @@ public struct TransferConfigView: View {
                     Divider().background(PastelTheme.cardBorder)
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Точность акустического сопоставления:")
+                        Text("How strict should matching be?")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(PastelTheme.textSecondary)
                         
@@ -1057,22 +1111,36 @@ public struct TransferConfigView: View {
                             transferManager.applyMatchingSensitivity(newValue)
                             transferManager.invalidateDryRunPreview()
                         }
+                        
+                        Text(matchingSensitivity.helpText)
+                            .font(.system(size: 11))
+                            .foregroundColor(PastelTheme.textTertiary)
                     }
                     
                     Divider().background(PastelTheme.cardBorder)
                     
                     HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "moon.zzz")
+                        Image(systemName: "arrow.triangle.2.circlepath")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(PastelTheme.textTertiary)
                             .padding(.top, 2)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Автоматическая синхронизация")
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("In-app library sync")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(PastelTheme.textPrimary)
-                            Text("Фоновый nightly sync ещё не подключён — используйте Sync now на Library.")
+                            Text("Refreshes when you open Create, Library, or Connect — only while the app is on screen. No background sync.")
                                 .font(.system(size: 12))
                                 .foregroundColor(PastelTheme.textSecondary)
+                            Button {
+                                Task { await coordinator.syncIfNeededWhileVisible(force: true) }
+                            } label: {
+                                Text(coordinator.isSyncing ? "Syncing…" : "Sync now")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(PastelTheme.pastelOat)
+                            }
+                            .disabled(coordinator.isSyncing)
+                            .buttonStyle(PlainButtonStyle())
+                            .accessibilityIdentifier("transfer.sync_now")
                         }
                     }
                 }
@@ -1148,7 +1216,7 @@ public struct TransferConfigView: View {
                     .foregroundColor(PastelTheme.amberWarning)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("Ready — dry-run then migrate. Favorites also save Liked Songs on destination.")
+                Text("Ready — dry-run then migrate. Writes a new playlist only (no Liked Songs).")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(PastelTheme.emeraldSuccess)
             }
@@ -1273,6 +1341,17 @@ public struct TransferConfigView: View {
             showingSpotifySetup = true
             return
         }
+        if type == .yandexMusic {
+            if coordinator.yandexMusic.isLiveSession {
+                await coordinator.syncIfNeededWhileVisible(force: true)
+            } else {
+                NavigationCoordinator.shared.openYandexConnect()
+            }
+            if type == sourceProvider {
+                selectedTrackIds = Set(coordinator.tracks(for: type).map(\.id))
+            }
+            return
+        }
         await coordinator.authenticate(type: type)
         if type == sourceProvider {
             selectedTrackIds = Set(coordinator.tracks(for: type).map(\.id))
@@ -1296,7 +1375,7 @@ public struct TransferConfigView: View {
                 showingSpotifySetup = true
             }
             transferManager.lastErrorMessage = reason
-            transferManager.statusMessage = "Blocked"
+            transferManager.statusMessage = reason
             return
         }
         guard !selectedTrackIds.isEmpty else { return }
@@ -1312,6 +1391,7 @@ public struct TransferConfigView: View {
             }
             if let reason = transferBlockingReason {
                 transferManager.lastErrorMessage = reason
+                transferManager.statusMessage = reason
                 isAnalyzingDryRun = false
                 return
             }
@@ -1330,14 +1410,16 @@ public struct TransferConfigView: View {
                 showingSpotifySetup = true
             }
             transferManager.lastErrorMessage = reason
-            transferManager.statusMessage = "Blocked"
+            transferManager.statusMessage = reason
             return
         }
         guard !selectedTrackIds.isEmpty else { return }
         transferManager.applyMatchingSensitivity(matchingSensitivity)
+        transferManager.destinationPlaylistName = customPlaylistName
         var migrationScope = scope
         migrationScope.selectedTrackIds = selectedTrackIds
-        migrationScope.transferFavorites = scope.transferFavorites || selectedPreset == .favorites
+        // Honor the Advanced toggle — Favorites preset only pre-selects tracks via applyPreset.
+        migrationScope.transferFavorites = scope.transferFavorites
         Task {
             if sourceTracks.isEmpty {
                 await coordinator.syncAll()
@@ -1346,6 +1428,7 @@ public struct TransferConfigView: View {
             }
             if let reason = transferBlockingReason {
                 transferManager.lastErrorMessage = reason
+                transferManager.statusMessage = reason
                 return
             }
             if preferBridge {
