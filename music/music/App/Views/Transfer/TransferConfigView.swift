@@ -94,7 +94,10 @@ public struct TransferConfigView: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
-                    // 0. Live readiness (P0 gates)
+                    // 0. Top Header Lockup
+                    bridgeDeckHeader
+                    
+                    // Live readiness (P0 gates)
                     transferReadinessBanner
                     
                     // 1. Top Mode Selector (Cloud Sync vs File Download)
@@ -195,6 +198,53 @@ public struct TransferConfigView: View {
         }
         .task {
             await coordinator.syncIfNeededWhileVisible()
+        }
+    }
+    
+    // MARK: - 0. Top Header Lockup
+    private var bridgeDeckHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(PastelTheme.athleticEmerald)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: PastelTheme.athleticEmerald.opacity(0.8), radius: 3)
+                    
+                    Text("MASS MIGRATION COCKPIT")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .tracking(1.2)
+                        .foregroundColor(PastelTheme.athleticEmerald)
+                }
+                
+                Text("Bridge Deck")
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+            }
+            
+            Spacer()
+            
+            // Rematch Inbox shortcut
+            Button {
+                HapticManager.lightImpact()
+                showingRematchInbox = true
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "tray.full.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(PastelTheme.warmAmber)
+                    
+                    Text("Inbox")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(PastelTheme.card)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(PastelTheme.cardBorder, lineWidth: 0.8))
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
     

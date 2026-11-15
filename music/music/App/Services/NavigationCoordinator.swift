@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 
-/// App tabs — migrator chrome (Home / Search / Migrations / Move).
+/// App tabs — 3-tab architecture: Radar (search) / Vault (library) / Bridge (create).
 public enum AppTab: Int, CaseIterable, Identifiable {
     case home = 0
     case search = 1
@@ -9,7 +9,10 @@ public enum AppTab: Int, CaseIterable, Identifiable {
     case create = 3
     
     // Aliases for compatibility
-    public static let services = AppTab.home
+    public static let radar = AppTab.search
+    public static let vault = AppTab.library
+    public static let bridge = AppTab.create
+    public static let services = AppTab.search
     public static let transfer = AppTab.create
     public static let taste = AppTab.create
     public static let move = AppTab.create
@@ -18,10 +21,10 @@ public enum AppTab: Int, CaseIterable, Identifiable {
     
     public var title: String {
         switch self {
-        case .home: return MigratorChrome.homeTabTitle
-        case .search: return MigratorChrome.searchTabTitle
-        case .library: return MigratorChrome.migrationsTabTitle
-        case .create: return MigratorChrome.moveTabTitle
+        case .home: return "Radar"
+        case .search: return "Radar"
+        case .library: return "Vault"
+        case .create: return "Bridge"
         }
     }
 }
@@ -31,7 +34,7 @@ public enum AppTab: Int, CaseIterable, Identifiable {
 public final class NavigationCoordinator: ObservableObject {
     public static let shared = NavigationCoordinator()
     
-    @Published public var selectedTab: Int = AppTab.home.rawValue
+    @Published public var selectedTab: Int = AppTab.search.rawValue
     @Published public var showingPersonalLibrarySheet: Bool = false
     @Published public var showingConnectSheet: Bool = false
     @Published public var showingTasteSheet: Bool = false
@@ -60,7 +63,11 @@ public final class NavigationCoordinator: ObservableObject {
     }
     
     public func navigateToHome() {
-        navigateTo(tab: .home)
+        navigateTo(tab: .search)
+    }
+    
+    public func navigateToRadar() {
+        navigateTo(tab: .search)
     }
     
     public func navigateToSearch() {
@@ -79,8 +86,16 @@ public final class NavigationCoordinator: ObservableObject {
         return value
     }
     
+    public func navigateToVault() {
+        navigateTo(tab: .library)
+    }
+    
     public func navigateToLibrary() {
         navigateTo(tab: .library)
+    }
+    
+    public func navigateToBridge() {
+        navigateTo(tab: .create)
     }
     
     public func navigateToCreate() {
@@ -118,7 +133,7 @@ public final class NavigationCoordinator: ObservableObject {
             showingConnectSheet = false
             showingTasteSheet = false
             showingPersonalLibrarySheet = false
-            navigateTo(tab: .home)
+            navigateTo(tab: .search)
         case .search(let query):
             showingConnectSheet = false
             showingTasteSheet = false

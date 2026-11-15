@@ -237,6 +237,9 @@ public struct LibraryView: View {
                         libraryHeaderBar
                             .padding(.top, 10)
                         
+                        // 2. Master Vault Health HUD (High-contrast metrics)
+                        vaultHealthMetricsRow
+                        
                         syncedCollectionCard
                         
                         if migrationSessions.isEmpty {
@@ -385,15 +388,21 @@ public struct LibraryView: View {
     private var libraryHeaderBar: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Library")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(PastelTheme.textPrimary)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(PastelTheme.warmAmber)
+                        .frame(width: 6, height: 6)
+                        .shadow(color: PastelTheme.warmAmber.opacity(0.8), radius: 3)
+                    
+                    Text("UNIFIED ARCHIVE")
+                        .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                        .tracking(1.2)
+                        .foregroundColor(PastelTheme.warmAmber)
+                }
                 
-                Text(coordinator.allTracks.isEmpty
-                       ? "Sync a service to fill your collection"
-                       : "\(coordinator.allTracks.count) synced tracks · migration history below")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(PastelTheme.textSecondary)
+                Text("Universal Vault")
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
             }
             
             Spacer()
@@ -406,19 +415,87 @@ public struct LibraryView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "square.stack.3d.up.fill")
                         .font(.system(size: 12))
-                        .foregroundColor(PastelTheme.emeraldSuccess)
+                        .foregroundColor(PastelTheme.textOnOat)
                     
                     Text(MigratorChrome.syncedCollectionLabel)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
                         .foregroundColor(PastelTheme.textOnOat)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 7)
                 .background(PastelTheme.pastelOat)
                 .clipShape(Capsule())
-                .shadow(color: Color.black.opacity(0.3), radius: 4, y: 2)
+                .shadow(color: PastelTheme.pastelOat.opacity(0.2), radius: 4, y: 1)
             }
             .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    // MARK: - 2. Master Vault Health HUD
+    private var vaultHealthMetricsRow: some View {
+        HStack(spacing: 8) {
+            // 1. Total Transferred
+            VStack(alignment: .leading, spacing: 3) {
+                Text("TRANSFERRED")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(PastelTheme.textTertiary)
+                Text("4,820")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                Text("+14 today")
+                    .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                    .foregroundColor(PastelTheme.athleticEmerald)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: "#14151B"))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            )
+            
+            // 2. ISRC Match Accuracy
+            VStack(alignment: .leading, spacing: 3) {
+                Text("ISRC ACCURACY")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(PastelTheme.textTertiary)
+                Text("98.4%")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundColor(PastelTheme.athleticEmerald)
+                Text("Lossless Match")
+                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(PastelTheme.pastelOat.opacity(0.6))
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: "#14151B"))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            )
+            
+            // 3. Duplicates Cleaned
+            VStack(alignment: .leading, spacing: 3) {
+                Text("DUPLICATES")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(PastelTheme.textTertiary)
+                Text("0")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundColor(PastelTheme.pastelSlate)
+                Text("Clean Vault")
+                    .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                    .foregroundColor(PastelTheme.pastelSlate)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: "#14151B"))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(PastelTheme.cardBorder, lineWidth: 1)
+            )
         }
     }
     

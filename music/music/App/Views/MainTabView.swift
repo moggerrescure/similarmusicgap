@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Root Tab Navigation — migrator: Home / Search / Migrations / Move + mini-player.
+/// Root Tab Navigation — 3-tab architecture: Radar / Vault / Bridge + mini-player.
 /// Connect & Taste stay sheets.
 public struct MainTabView: View {
     @ObservedObject private var navCoordinator = NavigationCoordinator.shared
@@ -14,40 +14,34 @@ public struct MainTabView: View {
                 .ignoresSafeArea()
             
             TabView(selection: $navCoordinator.selectedTab) {
-                SpotifyHomeFeedView()
+                // Tab 1: Radar (Cross-Platform Matcher & Gap Resolver)
+                BridgeRadarSearchView()
                     .tabItem {
-                        Image(systemName: navCoordinator.selectedTab == 0 ? "house.fill" : "house")
-                        Text(MigratorChrome.homeTabTitle)
-                    }
-                    .accessibilityIdentifier("tab.home")
-                    .tag(0)
-                
-                SpotifySearchBrowseView()
-                    .tabItem {
-                        Image(systemName: "magnifyingglass")
-                        Text(MigratorChrome.searchTabTitle)
+                        Image(systemName: navCoordinator.selectedTab == AppTab.search.rawValue ? "sparkle.magnifyingglass" : "magnifyingglass")
+                        Text("Radar")
                     }
                     .accessibilityIdentifier("tab.search")
-                    .tag(1)
+                    .tag(AppTab.search.rawValue)
                 
+                // Tab 2: Vault (Universal Library & Duplicates)
                 LibraryView()
                     .tabItem {
-                        // Keep SF Symbol books.vertical — Maestro + a11y rely on it; label = Migrations.
-                        Image(systemName: navCoordinator.selectedTab == 2 ? "books.vertical.fill" : "books.vertical")
-                        Text(MigratorChrome.migrationsTabTitle)
+                        Image(systemName: navCoordinator.selectedTab == AppTab.library.rawValue ? "books.vertical.fill" : "books.vertical")
+                        Text("Vault")
                     }
                     .accessibilityIdentifier("tab.library")
-                    .tag(2)
+                    .tag(AppTab.library.rawValue)
                 
+                // Tab 3: Bridge (Mass Migration & File Export)
                 NavigationStack {
                     TransferConfigView()
                 }
                 .tabItem {
-                    Image(systemName: "plus")
-                    Text(MigratorChrome.moveTabTitle)
+                    Image(systemName: navCoordinator.selectedTab == AppTab.create.rawValue ? "bolt.horizontal.fill" : "arrow.left.arrow.right")
+                    Text("Bridge")
                 }
                 .accessibilityIdentifier("tab.create")
-                .tag(3)
+                .tag(AppTab.create.rawValue)
             }
             .tint(Color.white)
             
