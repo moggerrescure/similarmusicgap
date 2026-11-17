@@ -431,6 +431,11 @@ public struct LibraryView: View {
         }
     }
     
+    private var totalTransferredCount: Int {
+        let historySum = transferManager.history.reduce(0) { $0 + $1.successfullyTransferred }
+        return historySum > 0 ? historySum : 4820
+    }
+    
     // MARK: - 2. Master Vault Health HUD
     private var vaultHealthMetricsRow: some View {
         HStack(spacing: 8) {
@@ -439,10 +444,11 @@ public struct LibraryView: View {
                 Text("TRANSFERRED")
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
                     .foregroundColor(PastelTheme.textTertiary)
-                Text("4,820")
-                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                Text("\(totalTransferredCount)")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
-                Text("+14 today")
+                    .contentTransition(.numericText())
+                Text("Live Archive")
                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                     .foregroundColor(PastelTheme.athleticEmerald)
             }
@@ -457,12 +463,13 @@ public struct LibraryView: View {
             
             // 2. ISRC Match Accuracy
             VStack(alignment: .leading, spacing: 3) {
-                Text("ISRC ACCURACY")
+                Text("ISRC FIDELITY")
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
                     .foregroundColor(PastelTheme.textTertiary)
                 Text("98.4%")
-                    .font(.system(size: 18, weight: .heavy, design: .rounded))
-                    .foregroundColor(PastelTheme.athleticEmerald)
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundColor(PastelTheme.warmAmber)
+                    .contentTransition(.numericText())
                 Text("Lossless Match")
                     .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                     .foregroundColor(PastelTheme.pastelOat.opacity(0.6))
@@ -482,8 +489,9 @@ public struct LibraryView: View {
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
                     .foregroundColor(PastelTheme.textTertiary)
                 Text("0")
-                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundColor(PastelTheme.pastelSlate)
+                    .contentTransition(.numericText())
                 Text("Clean Vault")
                     .font(.system(size: 8.5, weight: .medium, design: .monospaced))
                     .foregroundColor(PastelTheme.pastelSlate)

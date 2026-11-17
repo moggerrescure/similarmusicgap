@@ -103,8 +103,8 @@ public struct TransferConfigView: View {
                     // 1. Top Mode Selector (Cloud Sync vs File Download)
                     modeSelectorSection
                     
-                    // 2. Clear 3-Step Visual Guide
-                    stepsGuideCallout
+                    // 2. Interactive Transfer Arc Cockpit
+                    transferArcCockpit
                     
                     // 3. Step 1: Source Provider (Откуда)
                     step1SourceSection
@@ -281,41 +281,64 @@ public struct TransferConfigView: View {
         }
     }
     
-    // MARK: - 2. 3-Step Visual Flow Guide
+    // MARK: - 2. Interactive Transfer Arc Cockpit
     @ViewBuilder
-    private var stepsGuideCallout: some View {
-        HStack(spacing: 6) {
-            stepBadge(number: "1", title: "Откуда")
-            Image(systemName: "chevron.right")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(PastelTheme.textTertiary)
+    private var transferArcCockpit: some View {
+        HStack(spacing: 12) {
+            // Source Node
+            serviceNodePill(provider: sourceProvider, isSource: true)
             
-            stepBadge(number: "2", title: mainMode == .serviceTransfer ? "Куда" : "Формат")
-            Image(systemName: "chevron.right")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(PastelTheme.textTertiary)
+            // Electric Wire
+            ZStack {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: sourceProvider.brandColorHex), PastelTheme.athleticEmerald, Color(hex: destinationProvider.brandColorHex)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 2)
+                
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: PastelTheme.athleticEmerald, radius: 4)
+            }
+            .frame(maxWidth: .infinity)
             
-            stepBadge(number: "3", title: mainMode == .serviceTransfer ? "Перенос" : "Выкачать", isHighlight: true)
+            // Destination Node
+            serviceNodePill(provider: destinationProvider, isSource: false)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .background(PastelTheme.card.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Color(hex: "#14151B"))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(PastelTheme.cardBorder, lineWidth: 1)
+        )
     }
     
-    private func stepBadge(number: String, title: String, isHighlight: Bool = false) -> some View {
-        HStack(spacing: 5) {
-            Text(number)
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .foregroundColor(isHighlight ? PastelTheme.textOnOat : PastelTheme.pastelOat)
-                .frame(width: 18, height: 18)
-                .background(isHighlight ? PastelTheme.pastelOat : PastelTheme.cardSubtle)
-                .clipShape(Circle())
+    private func serviceNodePill(provider: MusicProviderType, isSource: Bool) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color(hex: provider.brandColorHex))
+                .frame(width: 24, height: 24)
+                .overlay(
+                    Image(systemName: provider == .spotify ? "music.note" : (provider == .appleMusic ? "applelogo" : "play.fill"))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(provider == .spotify ? .black : .white)
+                )
             
-            Text(title)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundColor(isHighlight ? PastelTheme.pastelOat : PastelTheme.textSecondary)
+            VStack(alignment: isSource ? .leading : .trailing, spacing: 1) {
+                Text(isSource ? "FROM" : "TO")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundColor(PastelTheme.textTertiary)
+                Text(provider.displayName)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            }
         }
     }
     
@@ -324,15 +347,15 @@ public struct TransferConfigView: View {
     private var step1SourceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("ШАГ 1 • ОТКУДА (ИСТОЧНИК ТРЕКОВ)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(0.6)
+                Text("SOURCE SERVICE")
+                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                    .tracking(0.8)
                     .foregroundColor(PastelTheme.textTertiary)
                 
                 Spacer()
                 
-                Text("\(tracksAvailable(for: sourceProvider)) треков")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                Text("\(tracksAvailable(for: sourceProvider)) tracks")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(PastelTheme.emeraldSuccess)
                     .monospacedDigit()
             }
@@ -412,9 +435,9 @@ public struct TransferConfigView: View {
     private var step2DestinationSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("ШАГ 2 • КУДА (ЦЕЛЕВОЙ СЕРВИС)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .tracking(0.6)
+                Text("DESTINATION SERVICE")
+                    .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                    .tracking(0.8)
                     .foregroundColor(PastelTheme.textTertiary)
                 
                 Spacer()
@@ -518,9 +541,9 @@ public struct TransferConfigView: View {
     @ViewBuilder
     private var step2ExportFormatSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ШАГ 2 • ВЫБЕРИТЕ ФОРМАТ ФАЙЛА ДЛЯ ВЫКАЧИВАНИЯ")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .tracking(0.6)
+            Text("EXPORT FORMAT")
+                .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                .tracking(0.8)
                 .foregroundColor(PastelTheme.textTertiary)
                 .padding(.horizontal, 4)
             
@@ -624,9 +647,9 @@ public struct TransferConfigView: View {
             // Header: Step Label + Platform Badge + Live Selection Counter
             HStack {
                 HStack(spacing: 6) {
-                    Text("ШАГ 2.5 • АРХИВ ТРЕКОВ И ВЫБОР")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .tracking(0.6)
+                    Text("CATALOG ARCHIVE")
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                        .tracking(0.8)
                         .foregroundColor(PastelTheme.textTertiary)
                     
                     PlatformBrandBadgeView(type: sourceProvider, size: 14)
@@ -634,8 +657,8 @@ public struct TransferConfigView: View {
                 
                 Spacer()
                 
-                Text("Выбрано \(selectedTrackIds.count) из \(sourceTracks.count)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                Text("\(selectedTrackIds.count) of \(sourceTracks.count) selected")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundColor(selectedTrackIds.isEmpty ? PastelTheme.amberWarning : PastelTheme.emeraldSuccess)
                     .monospacedDigit()
             }
@@ -900,13 +923,13 @@ public struct TransferConfigView: View {
                     .frame(width: 8, height: 8)
                 
                 if mainMode == .serviceTransfer {
-                    Text(hasSelection ? "Готово к переносу: \(trackCount) треков из \(sourceProvider.displayName) в \(destinationProvider.displayName)" : "Выберите треки для переноса в архиве выше")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(PastelTheme.textSecondary)
+                    Text(hasSelection ? "\(trackCount) tracks ready • \(sourceProvider.displayName) ➔ \(destinationProvider.displayName)" : "Select tracks in archive above")
+                        .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                        .foregroundColor(hasSelection ? PastelTheme.athleticEmerald : PastelTheme.textSecondary)
                 } else {
-                    Text(hasSelection ? "Готово к выкачиванию: \(trackCount) треков в формате \(selectedExportFormat.rawValue)" : "Выберите треки для выкачивания в архиве выше")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(PastelTheme.textSecondary)
+                    Text(hasSelection ? "\(trackCount) tracks • \(selectedExportFormat.rawValue)" : "Select tracks in archive above")
+                        .font(.system(size: 11.5, weight: .bold, design: .monospaced))
+                        .foregroundColor(hasSelection ? PastelTheme.athleticEmerald : PastelTheme.textSecondary)
                 }
                 Spacer()
             }

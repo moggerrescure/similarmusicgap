@@ -47,6 +47,7 @@ public struct BridgeRadarSearchView: View {
     @State private var isBridgingActive: Bool = false
     @State private var toastMessage: String? = nil
     @State private var showToast: Bool = false
+    @State private var isSonarPulsing: Bool = false
     
     // Quick Demo Chips
     private let quickChips: [(String, String)] = [
@@ -113,7 +114,10 @@ public struct BridgeRadarSearchView: View {
                     
                     // 3. Scrollable Radar Content
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
+                        VStack(spacing: 16) {
+                            // 0. Sonar Scanner Visualizer
+                            sonarScannerSection
+                            
                             // A. Live Tri-Platform Match Card
                             triPlatformMatchCard
                             
@@ -199,7 +203,7 @@ public struct BridgeRadarSearchView: View {
                     .foregroundColor(PastelTheme.pastelOat)
                     .padding(.leading, 12)
                 
-                TextField("Search track or paste Spotify / Apple link...", text: $searchText)
+                TextField("Track, artist, or URL...", text: $searchText)
                     .font(.system(size: 13.5, weight: .medium, design: .rounded))
                     .foregroundColor(.white)
                     .tint(PastelTheme.pastelOat)
@@ -249,6 +253,71 @@ public struct BridgeRadarSearchView: View {
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - 0. Sonar Scanner Visualizer
+    private var sonarScannerSection: some View {
+        Button {
+            HapticManager.selectionChanged()
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                isSonarPulsing.toggle()
+            }
+            showToast(message: "⚡️ Радар синхронизирован: Spotify • Apple • Яндекс")
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color(hex: "#14151B"))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(PastelTheme.cardBorder, lineWidth: 1)
+                    )
+                
+                // Pulsing Concentric Rings
+                ZStack {
+                    Circle()
+                        .stroke(PastelTheme.athleticEmerald.opacity(0.12), lineWidth: 1)
+                        .frame(width: isSonarPulsing ? 180 : 130, height: isSonarPulsing ? 180 : 130)
+                    Circle()
+                        .stroke(PastelTheme.athleticEmerald.opacity(0.22), lineWidth: 1)
+                        .frame(width: isSonarPulsing ? 130 : 95, height: isSonarPulsing ? 130 : 95)
+                    Circle()
+                        .stroke(PastelTheme.athleticEmerald.opacity(0.35), lineWidth: 1)
+                        .frame(width: isSonarPulsing ? 80 : 65, height: isSonarPulsing ? 80 : 65)
+                }
+                .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: isSonarPulsing)
+                
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(colors: [Color(hex: "#1E222A"), Color(hex: "#121317")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .frame(width: 48, height: 48)
+                            .overlay(Circle().stroke(PastelTheme.athleticEmerald.opacity(0.8), lineWidth: 1.5))
+                            .shadow(color: PastelTheme.athleticEmerald.opacity(0.35), radius: 10)
+                        
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(PastelTheme.athleticEmerald)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(PastelTheme.athleticEmerald)
+                            .frame(width: 5, height: 5)
+                            .shadow(color: PastelTheme.athleticEmerald, radius: 3)
+                        
+                        Text("3 CATALOGS CONNECTED • 99.8% READY")
+                            .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                            .tracking(1.0)
+                            .foregroundColor(PastelTheme.pastelOat)
+                    }
+                }
+            }
+            .frame(height: 120)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .onAppear {
+            isSonarPulsing = true
         }
     }
     
@@ -306,37 +375,34 @@ public struct BridgeRadarSearchView: View {
                         .foregroundColor(PastelTheme.textTertiary)
                 }
             }
-            .padding(.bottom, 4)
+            .padding(.bottom, 2)
             
-            // 3-Way Platform Availability Rows
-            VStack(spacing: 6) {
-                // 1. Spotify
-                platformRow(
-                    serviceName: "Spotify",
-                    iconColor: Color(hex: "#1ED760"),
-                    letter: "S",
-                    statusText: "Source Master • \(sample.spotifyQuality)",
-                    badgeText: "FOUND",
+            // 3-Way Platform Matrix Grid
+            HStack(spacing: 8) {
+                matrixCell(
+                    symbol: "S",
+                    color: Color(hex: "#1ED760"),
+                    textColor: .black,
+                    quality: sample.spotifyQuality,
+                    badge: "MASTER",
                     badgeColor: PastelTheme.athleticEmerald
                 )
                 
-                // 2. Apple Music
-                platformRow(
-                    serviceName: "Apple Music",
-                    iconColor: Color(hex: "#FA243C"),
-                    letter: "A",
-                    statusText: "Exact ISRC Match • \(sample.appleQuality)",
-                    badgeText: "READY",
+                matrixCell(
+                    symbol: "A",
+                    color: Color(hex: "#FA243C"),
+                    textColor: .white,
+                    quality: sample.appleQuality,
+                    badge: "RESOLVED",
                     badgeColor: PastelTheme.pastelSlate
                 )
                 
-                // 3. Yandex Music
-                platformRow(
-                    serviceName: "Яндекс Музыка",
-                    iconColor: Color(hex: "#FFCC00"),
-                    letter: "Я",
-                    statusText: "Acoustic Fingerprint 99.4% • \(sample.yandexQuality)",
-                    badgeText: "VERIFIED",
+                matrixCell(
+                    symbol: "Я",
+                    color: Color(hex: "#FFCC00"),
+                    textColor: .black,
+                    quality: sample.yandexQuality,
+                    badge: "ACOUSTIC",
                     badgeColor: PastelTheme.warmAmber
                 )
             }
@@ -351,19 +417,19 @@ public struct BridgeRadarSearchView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: PastelTheme.textOnOat))
                             .scaleEffect(0.8)
                     } else {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .font(.system(size: 14, weight: .bold))
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 13, weight: .black))
                     }
                     
-                    Text(isBridgingActive ? "BRIDGING TO APPLE MUSIC..." : "ПЕРЕНЕСТИ В 1 ТАП (SPOTIFY ➔ APPLE)")
-                        .font(.system(size: 11.5, weight: .heavy, design: .rounded))
-                        .tracking(0.4)
+                    Text(isBridgingActive ? "BRIDGING..." : "1-TAP BRIDGE TO APPLE MUSIC")
+                        .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        .tracking(0.5)
                 }
                 .foregroundColor(PastelTheme.textOnOat)
                 .frame(maxWidth: .infinity)
-                .frame(height: 42)
+                .frame(height: 44)
                 .background(PastelTheme.pastelOat)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(Capsule())
                 .shadow(color: PastelTheme.pastelOat.opacity(0.2), radius: 6, y: 2)
             }
             .buttonStyle(PlainButtonStyle())
@@ -378,47 +444,37 @@ public struct BridgeRadarSearchView: View {
         )
     }
     
-    private func platformRow(
-        serviceName: String,
-        iconColor: Color,
-        letter: String,
-        statusText: String,
-        badgeText: String,
+    private func matrixCell(
+        symbol: String,
+        color: Color,
+        textColor: Color = .black,
+        quality: String,
+        badge: String,
         badgeColor: Color
     ) -> some View {
-        HStack {
-            // Icon
+        VStack(spacing: 4) {
             Circle()
-                .fill(iconColor)
+                .fill(color)
                 .frame(width: 20, height: 20)
                 .overlay(
-                    Text(letter)
+                    Text(symbol)
                         .font(.system(size: 10, weight: .black))
-                        .foregroundColor(.black)
+                        .foregroundColor(textColor)
                 )
             
-            VStack(alignment: .leading, spacing: 1) {
-                Text(serviceName)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                
-                Text(statusText)
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundColor(badgeColor)
-            }
-            
-            Spacer()
-            
-            Text(badgeText)
-                .font(.system(size: 8, weight: .bold, design: .monospaced))
+            Text(badge)
+                .font(.system(size: 7.5, weight: .bold, design: .monospaced))
                 .foregroundColor(badgeColor)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(badgeColor.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            
+            Text(quality)
+                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                .foregroundColor(PastelTheme.textSecondary)
+                .lineLimit(1)
         }
-        .padding(8)
-        .background(Color(hex: "#0F1014"))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(Color(hex: "#101115"))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -435,14 +491,14 @@ public struct BridgeRadarSearchView: View {
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(PastelTheme.warmAmber)
                     
-                    Text("РАЗРЫВ МЕДИАТЕКИ (GAPS RADAR)")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                    Text("GAPS RADAR")
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
                 }
                 
                 Spacer()
                 
-                Text("\(gapItems.count) ТРЕКА ТРЕБУЮТ МОСТА")
+                Text("\(gapItems.count) GAPS DETECTED")
                     .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                     .foregroundColor(PastelTheme.warmAmber)
             }
@@ -452,15 +508,16 @@ public struct BridgeRadarSearchView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(gap.artist) — \(gap.title)")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: 12.5, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                             
                             HStack(spacing: 4) {
-                                Text("Есть в \(gap.sourceService.displayName)")
-                                    .foregroundColor(PastelTheme.textSecondary)
-                                Text("•")
+                                Text(gap.sourceService.displayName)
+                                    .foregroundColor(PastelTheme.athleticEmerald)
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 7))
                                     .foregroundColor(PastelTheme.textTertiary)
-                                Text("Нет в \(gap.missingInService.displayName)")
+                                Text("Missing on \(gap.missingInService.displayName)")
                                     .foregroundColor(PastelTheme.warmAmber)
                             }
                             .font(.system(size: 9.5, weight: .medium))
@@ -472,22 +529,26 @@ public struct BridgeRadarSearchView: View {
                         
                         Button {
                             HapticManager.heavyImpact()
-                            withAnimation(.spring()) {
-                                bridgedTrackIds.insert(gap.id)
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                _ = bridgedTrackIds.insert(gap.id)
                             }
-                            showToast(message: "Трек «\(gap.title)» перенесён в \(gap.missingInService.displayName)!")
+                            showToast(message: "⚡️ «\(gap.title)» перенесён в \(gap.missingInService.displayName)!")
                         } label: {
-                            Text(isBridged ? "В МОСТЕ ✓" : "Мост ➔")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .foregroundColor(isBridged ? PastelTheme.athleticEmerald : PastelTheme.pastelOat)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(isBridged ? PastelTheme.athleticEmerald.opacity(0.15) : PastelTheme.card)
-                                .clipShape(Capsule())
-                                .overlay(
-                                    Capsule()
-                                        .stroke(isBridged ? PastelTheme.athleticEmerald : PastelTheme.cardBorder, lineWidth: 1)
-                                )
+                            HStack(spacing: 4) {
+                                Image(systemName: isBridged ? "checkmark" : "bolt.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                Text(isBridged ? "BRIDGED" : "BRIDGE")
+                                    .font(.system(size: 9.5, weight: .bold, design: .monospaced))
+                            }
+                            .foregroundColor(isBridged ? PastelTheme.athleticEmerald : PastelTheme.textOnOat)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(isBridged ? PastelTheme.athleticEmerald.opacity(0.15) : PastelTheme.pastelOat)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(isBridged ? PastelTheme.athleticEmerald : Color.clear, lineWidth: 1)
+                            )
                         }
                         .buttonStyle(PlainButtonStyle())
                         .disabled(isBridged)
